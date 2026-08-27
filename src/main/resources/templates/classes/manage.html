@@ -19,22 +19,20 @@
         th:attr="data-flash-success=${flashSuccess},data-flash-error=${flashError}"
         style="display:none;"></span>
 
-  <!-- ===== Rank toggle ===== -->
-  <button class="rank-toggle" id="rankToggle" type="button">
-    <span>Hiện xếp hạng</span>
-    <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-  </button>
-
   <!-- ===== Panel: tabs + toolbar + list ===== -->
   <section class="panel">
 
     <!-- Tabs row -->
     <div class="panel-top">
       <div class="tabs">
-        <button class="tab active" type="button">
-          Lớp của bạn <span th:text="${classes != null ? classes.size() : 0}">0</span>
-        </button>
-        <button class="tab" type="button" title="Sắp ra mắt">Lớp đã ẩn</button>
+        <a class="tab" th:classappend="${selectedTab == 'current'} ? ' active'"
+           th:href="@{/lecturer/classes(tab='current',page=0,size=${classesPage.size})}">
+          Lớp của bạn <span class="tab-count" th:text="${currentClassCount}">0</span>
+        </a>
+        <a class="tab" th:classappend="${selectedTab == 'archived'} ? ' active'"
+           th:href="@{/lecturer/classes(tab='archived',page=0,size=${classesPage.size})}">
+          Lớp đã ẩn <span class="tab-count" th:text="${archivedClassCount}">0</span>
+        </a>
       </div>
       <div class="panel-top-right">
         <button class="btn-ghost" type="button" title="Sắp ra mắt">
@@ -90,7 +88,12 @@
 
       <!-- Empty state when no classes -->
       <div class="empty" th:if="${classes == null or classes.isEmpty()}">
-        Chưa có lớp học nào. Nhấn <b>Tạo lớp học</b> để bắt đầu.
+        <th:block th:if="${selectedTab == 'archived'}">
+          Chưa có lớp đã lưu trữ.
+        </th:block>
+        <th:block th:unless="${selectedTab == 'archived'}">
+          Chưa có lớp học nào. Nhấn <b>Tạo lớp học</b> để bắt đầu.
+        </th:block>
       </div>
 
       <!-- Selecting a class opens its lessons directly. -->
@@ -188,18 +191,29 @@
 
     </div>
 
-    <!-- Pagination — mirrors the admin/users.html pattern.
-         Hidden when there is only one page so tiny lists don't render an empty nav. -->
+    <!-- Centered list pagination. Hidden when a tab has only one page. -->
     <nav th:if="${classesPage != null and classesPage.totalPages > 1}"
-         class="users-pagination" aria-label="Phân trang">
-      <a class="page-link"
+         class="classes-pagination" aria-label="Phân trang danh sách lớp">
+      <a class="classes-page-link"
          th:if="${!classesPage.first}"
-         th:href="@{/lecturer/classes(page=${classesPage.number - 1},size=${classesPage.size})}">‹ Trước</a>
-      <span class="page-current"
-            th:text="'Trang ' + (${classesPage.number + 1}) + ' / ' + ${classesPage.totalPages}">Trang 1 / 1</span>
-      <a class="page-link"
+         th:href="@{/lecturer/classes(tab=${selectedTab},page=${classesPage.number - 1},size=${classesPage.size})}"
+         aria-label="Trang trước">
+        <span aria-hidden="true">‹</span> Trước
+      </a>
+      <span class="classes-page-link is-disabled" th:if="${classesPage.first}" aria-disabled="true">
+        <span aria-hidden="true">‹</span> Trước
+      </span>
+      <span class="classes-page-current"
+            th:text="'Trang ' + (${classesPage.number + 1}) + ' trên ' + ${classesPage.totalPages}">Trang 1 trên 1</span>
+      <a class="classes-page-link"
          th:if="${!classesPage.last}"
-         th:href="@{/lecturer/classes(page=${classesPage.number + 1},size=${classesPage.size})}">Sau ›</a>
+         th:href="@{/lecturer/classes(tab=${selectedTab},page=${classesPage.number + 1},size=${classesPage.size})}"
+         aria-label="Trang sau">
+        Sau <span aria-hidden="true">›</span>
+      </a>
+      <span class="classes-page-link is-disabled" th:if="${classesPage.last}" aria-disabled="true">
+        Sau <span aria-hidden="true">›</span>
+      </span>
     </nav>
   </section>
 </main>

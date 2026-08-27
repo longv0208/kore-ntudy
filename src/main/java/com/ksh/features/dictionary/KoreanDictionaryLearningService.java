@@ -51,21 +51,36 @@ public class KoreanDictionaryLearningService {
 
     @Transactional
     public SaveResult save(Long userId, SaveRequest request) {
-        if (request == null || request.deckId() == null) {
-            throw new IllegalArgumentException("Hãy chọn bộ thẻ muốn lưu.");
-        }
-        FlashcardDeck deck = deckRepository.findById(request.deckId())
-                .filter(value -> value.getOwnerId().equals(userId))
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bộ thẻ thuộc tài khoản của bạn."));
+        if (request == null) throw new IllegalArgumentException("Hãy chọn bộ thẻ muốn lưu.");
         String word = normalizeWord(request.word());
         String meaning = conciseMeaning(normalizeRequired(
                 request.meaningVi(), "Nhập nghĩa tiếng Việt trước khi lưu."));
+        boolean createDeck = request.deckId() == null
+                && request.newDeckTitle() != null
+                && !request.newDeckTitle().isBlank();
+        if (request.deckId() != null && request.newDeckTitle() != null
+                && !request.newDeckTitle().isBlank()) {
+            throw new IllegalArgumentException("Chỉ chọn một bộ thẻ hoặc tạo một bộ mới.");
+        }
+        FlashcardDeck deck;
+        if (createDeck) {
+            String title = normalizeDeckTitle(request.newDeckTitle());
+            deck = deckRepository.save(new FlashcardDeck(userId, title, null));
+        } else {
+            if (request.deckId() == null) {
+                throw new IllegalArgumentException("Hãy chọn bộ thẻ hoặc nhập tên bộ thẻ mới.");
+            }
+            deck = deckRepository.findById(request.deckId())
+                    .filter(value -> value.getOwnerId().equals(userId))
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Không tìm thấy bộ thẻ thuộc tài khoản của bạn."));
+        }
         Optional<Flashcard> existing = cardRepository.findFirstByDeckIdAndFrontText(deck.getId(), word);
-        if (existing.isPresent()) return result(deck, existing.get(), true);
+        if (existing.isPresent()) return result(deck, existing.get(), true, false);
         int sortOrder = Math.toIntExact(cardRepository.countByDeckId(deck.getId()));
         // Keep the learning surface clean: front = Korean, back = Vietnamese meaning only.
         Flashcard card = cardRepository.save(new Flashcard(deck.getId(), word, meaning, sortOrder));
-        return result(deck, card, false);
+        return result(deck, card, false, createDeck);
     }
 
     public static String normalizeWord(String value) {
@@ -89,8 +104,17 @@ public class KoreanDictionaryLearningService {
         return separator > 0 ? value.substring(0, separator).trim() : value;
     }
 
-    private static SaveResult result(FlashcardDeck deck, Flashcard card, boolean duplicate) {
+    private static String normalizeDeckTitle(String value) {
+        String title = normalizeRequired(value, "Nhập tên bộ thẻ mới.");
+        if (title.length() > 300) {
+            throw new IllegalArgumentException("Tên bộ thẻ tối đa 300 ký tự.");
+        }
+        return title;
+    }
+
+    private static SaveResult result(FlashcardDeck deck, Flashcard card,
+                                     boolean duplicate, boolean deckCreated) {
         return new SaveResult(deck.getId(), card.getId(), deck.getTitle(),
-                "/my/flashcards/" + deck.getId(), duplicate);
+                "/my/flashcards/" + deck.getId(), duplicate, deckCreated);
     }
 }

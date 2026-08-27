@@ -68,23 +68,6 @@
     rows.forEach(function (r) { list.appendChild(r); });
   }
 
-  // ── Tabs: simple visual toggle (no panel switching yet) ────────────
-  document.querySelectorAll('.tab').forEach(function (t) {
-    t.addEventListener('click', function () {
-      document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('active'); });
-      t.classList.add('active');
-    });
-  });
-
-  // ── Rank toggle: flip label ────────────────────────────────────────
-  var rankToggle = document.getElementById('rankToggle');
-  if (rankToggle) {
-    rankToggle.addEventListener('click', function () {
-      var s = this.querySelector('span');
-      s.textContent = s.textContent === 'Hiện xếp hạng' ? 'Ẩn xếp hạng' : 'Hiện xếp hạng';
-    });
-  }
-
   // ── Copy subject code to clipboard ─────────────────────────────────
   document.querySelectorAll('.copy-code').forEach(function (btn) {
     btn.addEventListener('click', function (e) {

@@ -79,6 +79,28 @@ class NonPracticeLearningUiContractTest {
     }
 
     @Test
+    void dictionary_deck_picker_opens_above_panel_and_can_create_a_personal_deck()
+            throws IOException {
+        String dictionaryScript = Files.readString(STATIC.resolve("js/korean-dictionary.js"));
+        String selectScript = Files.readString(STATIC.resolve("js/learning-select.js"));
+        String dictionaryCss = Files.readString(STATIC.resolve("css/korean-dictionary.css"));
+
+        assertThat(dictionaryScript).contains(
+                "data-ksh-select-menu-class=\"kdict-select-menu\"",
+                "+ Tạo bộ thẻ mới…",
+                "newDeckTitle",
+                "Tạo bộ và lưu flashcard",
+                "deckCreated");
+        assertThat(selectScript).contains(
+                "select.dataset.kshSelectMenuClass",
+                "menu.classList.add.apply");
+        assertThat(dictionaryCss).contains(
+                ".kdict-panel{position:fixed;z-index:1210",
+                ".kdict-select-menu{z-index:1240!important}",
+                ".kdict-create-deck[hidden]{display:none}");
+    }
+
+    @Test
     void student_classes_use_separate_compact_views_and_render_one_header() throws IOException {
         String classes = Files.readString(TEMPLATES.resolve("student/my-classes.html"));
         String lessons = Files.readString(TEMPLATES.resolve("student/class-lessons.html"));

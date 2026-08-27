@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,59 @@ public class ClassesService {
             page = Page.empty(pageable);
         }
 
+        return mapRows(page, pageable);
+    }
+
+    /**
+     * Returns one lifecycle tab of the class list without mixing archived
+     * classes into the operational PENDING/REJECTED/ACTIVE view.
+     */
+    @Transactional(readOnly = true)
+    public Page<ClassRow> listForUserByStatuses(Long userId, Role role,
+                                                Collection<String> statuses,
+                                                Pageable pageable) {
+        if (statuses == null || statuses.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        Page<ClassEntity> page;
+        if (role == Role.LECTURER) {
+            page = classRepository.findAllAccessibleToLecturerByStatuses(userId, statuses, pageable);
+        } else if (role == Role.LEADER) {
+            List<Long> subjectIds = accessPolicy.leaderSubjectIds(userId);
+            page = subjectIds.isEmpty()
+                    ? Page.empty(pageable)
+                    : classRepository.findAllBySubjectIdInAndStatusIn(subjectIds, statuses, pageable);
+        } else if (role == Role.ADMIN) {
+            page = classRepository.findAllByStatusIn(statuses, pageable);
+        } else {
+            page = Page.empty(pageable);
+        }
+        return mapRows(page, pageable);
+    }
+
+    /** Returns the role-scoped total for a lifecycle tab badge. */
+    @Transactional(readOnly = true)
+    public long countForUserByStatuses(Long userId, Role role, Collection<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return 0L;
+        }
+        if (role == Role.LECTURER) {
+            return classRepository.countAccessibleToLecturerByStatuses(userId, statuses);
+        }
+        if (role == Role.LEADER) {
+            List<Long> subjectIds = accessPolicy.leaderSubjectIds(userId);
+            return subjectIds.isEmpty()
+                    ? 0L
+                    : classRepository.countBySubjectIdInAndStatusIn(subjectIds, statuses);
+        }
+        if (role == Role.ADMIN) {
+            return classRepository.countByStatusIn(statuses);
+        }
+        return 0L;
+    }
+
+    private Page<ClassRow> mapRows(Page<ClassEntity> page, Pageable pageable) {
         List<ClassEntity> content = page.getContent();
         List<Long> classIds = content.stream().map(ClassEntity::getId).toList();
         Map<Long, Long> studentCounts = new HashMap<>();
