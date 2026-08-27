@@ -523,6 +523,9 @@
 .personal-library-pagination a { color: #2673a0; }
 
 .personal-library-share-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
   width: min(720px, calc(100vw - 28px));
   max-width: 720px;
   max-height: min(820px, calc(100vh - 28px));
@@ -534,7 +537,10 @@
   color: #243b48;
   box-shadow: 0 26px 70px rgba(15, 36, 50, .26);
 }
-.personal-library-share-dialog::backdrop { background: rgba(15, 36, 50, .5); }
+.personal-library-share-dialog::backdrop {
+  background: rgba(15, 36, 50, .5);
+  backdrop-filter: blur(2px);
+}
 .personal-library-share-shell { max-height: inherit; overflow: auto; }
 .personal-library-share-shell > header {
   display: flex;
@@ -608,12 +614,12 @@ button.personal-library-share-option { width: 100%; font: inherit; }
 }
 .personal-library-class-share {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 11px;
   padding: 0 20px 20px;
 }
 .personal-library-class-share[hidden] { display: none; }
-.personal-library-class-share-help { grid-column: 1 / -1; margin: 0; background: #f2f8fb; color: #5c7481; }
+.personal-library-class-share-help { margin: 0; background: #f2f8fb; color: #5c7481; }
 .personal-library-class-share label { display: grid; gap: 6px; }
 .personal-library-class-share label > span { color: #496675; font-size: 12px; font-weight: 750; }
 .personal-library-class-share select {

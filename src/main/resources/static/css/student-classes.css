@@ -33,6 +33,16 @@
   text-overflow: ellipsis;
 }
 
+.student-catalog-lecturer { display: grid; gap: 3px; white-space: normal !important; }
+.student-catalog-lecturer strong { color: #273b49; }
+.student-catalog-lecturer a {
+  color: #2876a1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Empty state ────────────────────────────────────────────────────── */
 .my-classes-empty {
   background: #fff;

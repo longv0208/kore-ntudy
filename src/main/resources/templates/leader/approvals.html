@@ -9,7 +9,7 @@
 </head>
 <body>
 <header th:replace="~{fragments/app-header :: appHeader('leader')}"></header>
-<div class="class-detail-layout">
+<div class="class-detail-layout leader-workspace">
   <aside th:replace="~{fragments/leader-sidebar :: leaderSidebar('approvals')}"></aside>
   <main class="col detail-page leader-approval-main">
     <span id="flash-data" th:attr="data-flash-success=${flashSuccess},data-flash-error=${flashError}" hidden></span>
@@ -26,14 +26,21 @@
       <div class="admin-list-table-scroll" th:if="${!pendingClasses.isEmpty()}">
         <table class="admin-list-table leader-approval-table">
           <thead>
-          <tr><th>Mã môn</th><th>Tên lớp</th><th>Giảng viên</th><th>Ngày tạo</th><th>Hành động</th></tr>
+          <tr><th>Mã môn</th><th>Tên lớp</th><th>Giảng viên</th><th>Gửi duyệt lúc</th><th>Hành động</th></tr>
           </thead>
           <tbody>
           <tr th:each="row : ${pendingClasses}">
             <td data-label="Mã môn"><code class="leader-class-code" th:text="${row.subjectCode()}">KOR311</code></td>
             <td data-label="Tên lớp"><strong class="leader-class-name" th:text="${row.className()}">Tên lớp</strong></td>
-            <td data-label="Giảng viên" th:text="${row.lecturerName()}">Giảng viên</td>
-            <td data-label="Ngày tạo" th:text="${row.createdAt() == null ? '—' : #temporals.format(row.createdAt(), 'dd/MM/yyyy HH:mm')}">—</td>
+            <td data-label="Giảng viên">
+              <span class="leader-lecturer-contact">
+                <strong th:text="${row.lecturerName()}">Giảng viên</strong>
+                <a th:if="${row.lecturerEmail() != null and row.lecturerEmail() != '—'}"
+                   th:href="${'mailto:' + row.lecturerEmail()}"
+                   th:text="${row.lecturerEmail()}">lecturer@ksh.edu.vn</a>
+              </span>
+            </td>
+            <td data-label="Gửi duyệt lúc" th:text="${row.requestedAt() == null ? '—' : #temporals.format(row.requestedAt(), 'dd/MM/yyyy HH:mm')}">—</td>
             <td data-label="Hành động" class="leader-approval-action-cell">
               <div class="leader-approval-actions">
                 <form class="leader-approval-approve-form"

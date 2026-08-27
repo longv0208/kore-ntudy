@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${view.className()} + ' — Tài liệu', ~{::link.page-css})}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/app-shell.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/student-lessons.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/student-class-detail.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/class-materials.css}">
+</head>
+<body>
+<header th:replace="~{fragments/app-header :: appHeader('my-classes')}"></header>
+<main class="student-lessons-shell student-class-detail-shell">
+  <div class="student-class-detail-grid">
+    <div th:replace="~{fragments/student-class-sidebar :: classSidebar('materials', ${view.classId()}, ${view.className()}, ${view.classCode()}, ${view.lecturerName()}, ~{}, ~{})}"></div>
+    <section class="student-class-detail-main class-materials-main">
+      <header class="class-materials-heading">
+        <div>
+          <p class="class-materials-eyebrow">Tài nguyên lớp học</p>
+          <h1>Tài liệu</h1>
+          <p>Tài liệu dùng chung do giảng viên chia sẻ trực tiếp vào lớp.</p>
+        </div>
+      </header>
+      <section class="class-materials-panel">
+        <div class="class-materials-empty" th:if="${#lists.isEmpty(classMaterials)}">
+          <strong>Chưa có tài liệu dùng chung.</strong>
+          <span>Giảng viên chưa chia sẻ tài liệu nào vào lớp.</span>
+        </div>
+        <article class="class-material-row" th:each="material : ${classMaterials}">
+          <span class="class-material-icon" aria-hidden="true">FILE</span>
+          <span class="class-material-copy">
+            <strong th:text="${material.title()}">Tài liệu</strong>
+            <small>
+              <span th:text="${material.originalFilename()}">file.pdf</span>
+              <span aria-hidden="true"> · </span><span th:text="${material.sizeLabel()}">0 KB</span>
+              <span th:if="${material.sharedAt() != null}" aria-hidden="true"> · </span>
+              <time th:if="${material.sharedAt() != null}" th:datetime="${material.sharedAt()}"
+                    th:text="${#temporals.format(material.sharedAt(), 'dd/MM/yyyy HH:mm')}">—</time>
+            </small>
+          </span>
+          <a class="class-material-download" th:href="${material.downloadUrl()}">Tải xuống</a>
+        </article>
+      </section>
+    </section>
+  </div>
+</main>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

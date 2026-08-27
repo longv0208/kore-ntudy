@@ -110,12 +110,14 @@ public record QuestionContent(
         return values == null ? List.of() : List.copyOf(values);
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public record Option(String id, String text, String imageReference) {
         public Option(String id, String text) {
             this(id, text, null);
         }
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public record Blank(String id, String prompt) {
     }
 

@@ -40,6 +40,7 @@ import com.ksh.security.Role;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -170,8 +171,9 @@ public class LessonTemplateService {
         Page<LessonTemplate> result = templateRepository.searchSubject(
                 subject.getId(), qNorm, pr);
         Map<Long, String> uploaderNames = uploaderNames(result.getContent());
+        boolean authoringOpen = !subject.isLibraryLocked();
         Page<LessonTemplateRow> rows = result.map(t -> toRow(t, subject.getCode(),
-                ownerId.equals(t.getOwnerId()), uploaderNames));
+                authoringOpen && ownerId.equals(t.getOwnerId()), uploaderNames));
         long templateCount = templateRepository.countBySubjectId(subject.getId());
         Map<Integer, List<LessonTemplateRow>> byChapter = new LinkedHashMap<>();
         rows.getContent().forEach(row -> byChapter
@@ -191,7 +193,9 @@ public class LessonTemplateService {
                 subjectOptions(ownerId, role),
                 listOwnedClassOptions(ownerId, role, subject.getId()),
                 chapters,
-                templateCount);
+                templateCount,
+                subject.isLibraryLocked(),
+                role == Role.LEADER && ownerId.equals(subject.getLeaderUserId()));
     }
 
     @Transactional(readOnly = true)
@@ -212,7 +216,7 @@ public class LessonTemplateService {
                                        Integer requestedChapterNumber) {
         LessonTemplateForm form = new LessonTemplateForm();
         if (templateId == null) {
-            Department subject = subjectResolver.require(ownerId, role, requestedSubjectId);
+            Department subject = requireAuthoringOpen(ownerId, role, requestedSubjectId);
             form.setSubjectId(subject.getId());
             List<LessonTemplate> existing = templateRepository
                     .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId());
@@ -247,7 +251,7 @@ public class LessonTemplateService {
             return form;
         }
         LessonTemplate template = getOwned(ownerId, templateId);
-        subjectResolver.require(ownerId, role, template.getSubjectId());
+        requireAuthoringOpen(ownerId, role, template.getSubjectId());
         form.setId(template.getId());
         form.setSubjectId(template.getSubjectId());
         form.setChapterNumber(template.getChapterOrder());
@@ -278,7 +282,7 @@ public class LessonTemplateService {
     @Transactional
     public void renameChapter(Long ownerId, Role role, Long subjectId,
                               int chapterNumber, String title) {
-        Department subject = subjectResolver.require(ownerId, role, subjectId);
+        Department subject = requireAuthoringOpen(ownerId, role, subjectId);
         String chapterTitle = canonicalChapter(chapterNumber,
                 requireText(stripChapterPrefix(title), "Tên chương không được để trống"));
         List<LessonTemplate> rows = templateRepository
@@ -295,18 +299,19 @@ public class LessonTemplateService {
     @Transactional
     public void renameLesson(Long ownerId, Role role, Long templateId, String title) {
         LessonTemplate template = getOwned(ownerId, templateId);
-        subjectResolver.require(ownerId, role, template.getSubjectId());
+        requireAuthoringOpen(ownerId, role, template.getSubjectId());
         String description = requireText(stripLessonPrefix(title),
                 "Tên bài học không được để trống");
         template.rename(canonicalLesson(template.getDisplayOrder(), description));
         templateRepository.saveAndFlush(template);
-        syncExistingSnapshots(template, ownerId);
+        // Existing class lessons are immutable distribution snapshots. The
+        // renamed canonical lesson reaches a class only through distribute().
     }
 
     @Transactional
     public void reorderChapters(Long ownerId, Role role, Long subjectId,
                                 List<Integer> chapterNumbers) {
-        Department subject = subjectResolver.require(ownerId, role, subjectId);
+        Department subject = requireAuthoringOpen(ownerId, role, subjectId);
         List<LessonTemplate> rows = new ArrayList<>(templateRepository
                 .findByOwnerIdAndSubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(
                         ownerId, subject.getId()));
@@ -398,7 +403,7 @@ public class LessonTemplateService {
 
     @Transactional
     public LessonTemplateRow saveForm(Long ownerId, Role role, LessonTemplateForm form) {
-        Department subject = subjectResolver.require(ownerId, role, form.getSubjectId());
+        Department subject = requireAuthoringOpen(ownerId, role, form.getSubjectId());
         int chapterNumber = requirePositive(form.getChapterNumber(), "Số chương phải từ 1 trở lên");
         String chapterDescription = requireText(form.getChapterTitle(),
                 "Nội dung tên chương không được để trống");
@@ -469,7 +474,9 @@ public class LessonTemplateService {
                     asset.getMimeType(), asset.getSizeBytes(), order++));
         }
         templateRepository.flush();
-        syncExistingSnapshots(saved, ownerId);
+        // Distributed lessons are immutable class snapshots. Updating the
+        // canonical Library row must not mutate content learners are already
+        // consuming; an explicit distribute action refreshes that snapshot.
         return toRow(saved, subject.getCode(), true, uploaderNames(List.of(saved)));
     }
 
@@ -477,30 +484,14 @@ public class LessonTemplateService {
     @Transactional
     public void detachResource(Long ownerId, Role role, Long templateId, Long assetId) {
         LessonTemplate template = getOwned(ownerId, templateId);
-        subjectResolver.require(ownerId, role, template.getSubjectId());
+        requireAuthoringOpen(ownerId, role, template.getSubjectId());
         LessonTemplateAttachment attachment = templateAttachmentRepository
                 .findByTemplateIdAndLibraryAssetId(templateId, assetId)
                 .orElseThrow(() -> new EntityNotFoundException("Tài nguyên không còn gắn với bài học"));
         templateAttachmentRepository.delete(attachment);
         template.touch();
         templateRepository.saveAndFlush(template);
-        syncExistingSnapshots(template, ownerId);
-    }
-
-    /**
-     * Refreshes only snapshots bound to this exact template. A null provenance
-     * (directly-authored lesson or ambiguous legacy row) deliberately fails
-     * closed; matching titles are not sufficient authority to overwrite it.
-     */
-    private void syncExistingSnapshots(LessonTemplate template, Long actorId) {
-        if (template.getId() == null) return;
-        List<Lesson> snapshots = lessonRepository
-                .findBySourceLessonTemplateIdOrderByIdAsc(template.getId());
-        if (snapshots.isEmpty()) return;
-        // Canonical refresh and direct class sharing use one global order:
-        // library assets (ascending id) before any existing lesson row.
-        lockTemplateAssets(template);
-        snapshots.forEach(lesson -> refreshSnapshot(lesson, template, actorId));
+        // Keep existing class snapshots unchanged until explicit redistribution.
     }
 
     private void refreshSnapshot(Lesson lesson, LessonTemplate template, Long actorId) {
@@ -622,11 +613,18 @@ public class LessonTemplateService {
             // The section is the mutex for exact provenance and title checks;
             // both checks and the append now happen under the same row lock.
             reorderService.lockSectionForUpdate(section.getId(), classId);
-            if (lessonRepository.existsByClassIdAndSourceLessonTemplateId(
-                    classId, template.getId())) {
-                throw new IllegalArgumentException(
-                        "Lớp " + clazz.getName()
-                                + " đã có bài học cùng tên hoặc cùng nguồn");
+            List<Lesson> existingSnapshots = lessonRepository
+                    .findBySourceLessonTemplateIdOrderByIdAsc(template.getId()).stream()
+                    .filter(row -> sectionRepository.findById(row.getSectionId())
+                            .map(existingSection -> classId.equals(existingSection.getClassId()))
+                            .orElse(false))
+                    .toList();
+            if (!existingSnapshots.isEmpty()) {
+                Lesson existing = existingSnapshots.get(0);
+                refreshSnapshot(existing, template, userId);
+                results.add(new LessonCloneResult(
+                        existing.getId(), classId, existing.getSectionId(), existing.getTitle()));
+                continue;
             }
             if (lessonRepository.findFirstBySectionIdAndTitleIgnoreCase(
                     section.getId(), template.getTitle()).isPresent()) {
@@ -669,8 +667,9 @@ public class LessonTemplateService {
 
     /** Soft-deletes an owned template (attachment rows stay for FK integrity). */
     @Transactional
-    public void softDelete(Long ownerId, Long templateId) {
+    public void softDelete(Long ownerId, Role role, Long templateId) {
         LessonTemplate template = getOwned(ownerId, templateId);
+        requireAuthoringOpen(ownerId, role, template.getSubjectId());
         int removedOrder = template.getDisplayOrder();
         template.markDeleted();
         templateRepository.save(template);
@@ -684,7 +683,7 @@ public class LessonTemplateService {
     /** Removes a complete owned chapter and closes both chapter and lesson numbering gaps. */
     @Transactional
     public void softDeleteChapter(Long ownerId, Role role, Long subjectId, int chapterNumber) {
-        Department subject = subjectResolver.require(ownerId, role, subjectId);
+        Department subject = requireAuthoringOpen(ownerId, role, subjectId);
         List<LessonTemplate> rows = new ArrayList<>(templateRepository
                 .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId()));
         List<LessonTemplate> target = rows.stream()
@@ -919,6 +918,28 @@ public class LessonTemplateService {
     private LessonTemplate getOwned(Long ownerId, Long templateId) {
         return templateRepository.findByIdAndOwnerId(templateId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException(MSG_TEMPLATE_NOT_FOUND));
+    }
+
+    /** Only the assigned Subject Leader may change the shared authoring lock. */
+    @Transactional
+    public boolean setSubjectLibraryLocked(Long userId, Role role, Long subjectId,
+                                           boolean locked) {
+        Department subject = subjectResolver.require(userId, role, subjectId);
+        if (role != Role.LEADER || !userId.equals(subject.getLeaderUserId())) {
+            throw new AccessDeniedException(
+                    "Chỉ trưởng bộ môn phụ trách mã môn mới được khóa khung chương trình");
+        }
+        subject.setLibraryLocked(locked);
+        return locked;
+    }
+
+    private Department requireAuthoringOpen(Long userId, Role role, Long subjectId) {
+        Department subject = subjectResolver.require(userId, role, subjectId);
+        if (subject.isLibraryLocked()) {
+            throw new AccessDeniedException(
+                    "Khung chương trình đã được trưởng bộ môn khóa; hãy mở khóa trước khi chỉnh sửa");
+        }
+        return subject;
     }
 
     private static void requireTemplateSubject(LessonTemplate template, Long subjectId) {

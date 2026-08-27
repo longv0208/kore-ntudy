@@ -45,7 +45,7 @@ public interface TestRepository extends JpaRepository<Test, Long> {
                                     Pageable pageable);
 
     @Query("SELECT t FROM Test t WHERE "
-            + "(:admin = true OR (:includeCreated = true AND t.createdBy = :userId) OR t.classId IN :classIds)"
+            + "(:admin = true OR (:includeCreated = true AND t.createdBy = :userId) OR t.classId IN :classIds OR t.subjectId IN :subjectIds)"
             + " AND (:admin = false OR t.type <> 'PRACTICE')"
             + " AND (:classId IS NULL OR t.classId = :classId)"
             + " AND (:status IS NULL OR t.status = :status)"
@@ -53,6 +53,7 @@ public interface TestRepository extends JpaRepository<Test, Long> {
             + " AND LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Test> searchManageable(@Param("userId") Long userId,
                                 @Param("classIds") Collection<Long> classIds,
+                                @Param("subjectIds") Collection<Long> subjectIds,
                                 @Param("admin") boolean admin,
                                 @Param("includeCreated") boolean includeCreated,
                                 @Param("classId") Long classId,

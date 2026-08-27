@@ -65,19 +65,10 @@
     <div id="fs-container"></div>
   </div>
 
-  <script type="module" th:inline="javascript">
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.20/dist/docx-preview.min.js"></script>
+  <script th:inline="javascript">
     /*<![CDATA[*/
-    import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-    // docx-preview is a UMD module; load as script then access global
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/docx-preview@0.1.20/dist/docx-preview.min.js';
-      s.onload = resolve;
-      s.onerror = reject;
-      document.head.appendChild(s);
-    });
-    const docx = window.docx;
-
     const downloadUrl = /*[[${downloadUrl}]]*/ '';
     const filename = /*[[${filename}]]*/ 'Tài liệu';
 
@@ -97,24 +88,27 @@
         ignoreHeight: true,
         className: 'docx-content'
       };
-      return docx.renderAsync(buffer, targetEl, null, options);
+      return window.docx.renderAsync(buffer, targetEl, null, options);
     }
 
     // Fetched once and reused for fullscreen. fetch() is not a navigation,
     // so download managers (IDM) do not intercept it — no base64 embedding.
     let docBuffer = null;
 
-    try {
-      const resp = await fetch(downloadUrl, { credentials: 'include' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      docBuffer = await resp.arrayBuffer();
-      loading.style.display = 'none';
-      await renderDocx(docBuffer.slice(0), container);
-    } catch (err) {
-      loading.style.display = 'none';
-      errorDiv.style.display = 'block';
-      console.error('DOCX load error:', err);
+    async function loadDoc() {
+      try {
+        const resp = await fetch(downloadUrl, { credentials: 'include' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        docBuffer = await resp.arrayBuffer();
+        loading.style.display = 'none';
+        await renderDocx(docBuffer.slice(0), container);
+      } catch (err) {
+        loading.style.display = 'none';
+        errorDiv.style.display = 'block';
+        console.error('DOCX load error:', err);
+      }
     }
+    loadDoc();
 
     // ── Fullscreen ────────────────────────────────────────────────────
     const fsOverlay = document.getElementById('fs-overlay');
@@ -136,6 +130,7 @@
         fsOverlay.classList.remove('active');
       }
     });
+    /*]]>*/
   </script>
 </body>
 </html>

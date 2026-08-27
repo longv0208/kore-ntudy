@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -198,6 +200,30 @@ class AssignmentsIntegrationTest {
 
         mockMvc.perform(get("/classes/{id}/assignments/{aid}", classId, aid))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithUserDetails("student@ksh.edu.vn")
+    void graded_result_is_rendered_inline_without_feedback_route() throws Exception {
+        Long aid = createAndPublishAssignment();
+        studentAssignmentService.submit(classId, aid, new SubmitForm("Bài làm tích hợp"), student.getId());
+        Long sid = lecturerAssignmentService
+                .listSubmissions(classId, aid, lecturer.getId(), Role.LECTURER)
+                .get(0).submissionId();
+        lecturerAssignmentService.grade(classId, aid, sid,
+                new GradeForm(BigDecimal.valueOf(9), "Cần diễn đạt tự nhiên hơn"),
+                lecturer.getId(), Role.LECTURER);
+
+        mockMvc.perform(get("/classes/{id}/assignments/{aid}", classId, aid))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Kết quả")))
+                .andExpect(content().string(containsString("9.00")))
+                .andExpect(content().string(containsString("Cần diễn đạt tự nhiên hơn")))
+                .andExpect(content().string(not(containsString("/feedback"))))
+                .andExpect(content().string(not(containsString("Đã khóa bài nộp"))));
+
+        mockMvc.perform(get("/classes/{id}/assignments/{aid}/feedback", classId, aid))
+                .andExpect(status().isNotFound());
     }
 
     @Test

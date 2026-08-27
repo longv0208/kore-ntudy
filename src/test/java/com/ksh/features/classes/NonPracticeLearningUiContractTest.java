@@ -213,10 +213,11 @@ class NonPracticeLearningUiContractTest {
                 "src/main/java/com/ksh/features/student/service/StudentClassDetailService.java"));
 
         assertThat(lecturerSidebar)
-                .doesNotContain(">Lịch học<", ">Nhóm học tập<", ">Vai trò lớp<");
+                .contains("/lessons", "/materials")
+                .doesNotContain(">Bảng tin<", ">Lịch học<", ">Nhóm học tập<", ">Vai trò lớp<");
         assertThat(studentSidebar)
-                .contains("/board|}", "/members|}")
-                .doesNotContain(">Lịch học<", ">Nhóm học tập<", ">Tin nhắn<");
+                .contains("/lessons|}", "/members|}", "/materials|}")
+                .doesNotContain(">Bảng tin<", ">Lịch học<", ">Nhóm học tập<", ">Tin nhắn<");
         assertThat(lessonController)
                 .contains("return \"student/class-lessons\"", "lessonBasePath")
                 .doesNotContain("redirect:/my/classes/");

@@ -4,6 +4,7 @@ import com.ksh.entities.ClassEntity;
 import com.ksh.features.classes.controller.support.ClassDetailModelSupport;
 import com.ksh.features.classes.dto.ClassesDtos.ClassForm;
 import com.ksh.features.classes.service.ClassMembersService;
+import com.ksh.features.classes.service.ClassMaterialsService;
 import com.ksh.features.classes.service.ClassesService;
 import com.ksh.features.classes.service.JoinClassService;
 import com.ksh.features.tests.service.LecturerExamService;
@@ -35,7 +36,7 @@ import static com.ksh.features.classes.controller.support.ClassDetailModelSuppor
  *
  * <p>Exposed endpoints:
  * <ul>
- *   <li>{@code GET  /lecturer/classes/{id}/board}    — announcement tab</li>
+ *   <li>{@code GET  /lecturer/classes/{id}/board}    — legacy redirect to lessons</li>
  *   <li>{@code GET  /lecturer/classes/{id}/members}  — member list tab</li>
  *   <li>{@code GET  /lecturer/classes/{id}/settings} — class settings</li>
  *   <li>{@code GET  /lecturer/classes/{id}/schedule|roles|groups|...} — placeholder tabs</li>
@@ -55,27 +56,26 @@ public class ClassDetailController {
     private final ClassDetailModelSupport detailSupport;
     private final LecturerExamService examService;
     private final JoinClassService joinClassService;
+    private final ClassMaterialsService classMaterialsService;
 
     public ClassDetailController(ClassesService classesService,
                                  ClassMembersService classMembersService,
                                  ClassDetailModelSupport detailSupport,
                                  LecturerExamService examService,
-                                 JoinClassService joinClassService) {
+                                 JoinClassService joinClassService,
+                                 ClassMaterialsService classMaterialsService) {
         this.classesService = classesService;
         this.classMembersService = classMembersService;
         this.detailSupport = detailSupport;
         this.examService = examService;
         this.joinClassService = joinClassService;
+        this.classMaterialsService = classMaterialsService;
     }
 
-    /** Renders the class board (announcement) tab. */
+    /** Retired board URL kept as a compatibility redirect. */
     @GetMapping("/classes/{id}/board")
-    public String detailBoard(@PathVariable Long id,
-                              @AuthenticationPrincipal KshUserDetails user,
-                              Model model) {
-        ClassEntity clazz = classesService.getViewable(id, user.getId(), user.getRole());
-        detailSupport.populateDetail(model, clazz, TAB_BOARD, user.getId(), user.getRole());
-        return VIEW_CLASS_DETAIL_BOARD;
+    public String detailBoard(@PathVariable Long id) {
+        return "redirect:" + classUrl(id) + "/lessons";
     }
 
     /** Renders the class members tab with ACTIVE members and PENDING requests. */
@@ -148,7 +148,7 @@ public class ClassDetailController {
     /**
      * Renders a placeholder view for class detail tabs not yet implemented (Sprint 3–5).
      * Handles: {@code /schedule}, {@code /roles}, {@code /groups}, {@code /assignments},
-     * {@code /scores}, {@code /materials}.
+     * {@code /scores}.
      *
      * <p>Note: {@code /lessons} and {@code /assignments} are intentionally NOT mapped here —
      * they are owned by {@code SectionsController} and {@code LecturerAssignmentController}
@@ -156,8 +156,7 @@ public class ClassDetailController {
      * {@code IllegalStateException: Ambiguous mapping} at startup.
      */
     @GetMapping({"/classes/{id}/schedule", "/classes/{id}/roles",
-                "/classes/{id}/groups",
-                "/classes/{id}/materials"})
+                "/classes/{id}/groups"})
     public String detailPlaceholder(@PathVariable Long id,
                                     @AuthenticationPrincipal KshUserDetails user,
                                     jakarta.servlet.http.HttpServletRequest request,
@@ -170,6 +169,36 @@ public class ClassDetailController {
         model.addAttribute(ATTR_PLACEHOLDER_TAB, tab);
         model.addAttribute(ATTR_PLACEHOLDER_LABEL, labelFor(tab));
         return VIEW_CLASS_DETAIL_PLACEHOLDER;
+    }
+
+    /** Standalone class Materials tab; these files never become lesson content. */
+    @GetMapping("/classes/{id}/materials")
+    public String detailMaterials(@PathVariable Long id,
+                                  @AuthenticationPrincipal KshUserDetails user,
+                                  Model model) {
+        ClassEntity clazz = classesService.getViewable(id, user.getId(), user.getRole());
+        detailSupport.populateDetail(model, clazz, TAB_MATERIALS,
+                user.getId(), user.getRole());
+        model.addAttribute("classMaterials",
+                classMaterialsService.listForTeaching(id, user.getId(), user.getRole()));
+        return "classes/detail-materials";
+    }
+
+    /** Removes the class reference while retaining the personal-library file. */
+    @PostMapping("/classes/{id}/materials/{materialId}/remove")
+    public String removeMaterial(@PathVariable Long id,
+                                 @PathVariable Long materialId,
+                                 @AuthenticationPrincipal KshUserDetails user,
+                                 RedirectAttributes ra) {
+        try {
+            classMaterialsService.remove(id, materialId, user.getId(), user.getRole());
+            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã gỡ tài liệu khỏi lớp");
+        } catch (EntityNotFoundException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        } catch (AccessDeniedException ex) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, ex.getMessage());
+        }
+        return "redirect:" + classUrl(id) + "/materials";
     }
 
     /**

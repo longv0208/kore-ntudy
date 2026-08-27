@@ -13,10 +13,9 @@ import java.time.LocalDateTime;
 /**
  * JPA entity mapping the {@code lesson_attachments} table introduced by V15.
  *
- * <p>An attachment belongs to a single {@link Lesson} and is hard-deleted
- * together with its on-disk file when the lecturer removes it or when the
- * parent lesson is soft-deleted (see KSH-4.0c design D1/D2). There is no
- * {@code is_deleted} column — when this row is gone, the file is gone too.
+ * <p>An attachment belongs either to one {@link Lesson}, or directly to one
+ * class when a personal-library document is shared into the class Materials
+ * tab. Class-level rows are library-backed references and never own the blob.
  *
  * <p>Plain getters (no Lombok {@code @Data}) to avoid the equals/hashCode
  * pitfalls flagged in the project conventions.
@@ -32,8 +31,11 @@ public class LessonAttachment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "lesson_id", nullable = false)
+    @Column(name = "lesson_id")
     private Long lessonId;
+
+    @Column(name = "class_id")
+    private Long classId;
 
     @Column(name = "original_filename", nullable = false, length = 255)
     private String originalFilename;
@@ -114,6 +116,24 @@ public class LessonAttachment {
         this.originScope = originScope;
     }
 
+    /** Creates a no-copy personal-library reference for a class Materials tab. */
+    public static LessonAttachment forClassMaterial(Long classId,
+                                                    String originalFilename,
+                                                    String storedPath,
+                                                    String mimeType,
+                                                    long sizeBytes,
+                                                    Long uploadedBy,
+                                                    Long libraryAssetId) {
+        if (classId == null || libraryAssetId == null) {
+            throw new IllegalArgumentException("Class materials require class and library asset ids");
+        }
+        LessonAttachment attachment = new LessonAttachment(
+                null, originalFilename, storedPath, mimeType, sizeBytes,
+                uploadedBy, libraryAssetId, ORIGIN_CLASS_PRIVATE);
+        attachment.classId = classId;
+        return attachment;
+    }
+
     @PrePersist
     void onPersist() {
         validateOriginScope(originScope, libraryAssetId);
@@ -139,6 +159,10 @@ public class LessonAttachment {
 
     public Long getLessonId() {
         return lessonId;
+    }
+
+    public Long getClassId() {
+        return classId;
     }
 
     public String getOriginalFilename() {

@@ -1515,4 +1515,25 @@
       Boolean(window.location.hash)
     );
   }
+
+  function initObjectiveGroupToggle() {
+    const toggleBtn = document.getElementById('prGroupToggleBtn');
+    const groupList = document.querySelector('.pr-objective-group-list');
+    if (!toggleBtn || !groupList) return;
+
+    toggleBtn.addEventListener('click', () => {
+      const isCollapsed = groupList.classList.toggle('is-collapsed');
+      toggleBtn.setAttribute('data-collapsed', String(isCollapsed));
+      const moreText = toggleBtn.querySelector('.pr-toggle-more-text');
+      const lessText = toggleBtn.querySelector('.pr-toggle-less-text');
+      if (moreText) moreText.style.display = isCollapsed ? 'inline' : 'none';
+      if (lessText) lessText.style.display = isCollapsed ? 'none' : 'inline';
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initObjectiveGroupToggle);
+  } else {
+    initObjectiveGroupToggle();
+  }
 })();

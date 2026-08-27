@@ -47,15 +47,6 @@
     <ul class="student-lessons-nav">
       <li>
         <a class="student-lessons-nav-item"
-           th:classappend="${active == 'board'} ? ' is-active'"
-           th:attrappend="aria-current=${active == 'board'} ? 'page'"
-           th:href="@{|/my/classes/${classId}/board|}">
-          <svg class="ico ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          Bảng tin
-        </a>
-      </li>
-      <li>
-        <a class="student-lessons-nav-item"
            th:classappend="${active == 'members'} ? ' is-active'"
            th:attrappend="aria-current=${active == 'members'} ? 'page'"
            th:href="@{|/my/classes/${classId}/members|}">
@@ -91,10 +82,13 @@
         </a>
       </li>
       <li>
-        <span class="student-lessons-nav-item is-disabled" aria-disabled="true" title="Sắp có">
+        <a class="student-lessons-nav-item"
+           th:classappend="${active == 'materials'} ? ' is-active'"
+           th:attrappend="aria-current=${active == 'materials'} ? 'page'"
+           th:href="@{|/my/classes/${classId}/materials|}">
           <svg class="ico ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Tài liệu
-        </span>
+        </a>
       </li>
     </ul>
   </details>

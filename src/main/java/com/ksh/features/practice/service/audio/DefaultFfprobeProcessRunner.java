@@ -62,6 +62,9 @@ public class DefaultFfprobeProcessRunner implements FfprobeProcessRunner {
             }
             String stdout = collect(stdoutFuture);
             String stderr = collect(stderrFuture);
+            if (process.exitValue() == 0 && java.nio.file.Files.isRegularFile(privateMediaPath)) {
+                stdout = enrichDurationIfMissing(stdout, privateMediaPath);
+            }
             return new FfprobeProcessResult(process.exitValue(), stdout, stderr);
         } catch (InterruptedException ex) {
             terminate(process);
@@ -126,5 +129,111 @@ public class DefaultFfprobeProcessRunner implements FfprobeProcessRunner {
 
     private static SpeakingAudioValidationException validation(SpeakingAudioValidationCategory category, String message, Throwable cause) {
         return new SpeakingAudioValidationException(category, message, cause);
+    }
+
+    private String enrichDurationIfMissing(String stdout, Path privateMediaPath) {
+        if (stdout == null || stdout.isBlank() || privateMediaPath == null) {
+            return stdout;
+        }
+        if (hasValidDuration(stdout)) {
+            return stdout;
+        }
+        java.math.BigDecimal durationSeconds = extractDurationFromPackets(privateMediaPath);
+        if (durationSeconds == null || durationSeconds.signum() <= 0) {
+            return stdout;
+        }
+        return injectFormatDuration(stdout, durationSeconds.toPlainString());
+    }
+
+    private java.math.BigDecimal extractDurationFromPackets(Path privateMediaPath) {
+        List<String> command = List.of(
+                properties.getFfprobePath(),
+                "-v", "error",
+                "-select_streams", "a:0",
+                "-show_entries", "packet=pts_time,duration_time",
+                "-of", "csv=p=0",
+                privateMediaPath.toString()
+        );
+        Process process;
+        try {
+            process = processLauncher.start(command);
+        } catch (Exception ex) {
+            return null;
+        }
+        ExecutorService readerExecutor = Executors.newSingleThreadExecutor();
+        Future<String> outputFuture = readerExecutor.submit(() ->
+                readBounded(process.getInputStream(), properties.getMaxProbeStdoutBytes(), process));
+        try {
+            boolean finished = process.waitFor(properties.getFfprobeTimeout().toMillis(), TimeUnit.MILLISECONDS);
+            if (!finished) {
+                terminate(process);
+                outputFuture.cancel(true);
+                return null;
+            }
+            if (process.exitValue() != 0) {
+                return null;
+            }
+            String output = outputFuture.get();
+            if (output == null || output.isBlank()) {
+                return null;
+            }
+            String[] lines = output.strip().split("\\r?\\n");
+            for (int i = lines.length - 1; i >= 0; i--) {
+                String line = lines[i].trim();
+                if (line.isEmpty()) {
+                    continue;
+                }
+                String[] tokens = line.split(",");
+                if (tokens.length > 0 && !tokens[0].isBlank() && !"N/A".equalsIgnoreCase(tokens[0])) {
+                    try {
+                        java.math.BigDecimal pts = new java.math.BigDecimal(tokens[0].trim());
+                        java.math.BigDecimal dur = java.math.BigDecimal.ZERO;
+                        if (tokens.length > 1 && !tokens[1].isBlank() && !"N/A".equalsIgnoreCase(tokens[1])) {
+                            try {
+                                dur = new java.math.BigDecimal(tokens[1].trim());
+                            } catch (Exception ignored) {
+                            }
+                        }
+                        java.math.BigDecimal total = pts.add(dur);
+                        if (total.signum() > 0) {
+                            return total;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            return null;
+        } catch (Exception ex) {
+            terminate(process);
+            return null;
+        } finally {
+            readerExecutor.shutdownNow();
+        }
+    }
+
+    private static boolean hasValidDuration(String stdout) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("\"duration\"\\s*:\\s*\"([0-9]+(?:\\.[0-9]+)?)\"")
+                .matcher(stdout);
+        while (matcher.find()) {
+            try {
+                java.math.BigDecimal val = new java.math.BigDecimal(matcher.group(1));
+                if (val.signum() > 0) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
+    }
+
+    private static String injectFormatDuration(String stdout, String durationStr) {
+        if (stdout.contains("\"format\"")) {
+            return stdout.replaceFirst(
+                    "\"format\"\\s*:\\s*\\{",
+                    "\"format\": {\n        \"duration\": \"" + durationStr + "\","
+            );
+        }
+        return stdout;
     }
 }

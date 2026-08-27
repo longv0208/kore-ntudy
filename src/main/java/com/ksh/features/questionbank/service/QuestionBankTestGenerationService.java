@@ -115,7 +115,8 @@ public class QuestionBankTestGenerationService {
                     .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subjectId)
                     .stream().collect(java.util.stream.Collectors.toMap(LessonTemplate::getId, row -> row));
             candidates.removeIf(item -> {
-                LessonTemplate lesson = lessons.get(item.getLessonTemplateId());
+                Long lid = item.getLessonTemplateId();
+                LessonTemplate lesson = lid != null ? lessons.get(lid) : null;
                 return lesson == null || !chapter.equalsIgnoreCase(lesson.getChapterTitle());
             });
         }

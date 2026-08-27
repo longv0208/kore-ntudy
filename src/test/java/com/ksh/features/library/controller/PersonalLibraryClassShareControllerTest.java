@@ -1,7 +1,7 @@
 package com.ksh.features.library.controller;
 
-import com.ksh.features.lessons.dto.LessonDtos.LessonAttachmentRow;
-import com.ksh.features.lessons.service.LessonAttachmentsService;
+import com.ksh.features.classes.service.ClassMaterialsService;
+import com.ksh.features.classes.service.ClassMaterialsService.ClassMaterialRow;
 import com.ksh.features.library.dto.LibraryDtos.PersonalAssetClassTargets;
 import com.ksh.features.library.service.PersonalLibraryClassTargetService;
 import com.ksh.security.KshUserDetails;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class PersonalLibraryClassShareControllerTest {
 
     @Mock private PersonalLibraryClassTargetService targetService;
-    @Mock private LessonAttachmentsService attachmentsService;
+    @Mock private ClassMaterialsService materialsService;
     @Mock private KshUserDetails user;
 
     private PersonalLibraryClassShareController controller;
@@ -36,7 +36,7 @@ class PersonalLibraryClassShareControllerTest {
     @BeforeEach
     void setUp() {
         controller = new PersonalLibraryClassShareController(
-                targetService, attachmentsService);
+                targetService, materialsService);
     }
 
     @Test
@@ -65,34 +65,50 @@ class PersonalLibraryClassShareControllerTest {
     @Test
     void supplementary_share_returns_stable_success_envelope() {
         stubLecturer();
-        LessonAttachmentRow row = new LessonAttachmentRow(
-                9L, "private.pdf", "application/pdf", 42L,
+        ClassMaterialRow row = new ClassMaterialRow(
+                9L, "Tài liệu riêng", "private.pdf", "application/pdf", 42L,
                 LocalDateTime.of(2026, 8, 11, 21, 30),
-                "/api/lessons/3/attachments/9/download");
-        when(attachmentsService.bindAttachmentFromLibrary(
-                1L, 2L, 3L, 11L, 7L, Role.LECTURER)).thenReturn(row);
+                "/api/classes/1/materials/9/download");
+        when(materialsService.shareFromLibrary(
+                1L, 11L, 7L, Role.LECTURER)).thenReturn(row);
 
-        var response = controller.shareIntoClass(11L, 1L, 2L, 3L, user);
+        var response = controller.shareIntoClass(11L, 1L, user);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).containsEntry("ok", true)
-                .containsEntry("attachment", row);
-        verify(attachmentsService).bindAttachmentFromLibrary(
-                1L, 2L, 3L, 11L, 7L, Role.LECTURER);
+                .containsEntry("material", row);
+        verify(materialsService).shareFromLibrary(
+                1L, 11L, 7L, Role.LECTURER);
     }
 
     @Test
     void cross_owner_asset_is_json_404() {
         stubLecturer();
-        when(attachmentsService.bindAttachmentFromLibrary(
-                1L, 2L, 3L, 99L, 7L, Role.LECTURER))
+        when(materialsService.shareFromLibrary(
+                1L, 99L, 7L, Role.LECTURER))
                 .thenThrow(new EntityNotFoundException("Không tìm thấy học liệu"));
 
-        var response = controller.shareIntoClass(99L, 1L, 2L, 3L, user);
+        var response = controller.shareIntoClass(99L, 1L, user);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).containsEntry("ok", false)
                 .containsEntry("message", "Không tìm thấy học liệu");
+    }
+
+    @Test
+    void duplicate_share_is_json_409_instead_of_generic_500() {
+        stubLecturer();
+        when(materialsService.shareFromLibrary(
+                1L, 11L, 7L, Role.LECTURER))
+                .thenThrow(new IllegalStateException(
+                        "Tài liệu này đã có trong tab Tài liệu của lớp"));
+
+        var response = controller.shareIntoClass(11L, 1L, user);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).containsEntry("ok", false)
+                .containsEntry("message",
+                        "Tài liệu này đã có trong tab Tài liệu của lớp");
     }
 
     private void stubLecturer() {

@@ -138,7 +138,9 @@ public final class LibraryDtos {
             List<SubjectContext> subjectOptions,
             List<AttachTargetClassRow> classOptions,
             List<ChapterView> chapters,
-            long templateCount
+            long templateCount,
+            boolean libraryLocked,
+            boolean canManageLibraryLock
     ) {
     }
 

@@ -54,8 +54,6 @@
     var kindNote = dialog.querySelector('[data-share-kind-note]');
     var form = dialog.querySelector('[data-class-share-form]');
     var classSelect = dialog.querySelector('[data-share-class]');
-    var sectionSelect = dialog.querySelector('[data-share-section]');
-    var lessonSelect = dialog.querySelector('[data-share-lesson]');
     var status = dialog.querySelector('[data-share-status]');
     var submit = dialog.querySelector('[data-share-submit]');
     var currentAsset = null;
@@ -95,25 +93,19 @@
       select.disabled = items.length === 0;
     }
 
-    function findById(items, id) {
-      return items.find(function (item) { return String(item.id) === String(id); }) || null;
-    }
-
     function syncSubmit() {
       if (!submit) return;
-      submit.disabled = !classSelect.value || !sectionSelect.value || !lessonSelect.value;
+      submit.disabled = !classSelect.value;
     }
 
     function resetClassFlow() {
       classes = [];
       if (form) form.hidden = true;
       resetSelect(classSelect, 'Chọn lớp…');
-      resetSelect(sectionSelect, 'Chọn chương…');
-      resetSelect(lessonSelect, 'Chọn bài giảng…');
       setStatus('');
       if (submit) {
         submit.disabled = true;
-        submit.textContent = 'Chia sẻ vào bài giảng';
+        submit.textContent = 'Chia sẻ vào Tài liệu';
       }
     }
 
@@ -125,7 +117,7 @@
       if (!currentAsset || currentAsset.kind !== 'DOCUMENT') return;
       if (form) form.hidden = false;
       classMode.disabled = true;
-      setStatus('Đang tải lớp, chương và bài giảng bạn có quyền chỉnh sửa…', 'is-loading');
+      setStatus('Đang tải các lớp ACTIVE bạn sở hữu…', 'is-loading');
 
       window.fetch('/lecturer/library/assets/' + encodeURIComponent(currentAsset.id) + '/class-targets', {
         method: 'GET',
@@ -145,7 +137,7 @@
           };
         }), 'Chọn lớp…');
         setStatus(classes.length
-          ? 'Chọn lớp, chương và bài giảng sẽ nhận tài liệu bổ sung.'
+          ? 'Chọn lớp sẽ nhận tài liệu trong tab Tài liệu.'
           : 'Bạn chưa có lớp phù hợp để nhận tài liệu này.');
       }).catch(function (error) {
         setStatus(error.message || 'Chưa thể tải danh sách lớp', 'is-error');
@@ -181,43 +173,17 @@
     dialog.addEventListener('close', resetClassFlow);
 
     classMode.addEventListener('click', loadTargets);
-    classSelect.addEventListener('change', function () {
-      var selectedClass = findById(classes, classSelect.value);
-      var sections = selectedClass && Array.isArray(selectedClass.sections)
-        ? selectedClass.sections : [];
-      addOptions(sectionSelect, sections.map(function (item) {
-        return {id: item.id, label: item.title};
-      }), 'Chọn chương…');
-      resetSelect(lessonSelect, 'Chọn bài giảng…');
-      syncSubmit();
-    });
-    sectionSelect.addEventListener('change', function () {
-      var selectedClass = findById(classes, classSelect.value);
-      var sections = selectedClass && Array.isArray(selectedClass.sections)
-        ? selectedClass.sections : [];
-      var selectedSection = findById(sections, sectionSelect.value);
-      var lessons = selectedSection && Array.isArray(selectedSection.lessons)
-        ? selectedSection.lessons : [];
-      addOptions(lessonSelect, lessons.map(function (item) {
-        var provenance = item.canonicalSnapshot ? ' · Bản phân phối chuẩn' : '';
-        var state = item.status ? ' · ' + item.status : '';
-        return {id: item.id, label: item.title + state + provenance};
-      }), 'Chọn bài giảng…');
-      syncSubmit();
-    });
-    lessonSelect.addEventListener('change', syncSubmit);
+    classSelect.addEventListener('change', syncSubmit);
 
     form.addEventListener('submit', function (event) {
       event.preventDefault();
       if (!currentAsset || currentAsset.kind !== 'DOCUMENT' || !form.checkValidity()) return;
       submit.disabled = true;
       submit.textContent = 'Đang chia sẻ…';
-      setStatus('Đang gắn tài liệu bổ sung vào bài giảng…', 'is-loading');
+      setStatus('Đang chia sẻ tài liệu vào lớp…', 'is-loading');
 
       var body = new URLSearchParams();
       body.set('classId', classSelect.value);
-      body.set('sectionId', sectionSelect.value);
-      body.set('lessonId', lessonSelect.value);
       var csrfToken = csrfMeta('_csrf');
       var csrfHeader = csrfMeta('_csrf_header');
       if (csrfToken) body.set('_csrf', csrfToken);
@@ -238,11 +204,9 @@
           return payload;
         });
       }).then(function (payload) {
-        setStatus(payload.message || 'Đã chia sẻ tài liệu riêng vào bài giảng', 'is-success');
+        setStatus(payload.message || 'Đã chia sẻ vào tab Tài liệu của lớp', 'is-success');
         submit.textContent = 'Đã chia sẻ';
         classSelect.disabled = true;
-        sectionSelect.disabled = true;
-        lessonSelect.disabled = true;
       }).catch(function (error) {
         setStatus(error.message || 'Chưa thể chia sẻ tài liệu', 'is-error');
         submit.disabled = false;

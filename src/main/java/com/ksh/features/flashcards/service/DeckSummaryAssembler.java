@@ -54,7 +54,7 @@ public class DeckSummaryAssembler {
             out.add(new DeckSummary(d.getId(), d.getTitle(), d.getDescription(),
                     counts.getOrDefault(d.getId(), 0L), d.isShared(),
                     d.getOwnerId().equals(callerId), ownerNames.get(d.getOwnerId()),
-                    d.getClassId() == null ? null : classNames.get(d.getClassId()),
+                    sharedClassLabel(d, classNames),
                     d.getSubjectId(), subject == null ? null : subject.getCode(),
                     subject == null ? null : subject.getName()));
         }
@@ -70,6 +70,21 @@ public class DeckSummaryAssembler {
         return map;
     }
 
+    private String sharedClassLabel(FlashcardDeck deck, Map<Long, String> classNames) {
+        List<String> names = new ArrayList<>();
+        Collection<Long> ids = deck.getSharedClassIds();
+        if (ids != null) {
+            for (Long id : ids) {
+                if (classNames.get(id) != null) names.add(classNames.get(id));
+            }
+        }
+        if (names.isEmpty() && deck.getClassId() != null && classNames.get(deck.getClassId()) != null) {
+            names.add(classNames.get(deck.getClassId()));
+        }
+        if (names.isEmpty()) return null;
+        return names.size() == 1 ? names.get(0) : names.get(0) + " + " + (names.size() - 1) + " lớp";
+    }
+
     private Map<Long, String> ownerNames(List<FlashcardDeck> decks) {
         Collection<Long> ownerIds = decks.stream()
                 .map(FlashcardDeck::getOwnerId).distinct().toList();
@@ -81,8 +96,15 @@ public class DeckSummaryAssembler {
     }
 
     private Map<Long, String> classNames(List<FlashcardDeck> decks) {
-        Collection<Long> classIds = decks.stream().map(FlashcardDeck::getClassId)
-                .filter(Objects::nonNull).distinct().toList();
+        Collection<Long> classIds = decks.stream()
+                .flatMap(deck -> {
+                    Collection<Long> ids = deck.getSharedClassIds();
+                    if (ids == null || ids.isEmpty()) {
+                        return deck.getClassId() == null ? java.util.stream.Stream.empty()
+                                : java.util.stream.Stream.of(deck.getClassId());
+                    }
+                    return ids.stream();
+                }).filter(Objects::nonNull).distinct().toList();
         Map<Long, String> map = new HashMap<>();
         if (classIds.isEmpty()) return map;
         for (ClassEntity c : classRepository.findAllById(classIds)) {

@@ -1717,7 +1717,7 @@ public final class PracticeDtos {
                     || teacherExplanationProvenance.isBlank()) {
                 throw new IllegalArgumentException("Objective question identity is incomplete");
             }
-            teacherExplanation = blankResultText(teacherExplanation);
+            teacherExplanation = sanitizeTeacherExplanation(teacherExplanation);
             languageTag = "ko".equals(languageTag) || "vi".equals(languageTag)
                     ? languageTag
                     : "ko";
@@ -5725,6 +5725,19 @@ public final class PracticeDtos {
 
     private static String blankResultText(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String sanitizeTeacherExplanation(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.contains("provenance:")
+                || trimmed.contains("questionArtifactId")
+                || (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+            return "";
+        }
+        return trimmed;
     }
 
     private static String tfngRelationForResult(String value) {

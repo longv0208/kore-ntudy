@@ -45,16 +45,21 @@ public class LeaderClassApprovalService {
         Map<Long, String> subjectCodes = new HashMap<>();
         for (Department subject : subjects) {
             subjectCodes.put(subject.getId(), subject.getCode());
-            pending.addAll(classRepository.findAllBySubjectIdAndStatusOrderByCreatedAtDesc(
+            pending.addAll(classRepository.findAllBySubjectIdAndStatusOrderByUpdatedAtDescIdDesc(
                     subject.getId(), ClassEntity.STATUS_PENDING));
         }
-        pending.sort((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()));
-        Map<Long, String> names = new HashMap<>();
-        pending.forEach(clazz -> userRepository.findById(clazz.getLecturerId())
-                .ifPresent(user -> names.put(user.getId(), user.getFullName())));
+        pending.sort((left, right) -> reviewRequestedAt(right)
+                .compareTo(reviewRequestedAt(left)));
+        Map<Long, LecturerContact> contacts = new HashMap<>();
+        userRepository.findAllById(pending.stream().map(ClassEntity::getLecturerId)
+                        .distinct().toList())
+                .forEach(user -> contacts.put(user.getId(),
+                        new LecturerContact(user.getFullName(), user.getEmail())));
         List<PendingClassRow> rows = pending.stream().map(clazz -> new PendingClassRow(
                 clazz.getId(), clazz.getName(), subjectCodes.get(clazz.getSubjectId()),
-                names.getOrDefault(clazz.getLecturerId(), "—"), clazz.getCreatedAt())).toList();
+                contacts.getOrDefault(clazz.getLecturerId(), LecturerContact.EMPTY).name(),
+                contacts.getOrDefault(clazz.getLecturerId(), LecturerContact.EMPTY).email(),
+                reviewRequestedAt(clazz))).toList();
         return new ApprovalQueueView(summary(subjects), rows, false);
     }
 
@@ -96,6 +101,16 @@ public class LeaderClassApprovalService {
                 ? new DepartmentSummary(first.getId(), first.getCode(), first.getName())
                 : new DepartmentSummary(first.getId(), subjects.size() + " mã môn",
                         "Bộ môn tiếng Hàn");
+    }
+
+    private static LocalDateTime reviewRequestedAt(ClassEntity clazz) {
+        LocalDateTime value = clazz.getUpdatedAt() != null
+                ? clazz.getUpdatedAt() : clazz.getCreatedAt();
+        return value == null ? LocalDateTime.MIN : value;
+    }
+
+    private record LecturerContact(String name, String email) {
+        private static final LecturerContact EMPTY = new LecturerContact("—", "—");
     }
 
     private void notifyOutcome(ClassEntity clazz, String type, String title, String body) {

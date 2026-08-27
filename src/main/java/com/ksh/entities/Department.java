@@ -38,6 +38,13 @@ public class Department {
     @Column(name = "leader_user_id")
     private Long leaderUserId;
 
+    /**
+     * Prevents further authoring of the canonical curriculum while keeping
+     * existing versions available for class distribution.
+     */
+    @Column(name = "library_locked", nullable = false)
+    private boolean libraryLocked;
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -91,6 +98,11 @@ public class Department {
         this.leaderUserId = leaderUserId;
     }
 
+    /** Locks or unlocks canonical Library authoring for this subject. */
+    public void setLibraryLocked(boolean libraryLocked) {
+        this.libraryLocked = libraryLocked;
+    }
+
     /** Flips the active flag and returns the new state. */
     public boolean toggleActive() {
         this.active = !this.active;
@@ -115,6 +127,10 @@ public class Department {
 
     public Long getLeaderUserId() {
         return leaderUserId;
+    }
+
+    public boolean isLibraryLocked() {
+        return libraryLocked;
     }
 
     public boolean isActive() {

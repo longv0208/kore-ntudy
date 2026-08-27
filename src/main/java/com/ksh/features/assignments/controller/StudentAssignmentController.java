@@ -118,25 +118,6 @@ public class StudentAssignmentController {
         return "redirect:" + studentAssignmentUrl(classId, assignmentId);
     }
 
-    // ── Feedback ──────────────────────────────────────────────────────────
-
-    /** Shows the graded feedback page for the student. */
-    @GetMapping("/{assignmentId}/feedback")
-    public String feedback(@PathVariable Long classId,
-                           @PathVariable Long assignmentId,
-                           @AuthenticationPrincipal KshUserDetails user,
-                           Model model) {
-        ClassEntity clazz = loadClass(classId);
-        try {
-            model.addAttribute(ATTR_ASSIGNMENT,
-                    assignmentService.getForStudent(classId, assignmentId, user.getId()));
-        } catch (EntityNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        modelSupport.populateDetail(model, clazz, TAB_ASSIGNMENTS, user.getId(), user.getRole());
-        return VIEW_STUDENT_ASSIGNMENT_FEEDBACK;
-    }
-
     // ── Helpers ───────────────────────────────────────────────────────────
 
     /** Builds the canonical URL for a single student assignment. */

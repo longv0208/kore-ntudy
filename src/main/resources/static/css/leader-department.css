@@ -135,6 +135,10 @@
   font-weight: 700;
 }
 
+.leader-lecturer-contact { display: grid; gap: 3px; }
+.leader-lecturer-contact strong { color: #263d4b; }
+.leader-lecturer-contact a { color: #2876a1; font-size: .78rem; }
+
 .leader-approval-action-cell {
   min-width: 360px;
 }
@@ -207,7 +211,30 @@
   }
 }
 
+.leader-workspace {
+  width: min(1480px, calc(100% - 32px));
+  min-height: calc(100vh - var(--header-height, 64px) - 48px);
+  margin: 24px auto 48px;
+  overflow: hidden;
+  border: 1px solid #dbe9f1;
+  border-radius: 18px;
+  background: #f8fbfd;
+  box-shadow: 0 14px 40px rgba(35, 75, 99, .07);
+}
+.leader-workspace > aside.col > .side {
+  position: static;
+  min-height: 100%;
+  height: auto;
+}
+
 @media (max-width: 720px) {
+  .leader-workspace {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .leader-approval-main > .detail-sub {
     line-height: 1.55;
   }

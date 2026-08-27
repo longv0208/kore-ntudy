@@ -53,8 +53,7 @@ public interface FlashcardDeckRepository extends JpaRepository<FlashcardDeck, Lo
      * SHARED decks targeting any of the given classes, excluding the caller's
      * own decks (those already appear in the "own" list). Newest-updated first.
      */
-    List<FlashcardDeck> findByVisibilityAndClassIdInAndOwnerIdNotOrderByUpdatedAtDesc(
-            String visibility, Collection<Long> classIds, Long ownerId);
+    List<FlashcardDeck> findByVisibilityOrderByUpdatedAtDesc(String visibility);
 
     /** Searches class-shared decks by deck title or canonical subject code/name. */
     @Query("""

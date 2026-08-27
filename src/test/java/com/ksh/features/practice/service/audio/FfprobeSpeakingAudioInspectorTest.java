@@ -233,6 +233,29 @@ class FfprobeSpeakingAudioInspectorTest {
     }
 
     @Test
+    void processRunnerEnrichesDurationFromPacketsWhenContainerHeaderDurationIsMissing() throws IOException {
+        Path tempFile = java.nio.file.Files.createTempFile("test-speaking", ".webm");
+        try {
+            AtomicInteger commandCount = new AtomicInteger();
+            DefaultFfprobeProcessRunner runner = new DefaultFfprobeProcessRunner(properties(), command -> {
+                int count = commandCount.incrementAndGet();
+                if (count == 1) {
+                    return FakeProcess.finished("{\"format\":{\"format_name\":\"matroska,webm\"},\"streams\":[{\"codec_type\":\"audio\",\"codec_name\":\"opus\"}]}", "");
+                } else {
+                    return FakeProcess.finished("0.000000,0.020000\n4.980000,0.020000\n", "");
+                }
+            });
+
+            FfprobeProcessResult result = runner.run(tempFile);
+            assertThat(result.getExitCode()).isZero();
+            assertThat(result.getStdout()).contains("\"duration\": \"5.000000\"");
+            assertThat(commandCount.get()).isEqualTo(2);
+        } finally {
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
+    }
+
+    @Test
     void propagatesProbeTimeoutUnavailableOutputLimitAndRestoresInterruption() {
         assertThatThrownBy(() -> inspector(path -> {
             throw new SpeakingAudioValidationException(SpeakingAudioValidationCategory.PROBE_TIMEOUT, "Audio probe timed out");

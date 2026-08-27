@@ -121,6 +121,7 @@
 
 /* ── Class row ─────────────────────────────────────────────────────── */
 .class-row {
+  position: relative;
   display: grid; grid-template-columns: 1fr 88px 88px 88px 88px 40px;
   align-items: center; gap: 8px; padding: 16px 20px;
   border-bottom: 1px solid var(--border-soft);
@@ -320,3 +321,23 @@
 .menu-item:disabled, .menu-item[disabled] {
   opacity: 0.45; cursor: not-allowed;
 }
+.class-resubmit-inline {
+  position: absolute;
+  top: 9px;
+  right: 54px;
+  z-index: 2;
+  margin: 0;
+}
+.class-resubmit-inline button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #e7aeb0;
+  border-radius: 999px;
+  background: #fff5f5;
+  color: #a33139;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.class-resubmit-inline button:hover { background: #ffe9ea; }

@@ -22,7 +22,7 @@ import java.util.Map;
  * the controllers stay focused on request mapping.
  *
  * <p>{@link #populateDetail} centralises the attributes consumed by the
- * detail layout across board, members, settings and placeholder tabs.
+ * detail layout across lessons, members, materials, settings and placeholder tabs.
  */
 @Component
 public class ClassDetailModelSupport {

@@ -11,6 +11,7 @@
   <div class="student-class-detail-grid">
     <div th:replace="~{fragments/student-class-sidebar :: classSidebar('members', ${view.classId()}, ${view.className()}, ${view.classCode()}, ${view.lecturerName()}, ~{}, ~{})}"></div>
     <section class="student-class-detail-main">
+      <div class="student-class-members-panel">
       <header class="student-class-detail-heading student-class-members-heading">
         <div>
           <p class="student-class-detail-eyebrow">Danh bạ lớp</p>
@@ -39,6 +40,7 @@
           </form>
           <span class="student-class-member-you" th:unless="${member.canMessage()}">Bạn</span>
         </article>
+      </div>
       </div>
     </section>
   </div>

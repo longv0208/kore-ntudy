@@ -50,6 +50,20 @@ class PracticeAttemptAnswerCodecTest {
     }
 
     @Test
+    void readerTreatsNullResponsesAsAnEmptyUnansweredSubmission() {
+        String historical = """
+                {"schemaVersion":"practice-attempt-answers.v2","responses":null}
+                """;
+
+        PracticeAttemptAnswerCodec.DecodedAnswers decoded =
+                codec.read(historical, Map.of());
+
+        assertThat(decoded.textAnswers()).isEmpty();
+        assertThat(decoded.writingBlankAnswers()).isEmpty();
+        assertThat(codec.write(decoded)).doesNotContain("\"responses\":null");
+    }
+
+    @Test
     void structuredWriterAndReaderRetainEveryIntentionallyEmptyBlank() {
         WritingBlankContract.QuestionResponse authority =
                 structuredAuthority();

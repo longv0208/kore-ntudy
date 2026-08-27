@@ -192,7 +192,10 @@ public class PracticeAttemptAnswerCodec {
                     "Unsupported Practice attempt answer schema");
         }
         JsonNode responses = root.get("responses");
-        if (responses == null || !responses.isObject()) {
+        if (responses == null || responses.isNull()) {
+            return new DecodedAnswers(Map.of(), Map.of(), false, false);
+        }
+        if (!responses.isObject()) {
             throw invalid(
                     "Practice attempt responses must be an object");
         }

@@ -20,11 +20,24 @@ import java.util.Optional;
  */
 public interface LessonAttachmentRepository extends JpaRepository<LessonAttachment, Long> {
 
-    /** Attachment counts grouped by class through their live lesson snapshots. */
-    @Query("SELECT s.classId AS classId, COUNT(a) AS cnt "
-            + "FROM LessonAttachment a, Lesson l, Section s "
-            + "WHERE a.lessonId = l.id AND l.sectionId = s.id "
-            + "AND s.classId IN :classIds GROUP BY s.classId")
+    /** Lesson-level and direct class-material counts grouped by class. */
+    @Query(value = """
+            SELECT grouped.class_id AS classId, SUM(grouped.cnt) AS cnt
+            FROM (
+                SELECT s.class_id, COUNT(*) AS cnt
+                FROM lesson_attachments a
+                JOIN lessons l ON l.id = a.lesson_id AND l.is_deleted = 0
+                JOIN sections s ON s.id = l.section_id
+                WHERE s.class_id IN (:classIds)
+                GROUP BY s.class_id
+                UNION ALL
+                SELECT a.class_id, COUNT(*) AS cnt
+                FROM lesson_attachments a
+                WHERE a.class_id IN (:classIds)
+                GROUP BY a.class_id
+            ) grouped
+            GROUP BY grouped.class_id
+            """, nativeQuery = true)
     List<ClassCount> countGroupedByClassIds(@Param("classIds") Collection<Long> classIds);
 
     interface ClassCount {
@@ -40,6 +53,15 @@ public interface LessonAttachmentRepository extends JpaRepository<LessonAttachme
 
     /** Duplicate guard for no-copy personal/canonical library bindings. */
     boolean existsByLessonIdAndLibraryAssetId(Long lessonId, Long libraryAssetId);
+
+    /** Direct class Materials rows, newest first. */
+    List<LessonAttachment> findByClassIdOrderByUploadedAtDescIdDesc(Long classId);
+
+    /** URL-scope guard for a class material. */
+    Optional<LessonAttachment> findByIdAndClassId(Long id, Long classId);
+
+    /** Idempotency guard for one personal asset shared to one class. */
+    boolean existsByClassIdAndLibraryAssetId(Long classId, Long libraryAssetId);
 
     /** Canonical subset replaced during an exact-provenance snapshot refresh. */
     List<LessonAttachment> findByLessonIdAndOriginScopeOrderByUploadedAtAsc(

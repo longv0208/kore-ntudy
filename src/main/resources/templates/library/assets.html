@@ -196,7 +196,7 @@
       </a>
       <button type="button" class="personal-library-share-option" data-share-class-mode>
         <strong>Chỉ lớp này</strong>
-        <span>Gắn tài liệu DOCUMENT làm file bổ sung vào đúng một bài hiện có; không thay PDF/video chính.</span>
+        <span>Chia sẻ DOCUMENT vào tab Tài liệu của đúng một lớp; không đưa vào vùng Bài giảng.</span>
       </button>
     </div>
 
@@ -206,7 +206,7 @@
 
     <form class="personal-library-class-share" data-class-share-form hidden>
       <p class="personal-library-class-share-help">
-        Hệ thống chỉ hiển thị lớp bạn là chủ sở hữu. Tệp được tham chiếu từ kho cá nhân, không sao chép dữ liệu.
+        Hệ thống chỉ hiển thị lớp ACTIVE bạn là chủ sở hữu. Tệp được tham chiếu từ kho cá nhân, không sao chép dữ liệu.
       </p>
       <label>
         <span>Lớp nhận tài liệu</span>
@@ -214,23 +214,11 @@
           <option value="">Chọn lớp…</option>
         </select>
       </label>
-      <label>
-        <span>Chương</span>
-        <select name="sectionId" data-share-section required disabled>
-          <option value="">Chọn chương…</option>
-        </select>
-      </label>
-      <label>
-        <span>Bài giảng</span>
-        <select name="lessonId" data-share-lesson required disabled>
-          <option value="">Chọn bài giảng…</option>
-        </select>
-      </label>
       <div class="personal-library-share-status" data-share-status role="status" aria-live="polite"></div>
       <div class="personal-library-share-actions">
         <button type="button" data-share-close>Huỷ</button>
         <button type="submit" class="personal-library-primary-action" data-share-submit disabled>
-          Chia sẻ vào bài giảng
+          Chia sẻ vào Tài liệu
         </button>
       </div>
     </form>

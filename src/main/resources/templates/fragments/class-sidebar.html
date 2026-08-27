@@ -3,12 +3,11 @@
 <!--
   Fragment: classSidebar(clazz, activeTab)
     clazz     : ClassEntity hien dang xem
-    activeTab : 'board' | 'schedule' | 'members' | 'roles' | 'groups' |
-                'assignments' | 'scores' | 'progress' | 'lessons' |
-                'materials' | 'settings'
+    activeTab : 'members' | 'assignments' | 'tests' | 'scores' | 'progress' |
+                'lessons' | 'materials' | 'settings'
 
   Render mot card sidebar 280px (cot trai layout chi tiet lop): info lop,
-  share link, nav 10 muc + button "Cai dat lop hoc" o footer.
+  teaching-team info, task navigation + button "Cai dat lop hoc" o footer.
 
   Yeu cau: main.css + app-shell.css + class-detail.css da load truoc.
 -->
@@ -57,12 +56,6 @@
       </summary>
 
     <ul class="side-nav">
-      <li>
-        <a th:href="@{'/lecturer/classes/' + ${clazz.id} + '/board'}"
-           th:classappend="${activeTab == 'board'} ? 'active' : ''">
-          <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Bảng tin
-        </a>
-      </li>
       <li>
         <a th:href="@{'/lecturer/classes/' + ${clazz.id} + '/members'}"
            th:classappend="${activeTab == 'members'} ? 'active' : ''">

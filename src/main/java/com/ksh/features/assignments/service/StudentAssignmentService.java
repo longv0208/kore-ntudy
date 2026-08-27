@@ -83,10 +83,14 @@ public class StudentAssignmentService {
                 a.getDueDate(), a.getMaxScore(), a.isAllowLateSubmission(),
                 sub.map(AssignmentSubmission::getId).orElse(null),
                 sub.map(AssignmentSubmission::getContent).orElse(null),
+                sub.map(AssignmentSubmission::getAttachmentUrl).orElse(null),
                 sub.map(AssignmentSubmission::getStatus).orElse(null),
                 sub.map(AssignmentSubmission::isLate).orElse(false),
+                sub.map(AssignmentSubmission::getSubmittedAt).orElse(null),
                 fb.map(AssignmentFeedback::getScore).orElse(null),
-                fb.map(AssignmentFeedback::getFeedback).orElse(null));
+                fb.map(AssignmentFeedback::getFeedback).orElse(null),
+                fb.map(row -> row.getUpdatedAt() != null
+                        ? row.getUpdatedAt() : row.getCreatedAt()).orElse(null));
     }
 
     /**

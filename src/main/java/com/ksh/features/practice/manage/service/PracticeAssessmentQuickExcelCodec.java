@@ -76,6 +76,192 @@ final class PracticeAssessmentQuickExcelCodec {
             "Q53", 30,
             "Q54", 50);
 
+    private static final List<List<String>> SAMPLE_ROWS = List.of(
+            // --- 10 Reading Sample Questions (Groups 1 to 5) ---
+            List.of(
+                    "reading_g1", "Bài đọc 1 - Biển báo", "[1~2] 다음을 읽고 무엇에 대한 글인지 고르십시오.",
+                    "깨끗한 물, 맑은 공기. 우리 함께 지켜요. 매주 토요일 환경 봉사 활동에 참여하세요.",
+                    "reading_q1", "1", "SINGLE_CHOICE", "",
+                    "이 글의 주제로 가장 알맞은 것을 고르십시오.",
+                    "환경 보호", "교통 안전", "건강 관리", "시간 절약", "", "", "", "",
+                    "A", "", "", "2.0",
+                    "Đoạn văn nói về việc bảo vệ nguồn nước và không khí sạch, tham gia hoạt động tình nguyện môi trường -> Chọn A.", "", ""
+            ),
+            List.of(
+                    "reading_g1", "Bài đọc 1 - Biển báo", "[1~2] 다음을 읽고 무엇에 대한 글인지 고르십시오.",
+                    "깨끗한 물, 맑은 공기. 우리 함께 지켜요. 매주 토요일 환경 봉사 활동에 참여하세요.",
+                    "reading_q2", "2", "SINGLE_CHOICE", "",
+                    "봉사 활동은 언제 합니까?",
+                    "매주 일요일", "매주 토요일", "매월 첫째 날", "평일 오후", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Trong bài nêu rõ '매주 토요일 환경 봉사 활동에 참여하세요' -> Chọn B (Mỗi thứ 7).", "", ""
+            ),
+            List.of(
+                    "reading_g2", "Bài đọc 2 - Thư viện", "[3~4] 다음 글을 읽고 물음에 답하십시오.",
+                    "한국 대학교 도서관은 시험 기간 동안 24시간 개방합니다. 학생증이 있어야 들어갈 수 있으며, 도서는 한 번에 최대 5권까지 대출 가능합니다. 단, 주말에는 2층 열람실을 이용할 수 없습니다.",
+                    "reading_q3", "3", "TRUE_FALSE_NOT_GIVEN", "",
+                    "시험 기간에는 밤에도 도서관을 이용할 수 있다.",
+                    "", "", "", "", "", "", "", "",
+                    "TRUE", "", "", "2.0",
+                    "Bài đọc nêu thư viện mở cửa 24h trong kỳ thi, nên ban đêm vẫn vào được -> Chọn TRUE.", "", ""
+            ),
+            List.of(
+                    "reading_g2", "Bài đọc 2 - Thư viện", "[3~4] 다음 글을 읽고 물음에 답하십시오.",
+                    "한국 대학교 도서관은 시험 기간 동안 24시간 개방합니다. 학생증이 있어야 들어갈 수 있으며, 도서는 한 번에 최대 5권까지 대출 가능합니다. 단, 주말에는 2층 열람실을 이용할 수 없습니다.",
+                    "reading_q4", "4", "SINGLE_CHOICE", "",
+                    "도서관 이용에 대한 설명으로 맞는 것을 고르십시오.",
+                    "학생증 없이 누구나 이용할 수 있다.", "주말에는 2층 열람실을 쓸 수 없다.", "도서는 최대 3권까지 빌릴 수 있다.", "시험 기간에는 낮에만 연다.", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Đoạn văn nêu rõ '단, 주말에는 2층 열람실을 이용할 수 없습니다' -> Chọn B.", "", ""
+            ),
+            List.of(
+                    "reading_g3", "Bài đọc 3 - Điền từ ngữ cảnh", "[5~6] 다음을 읽고 빈칸에 들어갈 가장 알맞은 것을 고르십시오.",
+                    "저는 지난 주말에 친구와 함께 산에 갔습니다. 날씨가 아주 맑아서 경치가 아름다웠습니다. 정상에 올라가서 사진을 찍고 준비해 간 도시락을 맛있게 먹었습니다.",
+                    "reading_q5", "5", "SINGLE_CHOICE", "",
+                    "글쓴이가 지난 주말에 한 일로 맞지 않는 것은 무엇입니까?",
+                    "친구와 산에 갔다.", "정상에서 사진을 찍었다.", "식당에서 밥을 사 먹었다.", "도시락을 먹었다.", "", "", "", "",
+                    "C", "", "", "2.0",
+                    "Người viết mang cơm hộp đi (준비해 간 도시락) chứ không ăn ở nhà hàng -> Chọn C.", "", ""
+            ),
+            List.of(
+                    "reading_g3", "Bài đọc 3 - Điền từ ngữ cảnh", "[5~6] 다음을 읽고 빈칸에 들어갈 가장 알맞은 것을 고르십시오.",
+                    "저는 지난 주말에 친구와 함께 산에 갔습니다. 날씨가 아주 맑아서 경치가 아름다웠습니다. 정상에 올라가서 사진을 찍고 준비해 간 도시락을 맛있게 먹었습니다.",
+                    "reading_q6", "6", "FILL_BLANK", "",
+                    "글쓴이는 지난 주말에 친구와 함께 {{blank:blank_1}}에 갔습니다.",
+                    "", "", "", "", "", "", "", "",
+                    "", "산", "", "2.0",
+                    "Câu đầu tiên nêu rõ '친구와 함께 산에 갔습니다' -> Điền '산'.", "", ""
+            ),
+            List.of(
+                    "reading_g4", "Bài đọc 4 - Văn hóa ngày lễ", "[7~8] 다음 글을 읽고 물음에 답하십시오.",
+                    "한국에서는 명절에 가족들이 모여 전통 음식을 만들어 먹습니다. 설날에는 떡국을 먹으며 새해의 건강과 복을 기원하고, 추석에는 송편을 빚으며 풍성한 수확에 감사하는 마음을 나눕니다.",
+                    "reading_q7", "7", "MULTIPLE_ANSWER", "",
+                    "본문에 언급된 한국의 명절 음식을 모두 고르십시오.",
+                    "떡국", "김치찌개", "송편", "비빔밥", "", "", "", "",
+                    "A,C", "", "", "2.0",
+                    "Trong bài nhắc đến Tteokguk (설날) và Songpyeon (추석) -> Chọn A và C.", "", ""
+            ),
+            List.of(
+                    "reading_g4", "Bài đọc 4 - Văn hóa ngày lễ", "[7~8] 다음 글을 읽고 물음에 답하십시오.",
+                    "한국에서는 명절에 가족들이 모여 전통 음식을 만들어 먹습니다. 설날에는 떡국을 먹으며 새해의 건강과 복을 기원하고, 추석에는 송편을 빚으며 풍성한 수확에 감사하는 마음을 나눕니다.",
+                    "reading_q8", "8", "SINGLE_CHOICE", "",
+                    "설날에 떡국을 먹는 의미는 무엇입니까?",
+                    "풍성한 수확에 감사하기 위해", "새해의 건강과 복을 기원하기 위해", "조상에게 제사를 지내기 위해", "오랜 친구를 만나기 위해", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Bài đọc nêu '설날에는 떡국을 먹으며 새해의 건강과 복을 기원하고' -> Chọn B.", "", ""
+            ),
+            List.of(
+                    "reading_g5", "Bài đọc 5 - Phương pháp học tập", "[9~10] 다음 글을 읽고 물음에 답하십시오.",
+                    "외국어를 배울 때 가장 중요한 것은 매일 꾸준히 연습하는 습관입니다. 한꺼번에 많은 양을 공부하는 것보다 하루에 20~30분씩이라도 듣고 말하는 연습을 반복하는 것이 언어 감각을 유지하는 데 훨씬 효과적입니다.",
+                    "reading_q9", "9", "SINGLE_CHOICE", "",
+                    "이 글의 중심 생각으로 가장 알맞은 것을 고르십시오.",
+                    "외국어는 단기간에 집중해서 끝내야 한다.", "매일 조금씩 꾸준히 연습하는 것이 효과적이다.", "문법 암기가 회화보다 훨씬 중요하다.", "혼자 공부하는 것보다 학원에 가야 한다.", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Ý chính của đoạn văn: Học đều đặn mỗi ngày tốt hơn nhồi nhét nhiều trong một lần -> Chọn B.", "", ""
+            ),
+            List.of(
+                    "reading_g5", "Bài đọc 5 - Phương pháp học tập", "[9~10] 다음 글을 읽고 물음에 답하십시오.",
+                    "외국어를 배울 때 가장 중요한 것은 매일 꾸준히 연습하는 습관입니다. 한꺼번에 많은 양을 공부하는 것보다 하루에 20~30분씩이라도 듣고 말하는 연습을 반복하는 것이 언어 감각을 유지하는 데 훨씬 효과적입니다.",
+                    "reading_q10", "10", "TRUE_FALSE_NOT_GIVEN", "",
+                    "하루에 20~30분씩 연습하는 것이 한꺼번에 공부하는 것보다 낫다.",
+                    "", "", "", "", "", "", "", "",
+                    "TRUE", "", "", "2.0",
+                    "Đoạn văn khẳng định việc học 20-30 phút/ngày hiệu quả hơn -> Chọn TRUE.", "", ""
+            ),
+
+            // --- 10 Listening Sample Questions (Groups 6 to 10) ---
+            List.of(
+                    "listening_g1", "Hội thoại 1 - Mua sắm", "[11~12] 다음 대화를 듣고 물음에 답하십시오.",
+                    "남자: 손님, 찾으시는 물건 있으세요?\n여자: 네, 따뜻한 털장갑 있어요?\n남자: 네, 이쪽에 최신 상품들이 있습니다. 한번 껴 보세요.\n여자: 디자인이 마음에 드네요. 이걸로 주세요.",
+                    "listening_q1", "11", "SINGLE_CHOICE", "",
+                    "두 사람이 대화하고 있는 장소는 어디입니까?",
+                    "서점", "옷가게", "식당", "병원", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Khách hỏi mua găng tay lông (털장갑) -> Cửa hàng thời trang/quần áo (옷가게).", "", ""
+            ),
+            List.of(
+                    "listening_g1", "Hội thoại 1 - Mua sắm", "[11~12] 다음 대화를 듣고 물음에 답하십시오.",
+                    "남자: 손님, 찾으시는 물건 있으세요?\n여자: 네, 따뜻한 털장갑 있어요?\n남자: 네, 이쪽에 최신 상품들이 있습니다. 한번 껴 보세요.\n여자: 디자인이 마음에 드네요. 이걸로 주세요.",
+                    "listening_q2", "12", "SINGLE_CHOICE", "",
+                    "여자는 무엇을 사기로 결정했습니까?",
+                    "털모자", "털장갑", "목도리", "외투", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Khách nữ chọn mua găng tay (이걸로 주세요) -> Chọn B (털장갑).", "", ""
+            ),
+            List.of(
+                    "listening_g2", "Thông báo 1 - Hoạt động ngoại khóa", "[13~14] 다음 안내 방송을 듣고 물음에 답하십시오.",
+                    "안내 말씀 드리겠습니다. 이번 주 금요일 오후 3시 대강당에서 외국인 유학생을 위한 한국 문화 체험 행사가 열립니다. 참가를 원하시는 분은 목요일까지 학생회관 3층 사무실로 신청해 주시기 바랍니다.",
+                    "listening_q3", "13", "SINGLE_CHOICE", "",
+                    "문화 체험 행사는 언제 열립니까?",
+                    "목요일 오후 3시", "금요일 오후 3시", "금요일 오전 10시", "토요일 오후 2시", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Thông báo phát: '이번 주 금요일 오후 3시' -> Chọn B.", "", ""
+            ),
+            List.of(
+                    "listening_g2", "Thông báo 1 - Hoạt động ngoại khóa", "[13~14] 다음 안내 방송을 듣고 물음에 답하십시오.",
+                    "안내 말씀 드리겠습니다. 이번 주 금요일 오후 3시 대강당에서 외국인 유학생을 위한 한국 문화 체험 행사가 열립니다. 참가를 원하시는 분은 목요일까지 학생회관 3층 사무실로 신청해 주시기 바랍니다.",
+                    "listening_q4", "14", "FILL_BLANK", "",
+                    "신청 장소는 학생회관 {{blank:blank_1}}층 사무실입니다.",
+                    "", "", "", "", "", "", "", "",
+                    "", "3|삼", "", "2.0",
+                    "Lời thông báo: '학생회관 3층 사무실로' -> Điền '3' hoặc '삼'.", "", ""
+            ),
+            List.of(
+                    "listening_g3", "Hội thoại 2 - Phỏng vấn học tiếng Hàn", "[15~16] 다음 대화를 듣고 물음에 답하십시오.",
+                    "남자: 민수 씨는 한국어 실력이 정말 많이 늘었네요. 비결이 뭐예요?\n여자: 저는 매일 아침 뉴스를 들으면서 쉐도잉 연습을 해요. 그리고 모르는 표현은 메모해 두고 바로 복습해요.",
+                    "listening_q5", "15", "MULTIPLE_ANSWER", "",
+                    "여자가 한국어를 공부하는 방법으로 언급된 것을 모두 고르십시오.",
+                    "매일 아침 뉴스 듣기", "주말마다 한국 영화 보기", "쉐도잉 따라 말하기", "외국인 친구와 여행 가기", "", "", "", "",
+                    "A,C", "", "", "2.0",
+                    "Người nữ nghe tin tức mỗi sáng (A) và luyện shadowing (C).", "", ""
+            ),
+            List.of(
+                    "listening_g3", "Hội thoại 2 - Phỏng vấn học tiếng Hàn", "[15~16] 다음 대화를 듣고 물음에 답하십시오.",
+                    "남자: 민수 씨는 한국어 실력이 정말 많이 늘었네요. 비결이 뭐예요?\n여자: 저는 매일 아침 뉴스를 들으면서 쉐도잉 연습을 해요. 그리고 모르는 표현은 메모해 두고 바로 복습해요.",
+                    "listening_q6", "16", "TRUE_FALSE_NOT_GIVEN", "",
+                    "여자는 모르는 표현을 메모해서 복습한다.",
+                    "", "", "", "", "", "", "", "",
+                    "TRUE", "", "", "2.0",
+                    "Người nữ nói rõ '모르는 표현은 메모해 두고 바로 복습해요' -> Chọn TRUE.", "", ""
+            ),
+            List.of(
+                    "listening_g4", "Hội thoại 3 - Hỏi đường xe buýt", "[17~18] 다음 대화를 듣고 물음에 답하십시오.",
+                    "여자: 실례합니다. 시청역으로 가려면 몇 번 버스를 타야 하나요?\n남자: 여기서 100번 버스를 타시면 세 정거장 후에 시청역 정류장에 도착합니다. 건너편 정류장이 아니라 여기서 바로 타셔야 합니다.",
+                    "listening_q7", "17", "SINGLE_CHOICE", "",
+                    "시청역으로 가려면 몇 번 버스를 타야 합니까?",
+                    "10번 버스", "100번 버스", "200번 버스", "500번 버스", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Người nam hướng dẫn: '여기서 100번 버스를 타시면' -> Chọn B (100번).", "", ""
+            ),
+            List.of(
+                    "listening_g4", "Hội thoại 3 - Hỏi đường xe buýt", "[17~18] 다음 대화를 듣고 물음에 답하십시오.",
+                    "여자: 실례합니다. 시청역으로 가려면 몇 번 버스를 타야 하나요?\n남자: 여기서 100번 버스를 타시면 세 정거장 후에 시청역 정류장에 도착합니다. 건너편 정류장이 아니라 여기서 바로 타셔야 합니다.",
+                    "listening_q8", "18", "SINGLE_CHOICE", "",
+                    "시청역까지 몇 정거장 가야 합니까?",
+                    "한 정거장", "두 정거장", "세 정거장", "네 정거장", "", "", "", "",
+                    "C", "", "", "2.0",
+                    "Người nam nói: '세 정거장 후에 시청역 정류장에 도착합니다' -> Chọn C (3 trạm).", "", ""
+            ),
+            List.of(
+                    "listening_g5", "Bài giảng 1 - Thói quen uống nước", "[19~20] 다음 강연을 듣고 물음에 답하십시오.",
+                    "여러분, 하루에 물을 얼마나 드시나요? 성인의 경우 하루 평균 1.5리터에서 2리터 정도의 수분을 섭취하는 것이 좋습니다. 특히 아침에 일어나서 마시는 미지근한 물 한 잔은 신진대사를 촉진하고 혈액 순환을 돕는 데 큰 도움이 됩니다.",
+                    "listening_q9", "19", "SINGLE_CHOICE", "",
+                    "강연자가 성인에게 권장하는 하루 수분 섭취량은 얼마입니까?",
+                    "0.5L ~ 1L", "1.5L ~ 2L", "2.5L ~ 3L", "3.5L ~ 4L", "", "", "", "",
+                    "B", "", "", "2.0",
+                    "Bài giảng nêu '하루 평균 1.5리터에서 2리터 정도의 수분을 섭취하는 것이 좋습니다' -> Chọn B.", "", ""
+            ),
+            List.of(
+                    "listening_g5", "Bài giảng 1 - Thói quen uống nước", "[19~20] 다음 강연을 듣고 물음에 답하십시오.",
+                    "여러분, 하루에 물을 얼마나 드시나요? 성인의 경우 하루 평균 1.5리터에서 2리터 정도의 수분을 섭취하는 것이 좋습니다. 특히 아침에 일어나서 마시는 미지근한 물 한 잔은 신진대사를 촉진하고 혈액 순환을 돕는 데 큰 도움이 됩니다.",
+                    "listening_q10", "20", "TRUE_FALSE_NOT_GIVEN", "",
+                    "아침에 마시는 미지근한 물은 신진대사와 혈액 순환에 도움이 된다.",
+                    "", "", "", "", "", "", "", "",
+                    "TRUE", "", "", "2.0",
+                    "Bài giảng khẳng định rõ tác dụng của ly nước ấm buổi sáng -> Chọn TRUE.", "", ""
+            )
+    );
+
     private final ObjectMapper objectMapper;
     private final AssessmentAuthoringCatalogService catalogService;
 
@@ -115,12 +301,15 @@ final class PracticeAssessmentQuickExcelCodec {
             header.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             header.setWrapText(true);
 
+            CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setWrapText(true);
+
             Row identity = sheet.createRow(0);
             identity.createCell(0).setCellValue(SENTINEL);
             identity.createCell(1).setCellValue(CONTRACT_VERSION);
             Row note = sheet.createRow(1);
             note.createCell(0).setCellValue(
-                    "Nhập câu hỏi từ dòng 4. Target Test/kỹ năng/lesson do route KSH quyết định.");
+                    "Nhập câu hỏi từ dòng 4 (bên dưới đã có 10 câu Đọc và 10 câu Nghe mẫu chuẩn). Target Test/kỹ năng/lesson do route KSH quyết định.");
             Row headerRow = sheet.createRow(2);
             for (int index = 0; index < HEADERS.size(); index++) {
                 Cell cell = headerRow.createCell(index);
@@ -128,6 +317,17 @@ final class PracticeAssessmentQuickExcelCodec {
                 cell.setCellStyle(header);
                 sheet.setColumnWidth(index, width(HEADERS.get(index)) * 256);
             }
+
+            for (int rIndex = 0; rIndex < SAMPLE_ROWS.size(); rIndex++) {
+                Row row = sheet.createRow(3 + rIndex);
+                List<String> values = SAMPLE_ROWS.get(rIndex);
+                for (int cIndex = 0; cIndex < values.size(); cIndex++) {
+                    Cell cell = row.createCell(cIndex);
+                    cell.setCellValue(values.get(cIndex));
+                    cell.setCellStyle(dataStyle);
+                }
+            }
+
             sheet.createFreezePane(0, 3);
             sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(
                     2, 2, 0, HEADERS.size() - 1));
