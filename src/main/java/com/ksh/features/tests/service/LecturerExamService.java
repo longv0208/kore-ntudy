@@ -105,8 +105,9 @@ public class LecturerExamService {
         PageRequest pageable = PageRequest.of(Math.max(page, 0), DEFAULT_EXAM_PAGE_SIZE,
                 Sort.by(Sort.Direction.DESC, "updatedAt"));
         List<Long> classIds = manageableClassIds(userId, role);
-        Page<Test> result = testRepository.searchManageable(userId, classIds,
-                role == Role.ADMIN, role == Role.LECTURER, filter.classId(),
+        List<Long> subjectIds = manageableSubjectIds(userId, role);
+        Page<Test> result = testRepository.searchManageable(userId, classIds, subjectIds,
+                role == Role.ADMIN, role == Role.LECTURER || role == Role.LEADER, filter.classId(),
                 filter.keyword(), filter.status(), filter.type(), pageable);
         return toRows(result);
     }
@@ -550,6 +551,14 @@ public class LecturerExamService {
                 .map(ClassEntity::getId)
                 .toList());
         // Sentinel keeps the JPQL IN clause valid when the actor has no class.
+        if (ids.isEmpty()) ids.add(-1L);
+        return ids;
+    }
+
+    private List<Long> manageableSubjectIds(Long userId, Role role) {
+        List<Long> ids = new ArrayList<>(subjectOptions(userId).stream()
+                .map(SubjectOption::id)
+                .toList());
         if (ids.isEmpty()) ids.add(-1L);
         return ids;
     }

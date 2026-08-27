@@ -25,6 +25,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static com.ksh.common.IConstant.DEFAULT_DECK_PAGE_SIZE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -180,6 +182,23 @@ class DeckServiceTest {
         assertThat(deckService.getDetail(id, owner.getId()).shared()).isFalse();
         assertThatThrownBy(() -> deckService.getDetail(id, member.getId()))
                 .isInstanceOf(EntityNotFoundException.class);
+    }
+
+    @Test
+    void one_deck_can_be_shared_to_multiple_classes_without_another_entity() {
+        ClassEntity secondClass = saveClass("Deck class 2", "DKCL2");
+        enrollmentRepository.saveAndFlush(Enrollment.createFor(
+                owner, secondClass.getId(), Enrollment.JoinedVia.REQUEST, null));
+        enrollmentRepository.saveAndFlush(Enrollment.createFor(
+                outsider, secondClass.getId(), Enrollment.JoinedVia.REQUEST, null));
+        Long id = deckService.createDeck(owner.getId(), new DeckForm("Nhiều lớp", null));
+
+        deckService.syncShares(id, owner.getId(), List.of(clazz.getId(), secondClass.getId()));
+
+        assertThat(deckService.getDetail(id, owner.getId()).sharedClassIds())
+                .containsExactlyInAnyOrder(clazz.getId(), secondClass.getId());
+        assertThat(deckService.getDetail(id, member.getId()).owner()).isFalse();
+        assertThat(deckService.getDetail(id, outsider.getId()).owner()).isFalse();
     }
 
     @Test

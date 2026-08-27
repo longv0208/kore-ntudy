@@ -58,7 +58,8 @@
         </div>
         <span th:text="${#lists.size(result.payload().groups()) + ' nhóm'}">2 nhóm</span>
       </div>
-      <div class="pr-objective-group-list">
+      <div class="pr-objective-group-list"
+           th:classappend="${#lists.size(result.payload().groups()) > 6 ? 'is-collapsed' : ''}">
         <article class="pr-objective-group"
                  th:each="group : ${result.payload().groups()}">
           <div class="pr-objective-group-copy">
@@ -103,6 +104,12 @@
             Xem câu trong nhóm
           </a>
         </article>
+      </div>
+      <div class="pr-objective-group-toggle-wrap" th:if="${#lists.size(result.payload().groups()) > 6}">
+        <button type="button" class="pr-objective-group-toggle" id="prGroupToggleBtn" data-collapsed="true">
+          <span class="pr-toggle-more-text" th:text="${'Xem thêm ' + (#lists.size(result.payload().groups()) - 6) + ' nhóm khác ▼'}">Xem thêm nhóm ▼</span>
+          <span class="pr-toggle-less-text" style="display:none">Thu gọn bớt nhóm ▲</span>
+        </button>
       </div>
     </section>
 

@@ -42,7 +42,8 @@ public final class LeaderDtos {
     }
 
     public record PendingClassRow(Long classId, String className, String subjectCode,
-                                  String lecturerName, LocalDateTime createdAt) {
+                                  String lecturerName, String lecturerEmail,
+                                  LocalDateTime requestedAt) {
     }
 
     public record ApprovalQueueView(DepartmentSummary department,

@@ -43,13 +43,13 @@ import static com.ksh.features.classes.controller.support.ClassDetailModelSuppor
  *   <li>{@code GET  /lecturer/classes}             — list all classes for the current user</li>
  *   <li>{@code GET  /lecturer/classes/new}         — render the create-class form</li>
  *   <li>{@code POST /lecturer/classes}             — submit the create-class form</li>
- *   <li>{@code GET  /lecturer/classes/{id}}        — redirect to the default board tab</li>
+ *   <li>{@code GET  /lecturer/classes/{id}}        — redirect to lessons</li>
  *   <li>{@code GET  /lecturer/classes/{id}/edit}   — render the edit-class form</li>
  *   <li>{@code POST /lecturer/classes/{id}}        — submit the edit-class form</li>
  *   <li>{@code POST /lecturer/classes/{id}/delete} — soft-delete after confirm modal</li>
  * </ul>
  *
- * <p>Sidebar tabs (board/members/settings/...) live on
+ * <p>Sidebar tabs (lessons/members/materials/settings/...) live on
  * {@link ClassDetailController}. Validation errors render inline beneath each
  * field via {@code th:errors}; the service layer enforces owner authorization.
  */
@@ -232,10 +232,10 @@ public class ClassesController {
         return "redirect:" + URL_CLASSES_LIST;
     }
 
-    /** Redirects the root class-detail URL to the default {@code /board} tab. */
+    /** Redirects the root class-detail URL straight to lessons. */
     @GetMapping("/classes/{id}")
     public String detailRoot(@PathVariable Long id) {
-        return "redirect:" + classUrl(id) + "/" + TAB_BOARD;
+        return "redirect:" + classUrl(id) + "/" + TAB_LESSONS;
     }
 
     /**

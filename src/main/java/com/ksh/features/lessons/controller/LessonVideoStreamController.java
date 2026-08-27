@@ -88,8 +88,7 @@ public class LessonVideoStreamController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        if (!CONTENT_TYPE_VIDEO.equals(lesson.getContentType())
-                || !VIDEO_PROVIDER_UPLOAD.equals(lesson.getVideoProvider())
+        if (!VIDEO_PROVIDER_UPLOAD.equals(lesson.getVideoProvider())
                 || (lesson.getVideoUrl() == null && !lesson.hasLibraryVideo())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }

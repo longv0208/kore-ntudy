@@ -158,10 +158,13 @@ public final class AssignmentDtos {
      * @param allowLateSubmission whether late submission is allowed
      * @param submissionId        id of the student's existing submission, or null
      * @param submissionContent   content of existing submission, or null
+     * @param submissionAttachmentUrl attachment URL, or null
      * @param submissionStatus    DRAFT/SUBMITTED/GRADED, or null
      * @param isLate              true when the existing submission was late
+     * @param submittedAt         time the immutable submission was received
      * @param score               the grade, or null when not yet graded
      * @param feedback            the feedback text, or null when not yet graded
+     * @param gradedAt            time the current feedback record was last saved
      */
     public record StudentAssignmentDetail(
             Long id,
@@ -173,10 +176,13 @@ public final class AssignmentDtos {
             boolean allowLateSubmission,
             Long submissionId,
             String submissionContent,
+            String submissionAttachmentUrl,
             String submissionStatus,
             boolean isLate,
+            LocalDateTime submittedAt,
             BigDecimal score,
-            String feedback
+            String feedback,
+            LocalDateTime gradedAt
     ) {}
 
     /**

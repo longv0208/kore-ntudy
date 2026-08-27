@@ -160,7 +160,8 @@ public class QuestionBankItemService {
 
     private ItemRow toRow(User actor, QuestionBankItem item, String subjectCode,
                           Map<Long, String> userNames, Map<Long, LessonTemplate> lessons) {
-        LessonTemplate lesson = lessons.get(item.getLessonTemplateId());
+        Long lessonTemplateId = item.getLessonTemplateId();
+        LessonTemplate lesson = lessonTemplateId != null ? lessons.get(lessonTemplateId) : null;
         int chapterOrder = lesson != null ? lesson.getChapterOrder()
                 : snapshotOrder(item.getChapterOrderSnapshot());
         int lessonOrder = lesson != null ? lesson.getDisplayOrder()
@@ -169,12 +170,14 @@ public class QuestionBankItemService {
                 : snapshotTitle(item.getChapterTitleSnapshot(), "Chưa phân chương");
         String lessonTitle = lesson != null ? lesson.getTitle()
                 : snapshotTitle(item.getLessonTitleSnapshot(), "Chưa gắn bài học");
+        Long contributorId = item.getContributorId();
+        String contributorName = contributorId != null ? userNames.getOrDefault(contributorId, "—") : "—";
         return new ItemRow(
                         item.getId(), preview(item.getContent()), item.getQuestionType(),
-                        item.getWorkflowStatus(), subjectCode, item.getLessonTemplateId(),
+                        item.getWorkflowStatus(), subjectCode, lessonTemplateId,
                         chapterOrder, lessonOrder, chapterTitle, lessonTitle,
-                        item.getContributorId(),
-                        userNames.getOrDefault(item.getContributorId(), "—"),
+                        contributorId,
+                        contributorName,
                         item.getUpdatedAt(), canEdit(actor, item), canReview(actor, item),
                         lesson != null);
     }
@@ -513,20 +516,26 @@ public class QuestionBankItemService {
     private Map<Long, LessonTemplate> lessonsById(List<QuestionBankItem> items) {
         List<Long> ids = items.stream().map(QuestionBankItem::getLessonTemplateId)
                 .filter(Objects::nonNull).distinct().toList();
-        if (ids.isEmpty()) return Map.of();
-        return lessonRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(LessonTemplate::getId, lesson -> lesson));
+        if (ids.isEmpty()) return new LinkedHashMap<>();
+        Map<Long, LessonTemplate> map = new LinkedHashMap<>();
+        for (LessonTemplate lesson : lessonRepository.findAllById(ids)) {
+            map.put(lesson.getId(), lesson);
+        }
+        return map;
     }
 
     private ItemDetail toDetail(User actor, QuestionBankItem item, String subjectCode,
                                 Map<Long, String> names,
                                 Map<Long, List<OptionView>> options) {
+        Long contributorId = item.getContributorId();
+        Long reviewedBy = item.getReviewedBy();
         return new ItemDetail(item.getId(), item.getQuestionType(), item.getWorkflowStatus(),
                 HtmlSanitizer.sanitize(item.getContent()), preview(item.getContent()),
                 sanitizeOptional(item.getExplanation()),
                 item.getReviewNote(), subjectCode,
-                item.getContributorId(), names.getOrDefault(item.getContributorId(), "—"),
-                names.get(item.getReviewedBy()),
+                contributorId,
+                contributorId != null ? names.getOrDefault(contributorId, "—") : "—",
+                reviewedBy != null ? names.get(reviewedBy) : null,
                 item.getReviewedAt(), item.getApprovedAt(), item.getUpdatedAt(),
                 options.getOrDefault(item.getId(), List.of()), canEdit(actor, item),
                 canReview(actor, item), canArchive(actor, item), canUnarchive(actor, item));

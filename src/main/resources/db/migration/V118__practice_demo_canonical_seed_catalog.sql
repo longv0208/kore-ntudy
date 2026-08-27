@@ -177,7 +177,7 @@ INSERT INTO practice_questions (
      'FALSE', JSON_OBJECT('schemaVersion','answer-spec-v1','questionType','TRUE_FALSE_NOT_GIVEN',
          'correctOptionIds',JSON_ARRAY('opt_false'),'scoringPolicyCode','ALL_OR_NOTHING'),
      '지수 씨는 동료와 커피를 마신 후 일을 시작합니다.',
-     'rl-explanation-strategy-registry-v2','NOT_GIVEN_BOUNDARY','v1',10.00,1,NULL),
+     'rl-explanation-strategy-registry-v2','TFNG_CONTRADICTION_TABLE','v1',10.00,1,NULL),
     (@reading_set, @reading_group_2, 3, 'SINGLE_CHOICE',
      '도서관이 쉬는 날은 언제입니까?',
      JSON_ARRAY('월요일','금요일','토요일','일요일'),

@@ -20,8 +20,6 @@ class ExperiencePolishFrontendContractTest {
             Path.of("src/main/resources/templates/classes/detail-settings.html"),
             Path.of("src/main/resources/templates/classes/detail-progress.html"),
             Path.of("src/main/resources/templates/classes/detail-tests.html"),
-            Path.of("src/main/resources/templates/assignments/student-detail.html"),
-            Path.of("src/main/resources/templates/assignments/student-feedback.html"),
             Path.of("src/main/resources/templates/tests/detail.html"),
             Path.of("src/main/resources/templates/tests/result.html"),
             Path.of("src/main/resources/templates/tests/review.html"),

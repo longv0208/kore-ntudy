@@ -35,7 +35,7 @@ class AssignmentCatalogUiContractTest {
     }
 
     @Test
-    void student_catalog_is_searchable_responsive_and_keeps_submission_lock_language()
+    void student_catalog_is_searchable_and_detail_renders_result_on_the_same_page()
             throws IOException {
         String template = Files.readString(TEMPLATES.resolve("student-list.html"));
         String detail = Files.readString(TEMPLATES.resolve("student-detail.html"));
@@ -47,7 +47,12 @@ class AssignmentCatalogUiContractTest {
                 "asgn-student-list",
                 "Xem kết quả đã khóa");
         assertThat(template).doesNotContain("<table", "overflow-x:auto");
-        assertThat(detail).contains("asgn-lock-notice");
+        assertThat(detail).contains(
+                "asgn-summary-card",
+                "asgn-submission-card",
+                "asgn-result-card",
+                "Nhận xét của giảng viên");
+        assertThat(detail).doesNotContain("asgn-lock-notice", "/feedback", "experience-polish.css");
     }
 
     @Test

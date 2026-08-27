@@ -23,7 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Canonical refresh replaces canonical material and preserves explicit class share. */
+/** Explicit redistribution replaces canonical material and preserves explicit class share. */
 @SpringBootTest
 @Transactional
 class LessonTemplatePrivateShareRefreshTest {
@@ -43,7 +43,7 @@ class LessonTemplatePrivateShareRefreshTest {
     }
 
     @Test
-    void canonical_refresh_keeps_class_private_and_replaces_canonical_rows() {
+    void explicit_redistribution_keeps_class_private_and_replaces_canonical_rows() {
         LibraryAsset canonicalAsset = assetRepository.saveAndFlush(new LibraryAsset(
                 lecturer.getId(), "Tài liệu chuẩn", "canonical.pdf",
                 "library/" + lecturer.getId() + "/canonical.pdf",
@@ -89,6 +89,13 @@ class LessonTemplatePrivateShareRefreshTest {
                 lecturer.getId(), Role.LECTURER, template.id(), lecturer.getSubjectId());
         edit.setContentRichtext("<p>Phiên bản 2</p>");
         templateService.saveForm(lecturer.getId(), Role.LECTURER, edit);
+
+        assertThat(attachmentRepository.findByLessonIdOrderByUploadedAtAsc(lessonId))
+                .extracting(LessonAttachment::getId)
+                .contains(oldCanonicalId, privateRow.id());
+
+        templateService.distribute(template.id(), List.of(clazz.getId()),
+                lecturer.getId(), Role.LECTURER);
 
         List<LessonAttachment> after = attachmentRepository
                 .findByLessonIdOrderByUploadedAtAsc(lessonId);

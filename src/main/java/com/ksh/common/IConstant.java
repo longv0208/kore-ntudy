@@ -424,7 +424,6 @@ public interface IConstant {
     String VIEW_ASSIGNMENT_GRADE         = "assignments/lecturer-grade";
     String VIEW_STUDENT_ASSIGNMENT_LIST  = "assignments/student-list";
     String VIEW_STUDENT_ASSIGNMENT_DETAIL = "assignments/student-detail";
-    String VIEW_STUDENT_ASSIGNMENT_FEEDBACK = "assignments/student-feedback";
 
     // Model attribute keys.
     String ATTR_ASSIGNMENT          = "assignment";

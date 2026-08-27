@@ -80,10 +80,11 @@ public class StudentClassesService {
                 .map(ClassEntity::getSubjectId).filter(java.util.Objects::nonNull).distinct().toList())) {
             subjects.put(subject.getId(), subject);
         }
-        Map<Long, String> lecturers = new HashMap<>();
+        Map<Long, LecturerContact> lecturers = new HashMap<>();
         for (User lecturer : userRepository.findAllById(classes.stream()
                 .map(ClassEntity::getLecturerId).distinct().toList())) {
-            lecturers.put(lecturer.getId(), lecturer.getFullName());
+            lecturers.put(lecturer.getId(), new LecturerContact(
+                    lecturer.getFullName(), lecturer.getEmail()));
         }
         Map<Long, String> enrollmentStatuses = new HashMap<>();
         for (Enrollment enrollment : enrollmentRepository.findAllByUserId(userId)) {
@@ -95,9 +96,11 @@ public class StudentClassesService {
             String code = subject == null ? "—" : subject.getCode();
             String subjectName = subject == null ? "—" : subject.getName();
             String status = enrollmentStatuses.get(clazz.getId());
+            LecturerContact lecturer = lecturers.getOrDefault(
+                    clazz.getLecturerId(), new LecturerContact("—", "—"));
             rows.add(new CatalogClassRow(
                     clazz.getId(), clazz.getName(), code, subjectName,
-                    lecturers.getOrDefault(clazz.getLecturerId(), "—"),
+                    lecturer.name(), lecturer.email(),
                     Enrollment.STATUS_PENDING.equals(status),
                     Enrollment.STATUS_ACTIVE.equals(status)));
         }
@@ -151,5 +154,8 @@ public class StudentClassesService {
     private static String gradientFor(int index) {
         String[] colors = AVATAR_GRADIENTS[Math.floorMod(index, AVATAR_GRADIENTS.length)];
         return "linear-gradient(135deg," + colors[0] + "," + colors[1] + ")";
+    }
+
+    private record LecturerContact(String name, String email) {
     }
 }

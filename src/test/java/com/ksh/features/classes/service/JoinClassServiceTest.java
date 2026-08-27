@@ -11,7 +11,6 @@ import com.ksh.features.notifications.service.NotificationService;
 import com.ksh.security.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -23,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,100 +51,6 @@ class JoinClassServiceTest {
         service = new JoinClassService(enrollmentRepository, classRepository,
                 activityWriter, userRepository, notificationService, classesService);
         when(classRepository.findByIdForUpdate(CLASS_ID)).thenReturn(Optional.of(activeClass()));
-    }
-
-    @Test
-    void activeCatalogClassCreatesPendingRequestWithoutInvite() {
-        ClassEntity clazz = activeClass();
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(clazz));
-        when(enrollmentRepository.findByUserIdAndClassId(USER_ID, CLASS_ID))
-                .thenReturn(Optional.empty());
-        when(enrollmentRepository.countActiveByClassIdForUpdate(CLASS_ID)).thenReturn(0L);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(student()));
-
-        assertThat(service.requestJoin(CLASS_ID, USER_ID))
-                .isInstanceOf(JoinClassService.PendingRequested.class);
-
-        ArgumentCaptor<Enrollment> enrollment = ArgumentCaptor.forClass(Enrollment.class);
-        verify(enrollmentRepository).save(enrollment.capture());
-        assertThat(enrollment.getValue().getStatus()).isEqualTo(Enrollment.STATUS_PENDING);
-        assertThat(enrollment.getValue().getJoinedVia()).isEqualTo("REQUEST");
-        verify(notificationService).create(eq(OWNER_ID), any(), any(),
-                eq(NotificationType.JOIN_REQUEST), eq(NotificationType.REF_CLASS), eq(CLASS_ID));
-    }
-
-    @Test
-    void draftAndArchivedClassesAreNotDiscoverableForRequest() {
-        ClassEntity draft = new ClassEntity("Draft", OWNER_ID, OWNER_ID,
-                null, null, null, 100);
-        ReflectionTestUtils.setField(draft, "id", CLASS_ID);
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(draft));
-
-        assertThatThrownBy(() -> service.requestJoin(CLASS_ID, USER_ID))
-                .isInstanceOf(IllegalStateException.class);
-        verify(enrollmentRepository, never()).save(any());
-    }
-
-    @Test
-    void duplicateRequestIsIdempotent() {
-        ClassEntity clazz = activeClass();
-        Enrollment pending = Enrollment.createPending(
-                student(), CLASS_ID, Enrollment.JoinedVia.REQUEST, null);
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(clazz));
-        when(enrollmentRepository.findByUserIdAndClassId(USER_ID, CLASS_ID))
-                .thenReturn(Optional.of(pending));
-
-        JoinClassService.PendingRequested result = (JoinClassService.PendingRequested)
-                service.requestJoin(CLASS_ID, USER_ID);
-
-        assertThat(result.alreadyPending()).isTrue();
-        verify(enrollmentRepository, never()).save(any());
-    }
-
-    @Test
-    void ownerCannotRequestToJoinTheirOwnClass() {
-        ClassEntity clazz = activeClass();
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(clazz));
-
-        assertThatThrownBy(() -> service.requestJoin(CLASS_ID, OWNER_ID))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("chủ lớp");
-
-        verify(enrollmentRepository, never()).findByUserIdAndClassId(any(), any());
-    }
-
-    @Test
-    void activeEnrollmentReturnsAlreadyJoinedWithoutChangingIt() {
-        ClassEntity clazz = activeClass();
-        Enrollment active = Enrollment.createPending(
-                student(), CLASS_ID, Enrollment.JoinedVia.REQUEST, null);
-        active.activateFromPending();
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(clazz));
-        when(enrollmentRepository.findByUserIdAndClassId(USER_ID, CLASS_ID))
-                .thenReturn(Optional.of(active));
-
-        assertThat(service.requestJoin(CLASS_ID, USER_ID))
-                .isInstanceOf(JoinClassService.AlreadyJoined.class);
-        verify(enrollmentRepository, never()).save(any());
-    }
-
-    @Test
-    void rejectedEnrollmentCanOpenANewPendingRequest() {
-        ClassEntity clazz = activeClass();
-        Enrollment rejected = Enrollment.createPending(
-                student(), CLASS_ID, Enrollment.JoinedVia.REQUEST, null);
-        rejected.markRejected();
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(clazz));
-        when(enrollmentRepository.findByUserIdAndClassId(USER_ID, CLASS_ID))
-                .thenReturn(Optional.of(rejected));
-        when(enrollmentRepository.countActiveByClassIdForUpdate(CLASS_ID)).thenReturn(0L);
-
-        JoinClassService.PendingRequested result = (JoinClassService.PendingRequested)
-                service.requestJoin(CLASS_ID, USER_ID);
-
-        assertThat(result.alreadyPending()).isFalse();
-        assertThat(rejected.getStatus()).isEqualTo(Enrollment.STATUS_PENDING);
-        verify(enrollmentRepository).save(rejected);
     }
 
     @Test
@@ -210,24 +114,6 @@ class JoinClassServiceTest {
     }
 
     @Test
-    void notificationFailureDoesNotRollBackTheJoinRequest() {
-        ClassEntity clazz = activeClass();
-        when(classRepository.findById(CLASS_ID)).thenReturn(Optional.of(clazz));
-        when(enrollmentRepository.findByUserIdAndClassId(USER_ID, CLASS_ID))
-                .thenReturn(Optional.empty());
-        when(enrollmentRepository.countActiveByClassIdForUpdate(CLASS_ID)).thenReturn(0L);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(student()));
-        doThrow(new IllegalStateException("mail service down")).when(notificationService).create(
-                eq(OWNER_ID), any(), any(), eq(NotificationType.JOIN_REQUEST),
-                eq(NotificationType.REF_CLASS), eq(CLASS_ID));
-
-        assertThat(service.requestJoin(CLASS_ID, USER_ID))
-                .isInstanceOf(JoinClassService.PendingRequested.class);
-
-        verify(enrollmentRepository).save(any(Enrollment.class));
-    }
-
-    @Test
     void activeStudentCanLeaveAndTheirEnrollmentBecomesRemoved() {
         ClassEntity clazz = activeClass();
         Enrollment active = Enrollment.createPending(
@@ -241,6 +127,17 @@ class JoinClassServiceTest {
 
         assertThat(active.getStatus()).isEqualTo(Enrollment.STATUS_REMOVED);
         verify(enrollmentRepository).save(active);
+    }
+
+    @Test
+    void studentSelfJoinIsAlwaysDeniedWithoutRepositoryMutation() {
+        assertThatThrownBy(() -> service.requestJoin(CLASS_ID, USER_ID))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("giảng viên phải thêm sinh viên");
+
+        verify(classRepository, never()).findById(any());
+        verify(enrollmentRepository, never()).save(any());
+        verify(notificationService, never()).create(any(), any(), any(), any(), any(), any());
     }
 
     private static ClassEntity activeClass() {

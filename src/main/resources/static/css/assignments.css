@@ -440,3 +440,304 @@
 @media(max-width:1200px){.asgn-workspace{grid-template-columns:minmax(300px,1fr) minmax(250px,36%)}.asgn-folder-pane{display:none}}
 @media(max-width:920px){.asgn-catalog-toolbar{grid-template-columns:minmax(0,1fr) 150px}.asgn-view-switch{display:none}.asgn-workspace{grid-template-columns:1fr}.asgn-list-pane{border-right:0}.asgn-detail-pane{border-top:1px solid #e5e8ee}.asgn-student-item{grid-template-columns:38px minmax(0,1fr) 18px}.asgn-student-state{grid-column:2;text-align:left}.asgn-item-arrow{grid-column:3;grid-row:1/3}}
 @media(max-width:620px){.assignment-catalog-main{padding:20px 12px 36px}.asgn-catalog-toolbar{grid-template-columns:1fr}.asgn-catalog-toolbar select{min-height:42px}.asgn-list-item{grid-template-columns:38px minmax(0,1fr)}.asgn-completion{grid-column:2}.asgn-item-titleline{align-items:flex-start;flex-direction:column}.asgn-student-item{padding:15px 12px}}
+
+/* Student assignment detail: one canonical page for requirements, submission and result. */
+.student-assignment-main {
+  padding: 26px clamp(28px, 4vw, 58px) 54px;
+}
+
+.asgn-detail-header,
+.asgn-summary-card,
+.asgn-detail-card {
+  width: min(100%, 1040px);
+  margin-inline: auto;
+}
+
+.asgn-detail-header {
+  margin-bottom: 20px;
+}
+
+.asgn-detail-back {
+  display: inline-flex;
+  margin-bottom: 14px;
+  color: #356aaa;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.asgn-detail-back:hover {
+  text-decoration: underline;
+}
+
+.asgn-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.asgn-detail-title-copy {
+  min-width: 0;
+}
+
+.asgn-detail-title-copy h1 {
+  margin: 0 0 8px;
+  color: #243247;
+  font-size: clamp(25px, 2.6vw, 32px);
+  line-height: 1.22;
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+}
+
+.asgn-detail-title-copy p {
+  margin: 0;
+  color: #7b8799;
+  font-size: 14px;
+}
+
+.asgn-max-score {
+  display: grid;
+  min-width: 112px;
+  min-height: 84px;
+  flex: 0 0 auto;
+  place-content: center;
+  padding: 12px 16px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 5px 16px rgba(42, 59, 82, .035);
+}
+
+.asgn-max-score strong {
+  color: #2f67b7;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.asgn-max-score span {
+  margin-top: 7px;
+  color: #8792a2;
+  font-size: 11px;
+}
+
+.asgn-summary-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid #dfe5ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(42, 59, 82, .035);
+}
+
+.asgn-summary-item {
+  display: flex;
+  min-width: 0;
+  min-height: 86px;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 20px;
+}
+
+.asgn-summary-item + .asgn-summary-item {
+  border-left: 1px solid #e5e9ef;
+}
+
+.asgn-summary-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 9px;
+  background: #edf4ff;
+  color: #4380d5;
+}
+
+.asgn-summary-icon svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.asgn-summary-item > div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.asgn-summary-item small {
+  color: #8791a1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.asgn-summary-item strong {
+  color: #344156;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.asgn-detail-card {
+  margin-bottom: 16px;
+  padding: 23px 26px;
+  border: 1px solid #dfe5ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(42, 59, 82, .035);
+}
+
+.asgn-detail-card h2 {
+  margin: 0 0 17px;
+  color: #28364a;
+  font-size: 18px;
+}
+
+.asgn-requirement-text {
+  color: #3f4b5d;
+  font-size: 14px;
+  line-height: 1.78;
+  white-space: pre-wrap;
+}
+
+.asgn-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.asgn-card-heading h2 {
+  margin-bottom: 0;
+}
+
+.asgn-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #7e899a;
+  font-size: 11px;
+}
+
+.asgn-field-block + .asgn-field-block {
+  margin-top: 16px;
+}
+
+.asgn-field-block h3 {
+  margin: 0 0 8px;
+  color: #344156;
+  font-size: 13px;
+}
+
+.asgn-submission-content,
+.asgn-feedback-content {
+  padding: 14px 16px;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #3c485a;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.asgn-attachment-block span,
+.asgn-attachment-block a {
+  color: #788496;
+  font-size: 13px;
+}
+
+.asgn-attachment-block a {
+  color: #326bb4;
+  font-weight: 650;
+}
+
+.asgn-result-line {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  margin: 2px 0 20px;
+}
+
+.asgn-result-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.asgn-result-score strong {
+  color: #26966d;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.asgn-result-score span {
+  color: #657286;
+  font-size: 15px;
+}
+
+.asgn-graded-time {
+  margin: 10px 0 0;
+  color: #8791a1;
+  font-size: 11px;
+}
+
+.asgn-one-shot-help {
+  margin: -6px 0 16px;
+  color: #748094;
+  font-size: 13px;
+}
+
+.student-assignment-page .asgn-form {
+  max-width: none;
+}
+
+@media (max-width: 800px) {
+  .student-assignment-main {
+    padding-inline: 20px;
+  }
+
+  .asgn-summary-card {
+    grid-template-columns: 1fr;
+  }
+
+  .asgn-summary-item + .asgn-summary-item {
+    border-top: 1px solid #e5e9ef;
+    border-left: 0;
+  }
+
+  .asgn-detail-title-row,
+  .asgn-card-heading {
+    flex-direction: column;
+  }
+
+  .asgn-card-meta {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .student-assignment-main {
+    padding: 20px 12px 36px;
+  }
+
+  .asgn-detail-card {
+    padding: 20px 18px;
+  }
+
+  .asgn-max-score {
+    min-height: 72px;
+  }
+}

@@ -452,11 +452,11 @@ class Sprint2ClassesIntegrationTest {
 
     @Test
     @WithUserDetails("lecturer@ksh.edu.vn")
-    void detail_root_redirects_to_board() throws Exception {
+    void detail_root_redirects_to_lessons() throws Exception {
         ClassEntity c = saveClass("DetailRoot", lecturer.getId(), "DTRT1");
         mockMvc.perform(get("/lecturer/classes/" + c.getId()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/lecturer/classes/" + c.getId() + "/board"));
+                .andExpect(redirectedUrl("/lecturer/classes/" + c.getId() + "/lessons"));
     }
 
     @Test
@@ -497,10 +497,11 @@ class Sprint2ClassesIntegrationTest {
 
     @Test
     @WithUserDetails("lecturer@ksh.edu.vn")
-    void detail_non_owner_lecturer_returns_403() throws Exception {
+    void retired_board_url_redirects_to_lessons() throws Exception {
         ClassEntity c = saveClass("OwnedByLeader", leader.getId(), "OWNHD");
         mockMvc.perform(get("/lecturer/classes/" + c.getId() + "/board"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/lecturer/classes/" + c.getId() + "/lessons"));
     }
 
     @Test

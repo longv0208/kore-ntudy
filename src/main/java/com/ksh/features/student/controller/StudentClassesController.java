@@ -4,16 +4,11 @@ import com.ksh.security.KshUserDetails;
 import com.ksh.security.Roles;
 import com.ksh.entities.ClassEntity;
 import com.ksh.features.classes.service.JoinClassService;
-import com.ksh.features.classes.service.JoinClassService.AlreadyJoined;
-import com.ksh.features.classes.service.JoinClassService.JoinResult;
-import com.ksh.features.classes.service.JoinClassService.PendingRequested;
-import com.ksh.features.classes.service.JoinClassService.Success;
 import com.ksh.features.student.dto.StudentClassesDtos.EnrolledClassRow;
 import com.ksh.features.student.service.StudentClassesService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -77,20 +72,6 @@ public class StudentClassesController {
         return VIEW_MY_CLASSES;
     }
 
-    @PostMapping("/classes/{id}/request")
-    public String requestJoin(@PathVariable Long id,
-                              @AuthenticationPrincipal KshUserDetails user,
-                              RedirectAttributes ra) {
-        try {
-            return redirectAfterJoin(joinClassService.requestJoin(id, user.getId()), ra);
-        } catch (EntityNotFoundException ex) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
-        } catch (IllegalStateException | AccessDeniedException ex) {
-            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
-            return REDIRECT_MY_CLASSES;
-        }
-    }
-
     @PostMapping("/classes/{id}/leave")
     public String leave(@PathVariable Long id,
                         @AuthenticationPrincipal KshUserDetails user,
@@ -107,20 +88,4 @@ public class StudentClassesController {
         }
     }
 
-    private String redirectAfterJoin(JoinResult outcome, RedirectAttributes ra) {
-        if (outcome instanceof Success s) {
-            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_JOINED_CLASS + s.clazz().getName());
-        } else if (outcome instanceof AlreadyJoined a) {
-            ra.addFlashAttribute(ATTR_FLASH_INFO, MSG_ALREADY_IN_CLASS + a.clazz().getName());
-        } else if (outcome instanceof PendingRequested p) {
-            if (p.alreadyPending()) {
-                ra.addFlashAttribute(ATTR_FLASH_INFO,
-                        MSG_JOIN_ALREADY_PENDING + p.clazz().getName() + MSG_JOIN_ALREADY_PENDING_SUFFIX);
-            } else {
-                ra.addFlashAttribute(ATTR_FLASH_INFO,
-                        MSG_JOIN_REQUEST_SENT + p.clazz().getName() + MSG_JOIN_REQUEST_PENDING_SUFFIX);
-            }
-        }
-        return REDIRECT_MY_CLASSES;
-    }
 }

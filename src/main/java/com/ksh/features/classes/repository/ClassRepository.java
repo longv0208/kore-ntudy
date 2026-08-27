@@ -138,6 +138,10 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
     List<ClassEntity> findAllBySubjectIdAndStatusOrderByCreatedAtDesc(
             Long subjectId, String status);
 
+    /** Review queue ordering: an explicit resubmission must return to the top. */
+    List<ClassEntity> findAllBySubjectIdAndStatusOrderByUpdatedAtDescIdDesc(
+            Long subjectId, String status);
+
     /** Paginated department-scoped class list. */
     Page<ClassEntity> findAllBySubjectId(Long subjectId, Pageable pageable);
 

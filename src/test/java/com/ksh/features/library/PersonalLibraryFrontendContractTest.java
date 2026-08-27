@@ -116,12 +116,10 @@ class PersonalLibraryFrontendContractTest {
                 "data-share-class-mode",
                 "data-class-share-form",
                 "name=\"classId\"",
-                "name=\"sectionId\"",
-                "name=\"lessonId\"",
                 "data-share-status",
                 "@{/lecturer/library/list}",
                 "Chỉ lớp này",
-                "không thay PDF/video chính",
+                "không đưa vào vùng Bài giảng",
                 "Video không thể gắn trực tiếp làm tài liệu bổ sung. Hãy gắn video chính trong Kho bài giảng.",
                 "Tệp được tham chiếu từ kho cá nhân, không sao chép dữ liệu.");
 
@@ -131,13 +129,16 @@ class PersonalLibraryFrontendContractTest {
                 "'/share/class'",
                 "credentials: 'same-origin'",
                 "body.set('classId', classSelect.value)",
-                "body.set('sectionId', sectionSelect.value)",
-                "body.set('lessonId', lessonSelect.value)",
                 "csrfMeta('_csrf')",
                 "csrfMeta('_csrf_header')",
                 "'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'",
-                "item.canonicalSnapshot",
-                "payload.message || 'Đã chia sẻ tài liệu riêng vào bài giảng'");
+                "payload.message || 'Đã chia sẻ vào tab Tài liệu của lớp'");
+
+        assertThat(page + script).doesNotContain(
+                "name=\"sectionId\"",
+                "name=\"lessonId\"",
+                "body.set('sectionId'",
+                "body.set('lessonId'");
 
         assertThat(page + script).doesNotContain(
                 "video-from-library",

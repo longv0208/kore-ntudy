@@ -118,13 +118,16 @@ public final class FlashcardDtos {
                                  long cardCount, boolean owner, boolean shared,
                                  Long classId, String className,
                                  List<ClassOption> shareClasses, String ownerName,
-                                 boolean publicLink, String shareToken) {
+                                 boolean publicLink, String shareToken,
+                                 List<Long> sharedClassIds,
+                                 List<ClassOption> sharedClasses) {
         public DeckDetailView(Long id, String title, String description,
                               long cardCount, boolean owner, boolean shared,
                               Long classId, String className,
                               List<ClassOption> shareClasses) {
             this(id, title, description, cardCount, owner, shared,
-                    classId, className, shareClasses, null, false, null);
+                    classId, className, shareClasses, null, false, null,
+                    classId == null ? List.of() : List.of(classId), List.of());
         }
     }
 

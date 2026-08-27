@@ -94,18 +94,21 @@ class LessonTemplateServiceTest {
     }
 
     @Test
-    void distribute_rejects_duplicate_lesson_in_same_class_chapter() {
+    void distribute_again_refreshes_the_exact_snapshot_in_place() {
         LessonTemplateRow template = templateService.saveForm(
                 lecturer.getId(), Role.LECTURER, richtextForm("Chương 1", "Bài duy nhất"));
         ClassEntity clazz = activeClass("Library duplicate");
 
-        templateService.distribute(template.id(), List.of(clazz.getId()),
+        Long lessonId = templateService.distribute(template.id(), List.of(clazz.getId()),
+                lecturer.getId(), Role.LECTURER).get(0).lessonId();
+
+        var redistributed = templateService.distribute(template.id(), List.of(clazz.getId()),
                 lecturer.getId(), Role.LECTURER);
 
-        assertThatThrownBy(() -> templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("đã có bài học cùng tên");
+        assertThat(redistributed).singleElement()
+                .extracting(result -> result.lessonId()).isEqualTo(lessonId);
+        assertThat(lessonRepository.findBySourceLessonTemplateIdOrderByIdAsc(template.id()))
+                .singleElement().extracting(Lesson::getId).isEqualTo(lessonId);
     }
 
     @Test
@@ -153,7 +156,7 @@ class LessonTemplateServiceTest {
     }
 
     @Test
-    void rename_syncs_exact_snapshot_and_blocks_redistribution_with_the_new_title() {
+    void rename_keeps_distributed_snapshot_immutable_until_explicit_redistribution() {
         LessonTemplateRow template = templateService.saveForm(
                 lecturer.getId(), Role.LECTURER,
                 richtextForm("Chương 96", "Tên phân phối ban đầu"));
@@ -165,11 +168,15 @@ class LessonTemplateServiceTest {
                 template.id(), "Tên canonical sau khi đổi");
 
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getTitle())
+                .endsWith("· Tên phân phối ban đầu");
+
+        var redistributed = templateService.distribute(template.id(), List.of(clazz.getId()),
+                lecturer.getId(), Role.LECTURER);
+
+        assertThat(redistributed).singleElement()
+                .extracting(result -> result.lessonId()).isEqualTo(lessonId);
+        assertThat(lessonRepository.findById(lessonId).orElseThrow().getTitle())
                 .endsWith("· Tên canonical sau khi đổi");
-        assertThatThrownBy(() -> templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("cùng nguồn");
         assertThat(lessonRepository.findBySourceLessonTemplateIdOrderByIdAsc(template.id()))
                 .extracting(Lesson::getId)
                 .containsExactly(lessonId);
@@ -198,7 +205,7 @@ class LessonTemplateServiceTest {
 
             assertThat(List.of(first.get(15, TimeUnit.SECONDS),
                     second.get(15, TimeUnit.SECONDS)))
-                    .containsExactlyInAnyOrder(true, false);
+                    .containsExactly(true, true);
             assertThat(lessonRepository.findBySourceLessonTemplateIdOrderByIdAsc(template.id()))
                     .hasSize(1);
         } finally {
@@ -210,7 +217,7 @@ class LessonTemplateServiceTest {
     }
 
     @Test
-    void video_summary_is_normalized_searchable_and_synced_to_distributed_snapshot() {
+    void video_summary_is_normalized_and_only_reaches_class_on_redistribution() {
         LessonTemplateForm create = richtextForm("Chương 93", "Video phản xạ giao tiếp");
         create.setVideoUrl("https://www.youtube.com/watch?v=kshVideo93");
         create.setVideoSummary("  Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.  ");
@@ -246,6 +253,10 @@ class LessonTemplateServiceTest {
         templateService.saveForm(lecturer.getId(), Role.LECTURER, edit);
 
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
+                .isEqualTo("Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.");
+        templateService.distribute(template.id(), List.of(clazz.getId()),
+                lecturer.getId(), Role.LECTURER);
+        assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
                 .isEqualTo("Phiên bản cập nhật: luyện nghe và trả lời trong 45 giây.");
 
         LessonTemplateForm clear = templateService.loadForm(lecturer.getId(), Role.LECTURER,
@@ -257,7 +268,10 @@ class LessonTemplateServiceTest {
         assertThat(templateRepository.findById(template.id()).orElseThrow().getVideoSummary())
                 .isNull();
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
-                .isNull();
+                .isEqualTo("Phiên bản cập nhật: luyện nghe và trả lời trong 45 giây.");
+        templateService.distribute(template.id(), List.of(clazz.getId()),
+                lecturer.getId(), Role.LECTURER);
+        assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary()).isNull();
     }
 
     @Test

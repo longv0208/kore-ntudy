@@ -93,12 +93,11 @@
         Chưa có lớp học nào. Nhấn <b>Tạo lớp học</b> để bắt đầu.
       </div>
 
-      <!-- Class rows. The whole name + thumb area is a link to the class detail page —
-           click anywhere on the class card to open the detail (Bảng tin tab) directly. -->
+      <!-- Selecting a class opens its lessons directly. -->
       <div th:each="cls : ${classes}" class="class-row"
            th:attr="data-class-id=${cls.id},data-class-name=${cls.name},data-class-code=${cls.code},data-student-count=${cls.studentCount},data-created-at=${cls.createdAtIso}">
         <a class="class-main class-main-link"
-           th:href="@{'/lecturer/classes/' + ${cls.id}}"
+           th:href="@{'/lecturer/classes/' + ${cls.id} + '/lessons'}"
            th:aria-label="'Mở lớp ' + ${cls.name}">
           <div class="class-thumb"
                th:style="'background:' + ${cls.gradientCss}"
@@ -124,6 +123,11 @@
         <div class="stat" th:text="${cls.lectureCount}">0</div>
         <div class="stat" th:text="${cls.assignmentCount}">0</div>
         <div class="stat" th:text="${cls.materialCount}">0</div>
+        <form class="class-resubmit-inline" th:if="${cls.status == 'REJECTED'}"
+              th:action="@{'/lecturer/classes/' + ${cls.id} + '/resubmit'}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+          <button type="submit">Gửi duyệt lại</button>
+        </form>
         <div class="dropdown row-menu" style="position:relative;">
           <button class="icon-btn" data-toggle="dropdown" type="button" aria-label="Tùy chọn">
             <svg class="ico ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>

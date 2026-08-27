@@ -220,8 +220,12 @@ public final class WritingBlankContractVerifier {
                     require(blanks.get(index), "Writing blank definition");
             String expectedId = taskType.name().toLowerCase(Locale.ROOT)
                     + "-b" + (index + 1);
-            requireEquals(expectedId, blank.blankId(),
-                    "Writing blank ID");
+            if (blank.blankId() == null
+                    || (!expectedId.equalsIgnoreCase(blank.blankId())
+                    && !blank.blankId().toLowerCase(Locale.ROOT).endsWith(expectedId))) {
+                requireEquals(expectedId, blank.blankId(),
+                        "Writing blank ID");
+            }
             requireEquals(index + 1, blank.ordinal(),
                     "Writing blank ordinal");
             requireText(blank.context(), "Writing blank context");

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${clazz.name} + ' | Tài liệu', ~{::link.page-css})}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/app-shell.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/class-detail.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/class-materials.css}">
+</head>
+<body>
+<header th:replace="~{fragments/app-header :: appHeader('classes')}"></header>
+<span id="flash-data"
+      th:attr="data-flash-success=${flashSuccess},data-flash-error=${flashError}" hidden></span>
+<div class="class-detail-layout">
+  <aside th:replace="~{fragments/class-sidebar :: classSidebar(${clazz}, 'materials')}"></aside>
+  <main class="col class-materials-main">
+    <header class="class-materials-heading">
+      <div>
+        <p class="class-materials-eyebrow">Tài nguyên lớp học</p>
+        <h1 class="detail-title">Tài liệu</h1>
+        <p>Các tài liệu riêng đã chia sẻ trực tiếp vào lớp, tách biệt khỏi Bài giảng.</p>
+      </div>
+      <a class="class-materials-library-link" th:if="${isPrimaryClassOwner}"
+         th:href="@{/lecturer/library/assets}">Mở kho tài liệu cá nhân</a>
+    </header>
+    <section class="class-materials-panel">
+      <div class="class-materials-empty" th:if="${#lists.isEmpty(classMaterials)}">
+        <strong>Chưa có tài liệu dùng chung.</strong>
+        <span th:if="${isPrimaryClassOwner}">Vào Kho tài liệu cá nhân, chọn Chia sẻ → Chỉ lớp này.</span>
+        <span th:unless="${isPrimaryClassOwner}">Giảng viên chủ lớp chưa chia sẻ tài liệu nào.</span>
+      </div>
+      <article class="class-material-row" th:each="material : ${classMaterials}">
+        <span class="class-material-icon" aria-hidden="true">FILE</span>
+        <span class="class-material-copy">
+          <strong th:text="${material.title()}">Tài liệu</strong>
+          <small>
+            <span th:text="${material.originalFilename()}">file.pdf</span>
+            <span aria-hidden="true"> · </span><span th:text="${material.sizeLabel()}">0 KB</span>
+            <span th:if="${material.sharedAt() != null}" aria-hidden="true"> · </span>
+            <time th:if="${material.sharedAt() != null}" th:datetime="${material.sharedAt()}"
+                  th:text="${#temporals.format(material.sharedAt(), 'dd/MM/yyyy HH:mm')}">—</time>
+          </small>
+        </span>
+        <a class="class-material-download" th:href="${material.downloadUrl()}">Tải xuống</a>
+        <form th:if="${isPrimaryClassOwner}" method="post"
+              th:action="@{|/lecturer/classes/${clazz.id}/materials/${material.id()}/remove|}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+          <button class="class-material-remove" type="submit">Gỡ khỏi lớp</button>
+        </form>
+      </article>
+    </section>
+  </main>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

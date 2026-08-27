@@ -27,7 +27,8 @@ public class AssessmentContractCodec {
             "languageTag");
     private static final Set<String> OPTION_FIELDS =
             Set.of("id", "text", "imageReference");
-    private static final Set<String> BLANK_FIELDS = Set.of("id", "prompt");
+    private static final Set<String> BLANK_FIELDS =
+            Set.of("id", "prompt", "ordinal", "blankId", "context");
     private static final Set<String> SPEAKING_DELIVERY_FIELDS = Set.of(
             "inputType",
             "deliveryMode",
@@ -45,7 +46,7 @@ public class AssessmentContractCodec {
             "correctValue", "blanks", "scoringPolicyCode",
             "writingBlankAuthority", "evaluationMode");
     private static final Set<String> ANSWER_BLANK_FIELDS = Set.of(
-            "blankId", "acceptedValues");
+            "blankId", "acceptedValues", "id", "ordinal", "acceptedAnswers");
     private static final Set<String> WRITING_AUTHORITY_FIELDS = Set.of(
             "contractVersion", "taskType", "normalization",
             "whitespacePolicy", "blanks");

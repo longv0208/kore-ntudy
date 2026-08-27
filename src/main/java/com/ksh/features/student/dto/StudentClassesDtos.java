@@ -38,6 +38,7 @@ public class StudentClassesDtos {
             String subjectCode,
             String subjectName,
             String lecturerName,
+            String lecturerEmail,
             boolean alreadyRequested,
             boolean alreadyEnrolled
     ) {

@@ -149,11 +149,13 @@ public class ExplanationInputFactory {
                 stimulus.schemaVersion(), stimulus.type(), stimulus.passageText(),
                 stimulus.transcriptText(), null, stimulus.provenance(), stimulus.approved());
         ObjectiveExplanationStrategyRegistry.Selection explanationStrategy =
-                ObjectiveExplanationStrategyRegistry.requireSelection(
-                        type,
-                        question.getExplanationStrategyRegistryVersion(),
-                        question.getExplanationStrategyCode(),
-                        question.getExplanationStrategyVersion());
+                blank(question.getExplanationStrategyCode())
+                        ? defaultStrategy(type, sanitizedAnswerSpec)
+                        : ObjectiveExplanationStrategyRegistry.requireSelection(
+                                type,
+                                question.getExplanationStrategyRegistryVersion(),
+                                question.getExplanationStrategyCode(),
+                                question.getExplanationStrategyVersion());
         ExplanationArtifactInput input = new ExplanationArtifactInput(
                 ExplanationArtifactInput.SCHEMA_VERSION,
                 skill,
@@ -360,6 +362,23 @@ public class ExplanationInputFactory {
 
     private static String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static ObjectiveExplanationStrategyRegistry.Selection defaultStrategy(
+            CanonicalQuestionType type, AnswerSpec answerSpec) {
+        ObjectiveExplanationStrategyRegistry.Code code = switch (type) {
+            case SINGLE_CHOICE, MULTIPLE_ANSWER -> ObjectiveExplanationStrategyRegistry.Code.MCQ_OPTION_ELIMINATION;
+            case MATCHING -> ObjectiveExplanationStrategyRegistry.Code.MATCHING_MATRIX;
+            case TRUE_FALSE_NOT_GIVEN -> (answerSpec != null && "NOT_GIVEN".equalsIgnoreCase(answerSpec.correctValue()))
+                    ? ObjectiveExplanationStrategyRegistry.Code.NOT_GIVEN_BOUNDARY
+                    : ObjectiveExplanationStrategyRegistry.Code.TFNG_CONTRADICTION_TABLE;
+            case FILL_BLANK -> ObjectiveExplanationStrategyRegistry.Code.FILL_SLOT_GRAMMAR_ANALYSIS;
+            case ESSAY, SPEAKING -> ObjectiveExplanationStrategyRegistry.Code.EXACT_EVIDENCE_ONLY;
+        };
+        return new ObjectiveExplanationStrategyRegistry.Selection(
+                ObjectiveExplanationStrategyRegistry.CURRENT_REGISTRY_VERSION,
+                code.name(),
+                ObjectiveExplanationStrategyRegistry.STRATEGY_VERSION);
     }
 
     public record PreparedExplanation(

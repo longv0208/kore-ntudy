@@ -2,8 +2,8 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Chi tiết kết quả Đọc/Nghe | KSH', ~{::link.page-css})}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/app-shell.css}">
-  <link class="page-css" rel="stylesheet" th:href="@{/css/practice-result-detail.css(v='pre14-e10')}">
-  <link class="page-css" rel="stylesheet" th:href="@{/css/practice-result-detail-prep.css(v='image-fit-v1')}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/practice-result-detail.css(v='v3-clean-dock')}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/practice-result-detail-prep.css(v='v3-clean-dock')}">
 </head>
 <body class="prd-body prd-objective-body">
 <header class="prd-header prd-boundary-header">
@@ -59,6 +59,22 @@
              th:id="${'objective-group-' + group.groupKey()}"
              th:attr="data-objective-group-key=${group.groupKey()},
                       aria-label=${group.displayLabel()}">
+     <div class="prd-objective-audio-dock" th:if="${source.hasAudio()}">
+       <div class="prd-objective-audio-dock-label">
+         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+         </svg>
+         <strong>Nghe lại nguồn âm thanh</strong>
+       </div>
+       <audio controls
+              preload="metadata"
+              aria-label="Nghe lại nguồn âm thanh của phần Nghe"
+              th:src="${source.audioUrl()}">
+         Trình duyệt không hỗ trợ phát âm thanh.
+       </audio>
+     </div>
+
     <aside class="prd-boundary-card prd-objective-sources"
            th:attr="aria-labelledby=${'objective-source-title-' + group.groupKey()}">
       <div class="prd-objective-source-toolbar">
@@ -103,15 +119,7 @@
           <img th:src="${source.imageUrl()}" alt="Hình ảnh thuộc nguồn đề đã khóa">
           <figcaption>Hình ảnh từ phiên bản đề bất biến</figcaption>
         </figure>
-        <div class="prd-objective-audio-dock" th:if="${source.hasAudio()}">
-          <strong>Nghe lại nguồn âm thanh</strong>
-          <audio controls
-                 preload="metadata"
-                 aria-label="Nghe lại nguồn âm thanh của phần Nghe"
-                 th:src="${source.audioUrl()}">
-            Trình duyệt không hỗ trợ phát âm thanh.
-          </audio>
-        </div>
+
         <section class="prd-objective-transcript"
                  th:if="${source.hasApprovedTranscript()}"
                  th:attr="aria-labelledby=${'approved-transcript-title-' + source.sourceId()}">
@@ -749,8 +757,8 @@
           <div class="prd-objective-explanation-body prd-objective-teacher"
                th:if="${!question.explanation().ready()
                  and !question.core().teacherExplanation().isBlank()}">
-            <strong>Giải thích của giáo viên đã khóa</strong>
-            <p th:text="${question.core().teacherExplanation()}">Giải thích đã khóa</p>
+            <strong>Giải thích của giáo viên</strong>
+            <p th:text="${question.core().teacherExplanation()}">Giải thích</p>
           </div>
         </details>
 

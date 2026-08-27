@@ -247,22 +247,35 @@
   </section>
 
   <section id="share" class="fc-owner-controls" th:if="${deck.owner()}">
-    <div class="fc-share">
-      <h3 class="fc-section-title">Chia sẻ với lớp</h3>
-      <form class="fc-share-form" th:action="@{|/my/flashcards/${deck.id()}/share|}" method="post" th:unless="${#lists.isEmpty(shareClasses)}">
-        <select id="shareClass" name="classId" aria-label="Chọn lớp" data-ksh-select>
-          <option th:each="c : ${shareClasses}" th:value="${c.id()}" th:text="${c.name()}" th:selected="${deck.classId() != null and deck.classId() == c.id()}">Lớp</option>
-        </select>
-        <button type="submit" class="fc-btn fc-btn-primary">Chia sẻ</button>
+    <div class="fc-sharing-heading">
+      <div><span class="fc-page-sub">QUẢN LÝ QUYỀN TRUY CẬP</span><h2>Chia sẻ bộ thẻ</h2></div>
+      <p>Một bộ thẻ có thể xuất hiện đồng thời trong nhiều lớp và qua một link công khai.</p>
+    </div>
+    <div class="fc-sharing-grid">
+    <div class="fc-share fc-share--classes">
+      <div class="fc-share-title-row">
+        <span class="fc-share-icon" aria-hidden="true">▦</span>
+        <div><h3 class="fc-section-title">Lớp được chia sẻ</h3><p>Chọn tất cả lớp cần dùng bộ thẻ này.</p></div>
+      </div>
+      <form class="fc-class-share-form" th:action="@{|/my/flashcards/${deck.id()}/share|}" method="post" th:unless="${#lists.isEmpty(shareClasses)}">
+        <div class="fc-class-share-list">
+          <label class="fc-class-share-option" th:each="c : ${shareClasses}"
+                 th:classappend="${deck.sharedClassIds().contains(c.id())} ? ' is-selected'">
+            <input type="checkbox" name="classIds" th:value="${c.id()}"
+                   th:checked="${deck.sharedClassIds().contains(c.id())}">
+            <span class="fc-class-check" aria-hidden="true">✓</span>
+            <span><strong th:text="${c.name()}">Tên lớp</strong><small th:text="${deck.sharedClassIds().contains(c.id()) ? 'Đang được chia sẻ' : 'Chưa chia sẻ'}">Trạng thái</small></span>
+          </label>
+        </div>
+        <button type="submit" class="fc-btn fc-btn-primary">Lưu lớp được chia sẻ</button>
       </form>
       <p class="fc-empty" th:if="${#lists.isEmpty(shareClasses)}">Bạn chưa tham gia lớp nào để chia sẻ.</p>
-      <form th:action="@{|/my/flashcards/${deck.id()}/unshare|}" method="post" th:if="${deck.shared()}">
-        <button type="submit" class="fc-btn fc-btn-ghost">Ngừng chia sẻ</button>
-      </form>
     </div>
-    <div class="fc-share">
-      <h3 class="fc-section-title">Link công khai</h3>
-      <p>Bất kỳ ai có link đều có thể xem bộ thẻ ở chế độ chỉ đọc.</p>
+    <div class="fc-share fc-share--public">
+      <div class="fc-share-title-row">
+        <span class="fc-share-icon" aria-hidden="true">↗</span>
+        <div><h3 class="fc-section-title">Link công khai</h3><p>Người có link có thể xem, lật thẻ, học và chơi; kết quả không lưu vào tài khoản.</p></div>
+      </div>
 
       <form th:if="${!deck.publicLink()}"
             th:action="@{|/my/flashcards/${deck.id()}/public-link/enable|}" method="post">
@@ -285,6 +298,7 @@
           <button type="submit" class="fc-btn fc-btn-ghost">Tạo link mới</button>
         </form>
       </div>
+    </div>
     </div>
   </section>
 </main>

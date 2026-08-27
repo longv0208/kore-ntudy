@@ -1,7 +1,7 @@
 package com.ksh.features.library.controller;
 
-import com.ksh.features.lessons.dto.LessonDtos.LessonAttachmentRow;
-import com.ksh.features.lessons.service.LessonAttachmentsService;
+import com.ksh.features.classes.service.ClassMaterialsService;
+import com.ksh.features.classes.service.ClassMaterialsService.ClassMaterialRow;
 import com.ksh.features.library.dto.LibraryDtos.PersonalAssetClassTargets;
 import com.ksh.features.library.service.PersonalLibraryClassTargetService;
 import com.ksh.security.KshUserDetails;
@@ -36,16 +36,16 @@ public class PersonalLibraryClassShareController {
     private static final Logger log =
             LoggerFactory.getLogger(PersonalLibraryClassShareController.class);
     private static final String SUCCESS_MESSAGE =
-            "Đã chia sẻ tài liệu riêng vào bài giảng";
+            "Đã chia sẻ vào tab Tài liệu của lớp";
 
     private final PersonalLibraryClassTargetService targetService;
-    private final LessonAttachmentsService attachmentsService;
+    private final ClassMaterialsService materialsService;
 
     public PersonalLibraryClassShareController(
             PersonalLibraryClassTargetService targetService,
-            LessonAttachmentsService attachmentsService) {
+            ClassMaterialsService materialsService) {
         this.targetService = targetService;
-        this.attachmentsService = attachmentsService;
+        this.materialsService = materialsService;
     }
 
     /** Read-only target discovery; never creates a section or lesson. */
@@ -71,9 +71,8 @@ public class PersonalLibraryClassShareController {
     }
 
     /**
-     * Binds one owned personal document to one existing lesson as
-     * CLASS_PRIVATE supplementary material. Main PDF/video fields are not
-     * accepted by this contract.
+     * Binds one owned personal document to the standalone Materials tab of one
+     * owned live class. No lesson id is accepted by this contract.
      */
     @PostMapping(value = "/{assetId}/share/class",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
@@ -81,18 +80,18 @@ public class PersonalLibraryClassShareController {
     public ResponseEntity<Map<String, Object>> shareIntoClass(
             @PathVariable Long assetId,
             @RequestParam Long classId,
-            @RequestParam Long sectionId,
-            @RequestParam Long lessonId,
             @AuthenticationPrincipal KshUserDetails user) {
         try {
-            LessonAttachmentRow attachment = attachmentsService.bindAttachmentFromLibrary(
-                    classId, sectionId, lessonId, assetId, user.getId(), user.getRole());
+            ClassMaterialRow material = materialsService.shareFromLibrary(
+                    classId, assetId, user.getId(), user.getRole());
             return ResponseEntity.ok(Map.of(
                     "ok", true,
                     "message", SUCCESS_MESSAGE,
-                    "attachment", attachment));
+                    "material", material));
         } catch (IllegalArgumentException ex) {
             return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return error(HttpStatus.CONFLICT, ex.getMessage());
         } catch (AccessDeniedException ex) {
             return error(HttpStatus.FORBIDDEN, "Bạn không có quyền chia sẻ vào lớp này");
         } catch (EntityNotFoundException ex) {
@@ -100,8 +99,8 @@ public class PersonalLibraryClassShareController {
         } catch (ResponseStatusException ex) {
             return error(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason());
         } catch (RuntimeException ex) {
-            log.error("Failed to share personal asset {} into lesson {}",
-                    assetId, lessonId, ex);
+            log.error("Failed to share personal asset {} into class {}",
+                    assetId, classId, ex);
             return error(HttpStatus.INTERNAL_SERVER_ERROR, MSG_GENERIC_RETRY);
         }
     }

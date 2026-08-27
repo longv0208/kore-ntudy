@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -84,7 +85,26 @@ public class LessonTemplateController {
         model.addAttribute("librarySubjectDescription", view.subjectDescription());
         model.addAttribute("librarySubjectOptions", view.subjectOptions());
         model.addAttribute("libraryChapters", view.chapters());
+        model.addAttribute("libraryLocked", view.libraryLocked());
+        model.addAttribute("libraryCanManageLock", view.canManageLibraryLock());
         return VIEW_LIBRARY;
+    }
+
+    @PostMapping("/subjects/{subjectId}/lock")
+    public String setSubjectLibraryLock(@PathVariable Long subjectId,
+                                        @RequestParam boolean locked,
+                                        @AuthenticationPrincipal KshUserDetails user,
+                                        RedirectAttributes ra) {
+        try {
+            templateService.setSubjectLibraryLocked(
+                    user.getId(), user.getRole(), subjectId, locked);
+            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, locked
+                    ? "Đã khóa khung chương trình; nội dung hiện chuyển sang chỉ đọc"
+                    : "Đã mở khóa khung chương trình; có thể tiếp tục biên soạn");
+        } catch (AccessDeniedException | IllegalArgumentException | EntityNotFoundException ex) {
+            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
+        }
+        return redirectTemplates(subjectId);
     }
 
     @GetMapping("/new")
@@ -136,6 +156,9 @@ public class LessonTemplateController {
             templateService.softDeleteChapter(user.getId(), user.getRole(), subjectId,
                     chapterNumber);
             ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã xoá chương và đánh lại số thứ tự");
+        } catch (AccessDeniedException ex) {
+            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
+            return redirectTemplates(subjectId);
         } catch (IllegalArgumentException | EntityNotFoundException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
         }
@@ -163,6 +186,9 @@ public class LessonTemplateController {
         try {
             templateService.saveForm(user.getId(), user.getRole(), form);
             ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã lưu bài học trong Library");
+            return redirectTemplates(form.getSubjectId());
+        } catch (AccessDeniedException ex) {
+            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
             return redirectTemplates(form.getSubjectId());
         } catch (IllegalArgumentException | EntityNotFoundException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
@@ -195,6 +221,9 @@ public class LessonTemplateController {
             var saved = templateService.saveForm(user.getId(), user.getRole(), form);
             return ResponseEntity.ok(Map.of("ok", true, "id", saved.id(),
                     "message", "Đã lưu bài học và tài nguyên"));
+        } catch (AccessDeniedException ex) {
+            return ResponseEntity.status(HttpStatus.LOCKED)
+                    .body(Map.of("ok", false, "message", ex.getMessage()));
         } catch (IllegalArgumentException | EntityNotFoundException ex) {
             return ResponseEntity.unprocessableEntity()
                     .body(Map.of("ok", false, "message", ex.getMessage()));
@@ -257,9 +286,9 @@ public class LessonTemplateController {
                          @AuthenticationPrincipal KshUserDetails user,
                          RedirectAttributes ra) {
         try {
-            templateService.softDelete(user.getId(), id);
+            templateService.softDelete(user.getId(), user.getRole(), id);
             ra.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_TEMPLATE_DELETED);
-        } catch (EntityNotFoundException ex) {
+        } catch (AccessDeniedException | EntityNotFoundException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
         } catch (RuntimeException ex) {
             log.error("Failed to delete template {} for user {}", id, user.getId(), ex);
@@ -277,7 +306,7 @@ public class LessonTemplateController {
         try {
             templateService.detachResource(user.getId(), user.getRole(), id, assetId);
             ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã gỡ tài nguyên và cập nhật các lớp đã phân phối");
-        } catch (IllegalArgumentException | EntityNotFoundException ex) {
+        } catch (AccessDeniedException | IllegalArgumentException | EntityNotFoundException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
         } catch (RuntimeException ex) {
             log.error("Failed to detach Library asset {} from template {}", assetId, id, ex);

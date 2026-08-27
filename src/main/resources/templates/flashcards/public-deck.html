@@ -5,21 +5,34 @@
   <link class="page-css" rel="stylesheet" th:href="@{/css/flashcards.css(v='2')}">
 </head>
 <body>
-<main class="fc-page fc-set-page">
-  <header class="fc-set-header">
+<main class="fc-page fc-set-page fc-public-page">
+  <header class="fc-set-header fc-public-hero">
     <div>
       <p class="fc-page-sub">Bộ thẻ công khai trên Korean Study Hub</p>
       <h1 class="fc-set-title" th:text="${deck.title()}">Tên bộ thẻ</h1>
       <p class="fc-set-description" th:if="${deck.description() != null}"
          th:text="${deck.description()}">Mô tả</p>
+      <div class="fc-public-stats"><strong th:text="${deck.cardCount()}">0</strong><span>thẻ · không cần đăng nhập · không lưu kết quả</span></div>
     </div>
   </header>
+
+  <section class="fc-mode-section fc-public-modes" th:if="${deck.cardCount()} > 0">
+    <div class="fc-public-mode-heading"><div><span class="fc-page-sub">BẮT ĐẦU NGAY</span><h2>Học và chơi</h2></div><p>Chọn một chế độ phù hợp với cách bạn muốn ôn tập.</p></div>
+    <div class="fc-mode-grid">
+      <a class="fc-mode-card" th:href="@{|/s/${publicToken}/flip|}"><span class="fc-mode-icon fc-mode-flip">▣</span><span>Lật thẻ</span></a>
+      <a class="fc-mode-card" th:href="@{|/s/${publicToken}/learn|}"><span class="fc-mode-icon fc-mode-learn">✦</span><span>Học</span></a>
+      <a class="fc-mode-card" th:href="@{|/s/${publicToken}/test|}"><span class="fc-mode-icon fc-mode-test">✓</span><span>Kiểm tra</span></a>
+      <a class="fc-mode-card" th:href="@{|/s/${publicToken}/match|}"><span class="fc-mode-icon fc-mode-match">↔</span><span>Ghép cặp</span></a>
+      <a class="fc-mode-card" th:href="@{|/s/${publicToken}/tiles|}"><span class="fc-mode-icon fc-mode-tiles">▦</span><span>Xếp âm tiết</span></a>
+      <a class="fc-mode-card" th:href="@{|/s/${publicToken}/word-search|}"><span class="fc-mode-icon fc-mode-word-search">⌕</span><span>Săn chữ Hàn</span></a>
+    </div>
+  </section>
 
   <p class="fc-empty" th:if="${deck.cardCount()} == 0">
     Bộ thẻ này chưa có thuật ngữ nào để học.
   </p>
 
-  <section class="fc-term-section" th:if="${deck.cardCount()} > 0">
+  <section class="fc-term-section fc-public-terms" th:if="${deck.cardCount()} > 0">
     <h2 th:text="'Thuật ngữ trong bộ thẻ này (' + ${deck.cardCount()} + ')'">Thuật ngữ</h2>
     <div class="fc-term-list">
       <article class="fc-term-row" th:each="card : ${cards}"

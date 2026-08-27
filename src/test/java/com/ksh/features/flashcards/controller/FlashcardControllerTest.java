@@ -191,6 +191,22 @@ class FlashcardControllerTest {
     }
 
     @Test
+    void public_link_exposes_anonymous_flip_learn_and_play_modes() throws Exception {
+        Long ownerId = userRepository.findByEmailIgnoreCase(OWNER).orElseThrow().getId();
+        String token = publicLinkService.enable(deckId, ownerId);
+
+        mockMvc.perform(get("/s/" + token + "/flip"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("LẬT THẺ")));
+        mockMvc.perform(get("/s/" + token + "/learn"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("PHÒNG LUYỆN TẬP")));
+        mockMvc.perform(get("/s/" + token + "/match"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("GHÉP CẶP")));
+    }
+
+    @Test
     void disabled_public_link_returns_not_found_without_leaking_deck() throws Exception {
         Long ownerId = userRepository.findByEmailIgnoreCase(OWNER).orElseThrow().getId();
         String token = publicLinkService.enable(deckId, ownerId);

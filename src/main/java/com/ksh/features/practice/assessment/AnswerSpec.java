@@ -52,6 +52,7 @@ public record AnswerSpec(
                 : evaluationMode;
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public record BlankAnswer(String blankId, List<String> acceptedValues) {
         public BlankAnswer {
             acceptedValues = acceptedValues == null ? List.of() : List.copyOf(acceptedValues);

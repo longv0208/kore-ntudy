@@ -9,15 +9,19 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * JPA entity mapping the {@code flashcard_decks} table (KSH-5.x).
  *
  * <p>A deck is a personal collection of two-sided cards owned by a student.
  * A fresh deck is {@link #VISIBILITY_PRIVATE}; the owner may switch it to
- * {@link #VISIBILITY_SHARED} targeting one of their classes so enrolled
+ * {@link #VISIBILITY_SHARED} targeting one or more of their classes so enrolled
  * classmates can view/study it. {@code OFFICIAL} decks are out of scope this
  * change but the value is kept for schema fidelity.
  *
@@ -44,9 +48,17 @@ public class FlashcardDeck {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    /** Null when PRIVATE; the target class id when SHARED. */
+    /**
+     * Legacy single-class pointer retained for backward-compatible migrations.
+     * New code uses {@link #sharedClassIds}; it may contain the first shared class.
+     */
     @Column(name = "class_id")
     private Long classId;
+
+    /** Class targets stored inline as JSON to keep the flashcard schema single-table. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "shared_class_ids", columnDefinition = "json")
+    private Set<Long> sharedClassIds = new LinkedHashSet<>();
 
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
@@ -120,16 +132,31 @@ public class FlashcardDeck {
         this.subjectId = subjectId;
     }
 
-    /** Moves the deck to SHARED targeting the given class. */
+    /** Adds a class target while preserving any classes already shared. */
     public void shareTo(Long classId) {
         this.visibility = VISIBILITY_SHARED;
-        this.classId = classId;
+        if (this.sharedClassIds == null) this.sharedClassIds = new LinkedHashSet<>();
+        this.sharedClassIds.add(classId);
+        if (this.classId == null) this.classId = classId;
+    }
+
+    /** Removes one class target and returns to PRIVATE after the last target. */
+    public void unshareFrom(Long classId) {
+        if (this.sharedClassIds == null) this.sharedClassIds = new LinkedHashSet<>();
+        this.sharedClassIds.remove(classId);
+        if (this.sharedClassIds.isEmpty()) {
+            unshare();
+        } else if (classId != null && classId.equals(this.classId)) {
+            this.classId = this.sharedClassIds.iterator().next();
+        }
     }
 
     /** Reverts the deck to PRIVATE and clears its target class. */
     public void unshare() {
         this.visibility = VISIBILITY_PRIVATE;
         this.classId = null;
+        if (this.sharedClassIds == null) this.sharedClassIds = new LinkedHashSet<>();
+        else this.sharedClassIds.clear();
     }
 
     /** Marks the deck soft-deleted; excluded from all default queries. */
@@ -175,6 +202,10 @@ public class FlashcardDeck {
 
     public Long getClassId() {
         return classId;
+    }
+
+    public Set<Long> getSharedClassIds() {
+        return sharedClassIds == null ? Set.of() : Set.copyOf(sharedClassIds);
     }
 
     public Long getOwnerId() {

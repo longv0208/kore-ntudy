@@ -8,7 +8,7 @@
   <link class="page-css" rel="stylesheet" th:href="@{/css/learning-ui.css}">
   <link class="page-css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
 </head>
-<body>
+<body th:classappend="${libraryLocked} ? ' library-is-locked'">
 <header th:replace="~{fragments/app-header :: appHeader('library')}"></header>
 
 <main class="library-detail-page">
@@ -21,10 +21,24 @@
              th:text="${librarySubjectDescription}">Chương trình đào tạo</small>
     </div>
     <div class="library-header-actions">
+      <form method="post" class="library-lock-form" th:if="${libraryCanManageLock}"
+            th:action="@{|/lecturer/library/templates/subjects/${librarySubjectId}/lock|}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <input type="hidden" name="locked" th:value="${!libraryLocked}">
+        <button class="library-lock-btn" th:classappend="${libraryLocked} ? ' is-locked'"
+                type="submit"
+                th:attr="aria-label=${libraryLocked ? 'Mở khóa khung chương trình' : 'Khóa khung chương trình'}">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6z"/>
+          </svg>
+          <span th:text="${libraryLocked ? 'Mở khóa biên soạn' : 'Khóa biên soạn'}">Khóa biên soạn</span>
+        </button>
+      </form>
       <button class="btn-ghost" type="button" data-library-share
               th:if="${libraryTemplateCount > 0}"
               aria-controls="libraryDistribution" aria-expanded="false">Chia sẻ cho lớp</button>
       <button class="content-create-btn js-library-editor" type="button"
+              th:if="${!libraryLocked}"
               th:attr="data-form-url=@{/lecturer/library/templates/new(subjectId=${librarySubjectId})}">Tạo bài học</button>
     </div>
   </div>
@@ -34,6 +48,20 @@
          th:if="${flashSuccess != null or flashError != null}"
          th:attr="data-flash-success=${flashSuccess},data-flash-error=${flashError}"
          hidden></div>
+
+    <aside class="library-authoring-lock" th:if="${libraryLocked}" role="status">
+      <span class="library-authoring-lock-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6z"/></svg>
+      </span>
+      <div>
+        <strong>Khung chương trình đang ở chế độ chỉ đọc</strong>
+        <p th:text="${libraryCanManageLock
+            ? 'Bạn đã khóa mã môn này. Mở khóa để tiếp tục biên soạn; việc phân phối cho lớp vẫn khả dụng.'
+            : 'Trưởng bộ môn đã khóa phiên bản hiện tại. Bạn vẫn có thể xem và phân phối, nhưng không thể chỉnh sửa nội dung.'}">
+          Trưởng bộ môn đã khóa phiên bản hiện tại.
+        </p>
+      </div>
+    </aside>
 
     <div class="content-header">
       <div class="content-heading">
@@ -100,15 +128,21 @@
     <div class="content-empty" th:if="${libraryPage == null or libraryPage.empty}">
       <h3 th:text="${libraryQuery != null and !#strings.isEmpty(libraryQuery)}
                     ? 'Không tìm thấy bài học phù hợp' : 'Chưa có bài học nào'">Chưa có bài học</h3>
-      <p>Tạo bài học trong Library; không cần tạo chương hoặc upload trực tiếp bên trong lớp.</p>
+      <p th:text="${libraryLocked
+          ? 'Khung chương trình đang bị khóa và hiện chưa có bài học để phân phối.'
+          : 'Tạo bài học trong Library; không cần tạo chương hoặc upload trực tiếp bên trong lớp.'}">
+        Tạo bài học trong Library.
+      </p>
       <button class="content-create-btn js-library-editor" type="button"
+              th:if="${!libraryLocked}"
               th:attr="data-form-url=@{/lecturer/library/templates/new(subjectId=${librarySubjectId})}">Tạo bài học đầu tiên</button>
     </div>
 
     <div class="library-subject-tree" th:if="${libraryPage != null and !libraryPage.empty}">
       <section class="library-chapter" th:each="chapter, iterStat : ${libraryChapters}"
-               th:classappend="${iterStat.index == 0} ? 'is-open'"
-               draggable="true" th:attr="data-chapter-number=${chapter.number()}">
+               th:classappend="${(iterStat.index == 0 ? 'is-open ' : '')
+                    + ((!libraryLocked and chapter.canManage()) ? 'is-editable' : 'is-readonly')}"
+               th:attr="draggable=${!libraryLocked and chapter.canManage()},data-chapter-number=${chapter.number()}">
         <header class="library-chapter-head">
           <button type="button" class="library-chapter-toggle"
                   th:attr="aria-expanded=${iterStat.index == 0},aria-controls='chapter-lessons-' + ${iterStat.index}">
@@ -118,14 +152,21 @@
           <div class="library-inline-title">
             <span>Chương</span>
             <button type="button" class="library-title-button" data-inline-edit
+                    th:if="${!libraryLocked and chapter.canManage()}"
                     th:attr="data-save-url=@{|/lecturer/library/templates/subjects/${librarySubjectId}/chapters/${chapter.number()}/rename|}"
                     th:text="${chapter.title()}">Chương 1 · Nhập môn</button>
-            <input class="library-title-input" hidden maxlength="180" th:value="${chapter.title()}">
+            <input class="library-title-input" hidden maxlength="180"
+                   th:if="${!libraryLocked and chapter.canManage()}" th:value="${chapter.title()}">
+            <strong class="library-readonly-title"
+                    th:if="${libraryLocked or !chapter.canManage()}"
+                    th:text="${chapter.title()}">Chương 1 · Nhập môn</strong>
           </div>
           <small th:text="${chapter.lessons().size()} + ' bài học'">2 bài học</small>
           <button type="button" class="btn-ghost btn-sm js-library-editor library-chapter-add"
+                  th:if="${!libraryLocked and chapter.canManage()}"
                   th:attr="data-form-url=@{/lecturer/library/templates/new(subjectId=${librarySubjectId},chapterNumber=${chapter.number()})}">+ Bài mới</button>
-          <form method="post" class="library-chapter-delete" th:if="${chapter.canManage()}"
+          <form method="post" class="library-chapter-delete"
+                th:if="${!libraryLocked and chapter.canManage()}"
                 th:action="@{|/lecturer/library/templates/subjects/${librarySubjectId}/chapters/${chapter.number()}/delete|}"
                 onsubmit="return confirm('Xoá toàn bộ chương này và các bài học bên trong?')">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
@@ -134,20 +175,26 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6"/></svg>
             </button>
           </form>
-          <button type="button" class="library-drag-handle" title="Kéo để đổi vị trí chương" aria-label="Kéo để đổi vị trí chương">⠿</button>
+          <button type="button" class="library-drag-handle"
+                  th:if="${!libraryLocked and chapter.canManage()}"
+                  title="Kéo để đổi vị trí chương" aria-label="Kéo để đổi vị trí chương">⠿</button>
         </header>
         <div class="library-lesson-list" role="list"
              th:id="'chapter-lessons-' + ${iterStat.index}">
           <article class="library-lesson-row" th:each="item : ${chapter.lessons()}" role="listitem">
             <span class="library-lesson-number" th:text="${item.lessonNumber()}">1</span>
             <div class="library-lesson-main">
-              <button type="button" class="asset-title library-title-button" th:if="${item.canManage()}"
+              <button type="button" class="asset-title library-title-button"
+                      th:if="${!libraryLocked and item.canManage()}"
                       data-inline-edit th:attr="data-save-url=@{|/lecturer/library/templates/${item.id()}/rename|}"
                       th:text="${item.title()}">Bài 1</button>
-              <input class="library-title-input" hidden maxlength="280" th:if="${item.canManage()}" th:value="${item.title()}">
-              <strong class="asset-title" th:if="${!item.canManage()}"
+              <input class="library-title-input" hidden maxlength="280"
+                     th:if="${!libraryLocked and item.canManage()}" th:value="${item.title()}">
+              <strong class="asset-title" th:if="${libraryLocked or !item.canManage()}"
                       th:text="${item.title()}">Bài 1</strong>
-              <small>Nhấn tiêu đề để sửa nhanh; mở tài nguyên để thay nội dung hoặc file.</small>
+              <small th:if="${!libraryLocked and item.canManage()}">Nhấn tiêu đề để sửa nhanh; mở tài nguyên để thay nội dung hoặc file.</small>
+              <small th:if="${libraryLocked}">Nội dung chỉ đọc trong khi khung chương trình đang khóa.</small>
+              <small th:if="${!libraryLocked and !item.canManage()}">Chỉ người tải lên mới được sửa nội dung bài học này.</small>
             </div>
             <div class="library-lesson-meta">
               <span class="kind-pill" th:text="${item.contentType() == 'PDF'} ? 'PDF'
@@ -156,7 +203,7 @@
               <span th:text="${'Tải lên bởi ' + item.uploaderDisplayName()
                       + ' · ID ' + item.uploaderUserId()}">Tải lên bởi Giảng viên · ID 1</span>
             </div>
-            <div class="library-lesson-actions" th:if="${item.canManage()}">
+            <div class="library-lesson-actions" th:if="${!libraryLocked and item.canManage()}">
               <button class="btn-ghost btn-sm js-library-editor" type="button"
                       th:attr="data-form-url=@{|/lecturer/library/templates/${item.id()}/edit|}">Tài nguyên</button>
               <form method="post" th:action="@{|/lecturer/library/templates/${item.id()}/delete|}">
@@ -178,7 +225,8 @@
                   <span class="library-resource-kind" th:text="${resource.kind()}">PDF</span>
                   <span><strong th:text="${resource.label()}">PDF chính</strong>
                     <small th:text="${resource.name()}">name.pdf</small></span>
-                  <form method="post" th:if="${resource.assetId() != null}"
+                  <form method="post"
+                        th:if="${!libraryLocked and item.canManage() and resource.assetId() != null}"
                         th:action="@{|/lecturer/library/templates/${item.id()}/resources/${resource.assetId()}/delete|}"
                         onsubmit="return confirm('Gỡ tài nguyên này khỏi bài học?')">
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
@@ -196,7 +244,7 @@
       </section>
     </div>
 
-    <div class="library-add-actions" th:if="${librarySubjectId != null}">
+    <div class="library-add-actions" th:if="${librarySubjectId != null and !libraryLocked}">
       <button type="button" class="library-add-row js-library-editor"
               th:attr="data-form-url=@{/lecturer/library/templates/new(subjectId=${librarySubjectId},newChapter=true)}">+ Thêm chương mới</button>
     </div>
@@ -212,7 +260,8 @@
   </section>
 </main>
 
-<dialog class="library-editor-dialog" data-library-editor-dialog aria-label="Biên tập bài học">
+<dialog class="library-editor-dialog" th:if="${!libraryLocked}"
+        data-library-editor-dialog aria-label="Biên tập bài học">
   <div class="library-editor-shell" data-library-drop-surface>
     <header class="library-editor-header">
       <div><span>Biên tập nhanh</span><strong data-library-editor-title>Bài học</strong></div>

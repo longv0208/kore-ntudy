@@ -181,10 +181,14 @@ public class StudentFlashcardController {
     /** Shares a deck to one of the owner's classes; owner-only. */
     @PostMapping("/{id}/share")
     public String share(@PathVariable Long id,
-                        @RequestParam("classId") Long classId,
+                        @RequestParam(name = "classIds", required = false) List<Long> classIds,
+                        @RequestParam(name = "classId", required = false) Long legacyClassId,
                         @AuthenticationPrincipal KshUserDetails user,
                         RedirectAttributes ra) {
-        deckService.share(id, user.getId(), classId);
+        List<Long> targets = classIds == null ? new java.util.ArrayList<>()
+                : new java.util.ArrayList<>(classIds);
+        if (legacyClassId != null) targets.add(legacyClassId);
+        deckService.syncShares(id, user.getId(), targets);
         ra.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_DECK_SHARED);
         return "redirect:" + deckUrl(id);
     }
@@ -192,9 +196,11 @@ public class StudentFlashcardController {
     /** Reverts a deck to PRIVATE; owner-only. */
     @PostMapping("/{id}/unshare")
     public String unshare(@PathVariable Long id,
+                          @RequestParam(name = "classId", required = false) Long classId,
                           @AuthenticationPrincipal KshUserDetails user,
                           RedirectAttributes ra) {
-        deckService.unshare(id, user.getId());
+        if (classId == null) deckService.unshare(id, user.getId());
+        else deckService.unshare(id, user.getId(), classId);
         ra.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_DECK_UNSHARED);
         return "redirect:" + deckUrl(id);
     }

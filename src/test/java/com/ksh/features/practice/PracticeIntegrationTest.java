@@ -3574,6 +3574,53 @@ class PracticeIntegrationTest {
 
     @Test
     @WithUserDetails("student@ksh.edu.vn")
+    void unansweredQ51AndQ52SubmitAsEmptyAnswersWithoutHttp500() throws Exception {
+        PracticeSet set = setRepository.saveAndFlush(new PracticeSet(
+                "Blank Q51 Q52 submission", "Desc", "WRITING", "GLOBAL",
+                null, null, "{}", "PUBLISHED", lecturer.getId()));
+        PracticeTest test = testRepository.saveAndFlush(new PracticeTest(
+                set.getId(), "Writing", "Desc", 1, 40));
+        PracticeSection section = new PracticeSection(
+                set.getId(), "Writing", "WRITING", "ESSAY", "Desc", 50,
+                BigDecimal.valueOf(20), 1);
+        section.setTestId(test.getId());
+        section = sectionRepository.saveAndFlush(section);
+        PracticeQuestionGroup group = new PracticeQuestionGroup(
+                set.getId(), "Q51-Q52", 51, 52, "Desc", null, null, 1);
+        group.setSectionId(section.getId());
+        group = groupRepository.saveAndFlush(group);
+
+        PracticeQuestion q51 = new PracticeQuestion(
+                set.getId(), 51, "ESSAY", "Prompt Q51", "[]", "", "Explain",
+                BigDecimal.TEN, 1);
+        q51.setWritingTaskType(WritingTaskType.Q51);
+        q51.setGroupId(group.getId());
+        questionRepository.saveAndFlush(q51);
+        PracticeQuestion q52 = new PracticeQuestion(
+                set.getId(), 52, "ESSAY", "Prompt Q52", "[]", "", "Explain",
+                BigDecimal.TEN, 2);
+        q52.setWritingTaskType(WritingTaskType.Q52);
+        q52.setGroupId(group.getId());
+        questionRepository.saveAndFlush(q52);
+        publishVersion(set.getId());
+
+        Long attemptId = practiceService.startAttempt(
+                set.getId(), test.getId(), section.getId(), student.getId());
+        PracticeAttempt attempt = attemptRepository.findById(attemptId).orElseThrow();
+
+        mockMvc.perform(post("/practice/attempts/" + attemptId + "/submit")
+                        .with(csrf())
+                        .param("expectedLockVersion", String.valueOf(attempt.getLockVersion())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/practice/attempts/" + attemptId + "/result"));
+
+        PracticeAttempt submitted = attemptRepository.findById(attemptId).orElseThrow();
+        assertNotEquals(PracticeAttempt.STATUS_IN_PROGRESS, submitted.getStatus());
+        assertFalse(submitted.getAnswersJson().contains("\"responses\":null"));
+    }
+
+    @Test
+    @WithUserDetails("student@ksh.edu.vn")
     void testResultRenderSecurityEscaping() throws Exception {
         // Seed a published WRITING set
         PracticeSet writingSet = new PracticeSet(

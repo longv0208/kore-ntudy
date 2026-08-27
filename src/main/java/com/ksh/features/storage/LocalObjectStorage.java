@@ -80,11 +80,7 @@ public class LocalObjectStorage implements ObjectStorage {
         long cappedEnd = Math.min(end, size - 1);
         long length = cappedEnd - start + 1;
         InputStream full = Files.newInputStream(path);
-        long skipped = full.skip(start);
-        if (skipped < start) {
-            full.close();
-            throw new IOException("Failed to seek to range start " + start);
-        }
+        full.skipNBytes(start);
         // Limit stream so callers cannot read past the requested end.
         InputStream limited = new LimitedInputStream(full, length);
         String type = Files.probeContentType(path);

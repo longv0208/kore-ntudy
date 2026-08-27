@@ -57,23 +57,13 @@ class ClassJoinApprovalNotificationIntegrationTest {
     }
 
     @Test
-    void request_then_owner_approval_persists_enrollment_and_both_notification_boundaries() {
-        long ownerUnreadBefore = notificationService.unreadCount(owner.getId());
+    void lecturer_approval_of_existing_pending_enrollment_persists_membership_and_notifications() {
         long studentUnreadBefore = notificationService.unreadCount(student.getId());
 
-        JoinClassService.JoinResult requested = joinClassService.requestJoin(
-                activeClass.getId(), student.getId());
-
-        assertThat(requested).isInstanceOf(JoinClassService.PendingRequested.class);
-        Enrollment pending = enrollmentRepository.findByUserIdAndClassId(student.getId(), activeClass.getId())
-                .orElseThrow();
+        Enrollment pending = Enrollment.createPending(
+                student, activeClass.getId(), Enrollment.JoinedVia.IMPORT, null);
+        enrollmentRepository.saveAndFlush(pending);
         assertThat(pending.getStatus()).isEqualTo(Enrollment.STATUS_PENDING);
-        assertThat(notificationService.unreadCount(owner.getId())).isEqualTo(ownerUnreadBefore + 1);
-        assertThat(notificationsFor(owner.getId())).anySatisfy(notification -> {
-            assertThat(notification.getType()).isEqualTo(NotificationType.JOIN_REQUEST);
-            assertThat(notification.getReferenceType()).isEqualTo(NotificationType.REF_CLASS);
-            assertThat(notification.getReferenceId()).isEqualTo(activeClass.getId());
-        });
 
         joinClassService.approve(activeClass.getId(), student.getId(), owner.getId(), Role.LECTURER);
 

@@ -824,14 +824,7 @@
   };
   initializeSplitResize();
 
-  ['contextmenu', 'copy', 'cut', 'paste', 'drop', 'dragstart'].forEach((eventName) => {
-    player.addEventListener(eventName, (event) => event.preventDefault());
-  });
-  player.addEventListener('keydown', (event) => {
-    if ((event.ctrlKey || event.metaKey) && ['c', 'x', 'v'].includes(event.key.toLowerCase())) {
-      event.preventDefault();
-    }
-  });
+  // Anti-cheat copy/paste disabled per user request
 
   const selectionTools = player.querySelector('[data-selection-tools]');
   const noteComposer = player.querySelector('[data-note-composer]');
@@ -1162,20 +1155,9 @@
       exitPending = true;
       link.setAttribute('aria-disabled', 'true');
       window.clearTimeout(autosaveTimer);
-      flushLatestAnswers().then((saved) => {
-        if (saved && !autosaveBlocked) {
-          allowNavigation = true;
-          window.location.assign(link.href);
-          return;
-        }
-        if (deadlineSubmission) {
-          player.requestSubmit();
-        }
-      }).finally(() => {
-        if (!allowNavigation) {
-          exitPending = false;
-          link.removeAttribute('aria-disabled');
-        }
+      flushLatestAnswers().finally(() => {
+        allowNavigation = true;
+        window.location.assign(link.href);
       });
     });
   });

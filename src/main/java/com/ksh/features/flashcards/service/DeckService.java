@@ -109,15 +109,18 @@ public class DeckService {
         }
         FlashcardDeck deck = resolved.deck();
         long count = cardRepository.countByDeckId(deckId);
-        String className = deck.getClassId() == null ? null
-                : classRepository.findById(deck.getClassId())
-                        .map(ClassEntity::getName).orElse(null);
+        List<Long> sharedClassIds = sharedClassIds(deck);
+        List<ClassOption> sharedClasses = classOptions(sharedClassIds);
+        String className = sharedClasses.isEmpty() ? null
+                : sharedClasses.size() == 1 ? sharedClasses.get(0).name()
+                : sharedClasses.get(0).name() + " + " + (sharedClasses.size() - 1) + " lớp";
         List<ClassOption> shareClasses = resolved.isOwner() ? shareableClasses(userId) : List.of();
         String ownerName = assembler.toSummaries(List.of(deck), userId).get(0).ownerName();
         return new DeckDetailView(deck.getId(), deck.getTitle(), deck.getDescription(),
                 count, resolved.isOwner(), deck.isShared(), deck.getClassId(),
                 className, shareClasses, ownerName, deck.isPublicLink(),
-                resolved.isOwner() ? deck.getShareToken() : null);
+                resolved.isOwner() ? deck.getShareToken() : null,
+                sharedClassIds, sharedClasses);
     }
 
     /**
@@ -140,9 +143,14 @@ public class DeckService {
         Page<DeckSummary> ownPage = ownDecksPage(userId, page, keyword);
         List<Long> classIds = activeClassIds(userId);
         List<FlashcardDeck> shared = classIds.isEmpty() ? List.of()
-                : deckRepository.searchShared(FlashcardDeck.VISIBILITY_SHARED,
-                        classIds, userId, keyword);
-        return new StudentDeckList(ownPage, assembler.toSummaries(shared, userId));
+                : deckRepository.findByVisibilityOrderByUpdatedAtDesc(
+                        FlashcardDeck.VISIBILITY_SHARED).stream()
+                        .filter(deck -> !deck.getOwnerId().equals(userId))
+                        .filter(deck -> targetsAnyClass(deck, classIds))
+                        .toList();
+        List<DeckSummary> sharedSummaries = assembler.toSummaries(shared, userId).stream()
+                .filter(deck -> matchesKeyword(deck, keyword)).toList();
+        return new StudentDeckList(ownPage, sharedSummaries);
     }
 
     /**
@@ -156,9 +164,10 @@ public class DeckService {
                 deckRepository.findByOwnerIdOrderByUpdatedAtDesc(userId));
         List<Long> classIds = activeClassIds(userId);
         if (!classIds.isEmpty()) {
-            viewable.addAll(deckRepository
-                    .findByVisibilityAndClassIdInAndOwnerIdNotOrderByUpdatedAtDesc(
-                            FlashcardDeck.VISIBILITY_SHARED, classIds, userId));
+            viewable.addAll(deckRepository.findByVisibilityOrderByUpdatedAtDesc(
+                            FlashcardDeck.VISIBILITY_SHARED).stream()
+                    .filter(deck -> !deck.getOwnerId().equals(userId))
+                    .filter(deck -> targetsAnyClass(deck, classIds)).toList());
         }
         return assembler.toSummaries(viewable, userId);
     }
@@ -183,9 +192,9 @@ public class DeckService {
     /** SHARED decks targeting a class (surfaced on the class page). */
     @Transactional(readOnly = true)
     public List<DeckSummary> listSharedForClass(Long classId, Long userId) {
-        List<FlashcardDeck> shared = deckRepository
-                .findByVisibilityAndClassIdOrderByUpdatedAtDesc(
-                        FlashcardDeck.VISIBILITY_SHARED, classId);
+        List<FlashcardDeck> shared = deckRepository.findByVisibilityOrderByUpdatedAtDesc(
+                        FlashcardDeck.VISIBILITY_SHARED).stream()
+                .filter(deck -> targetsAnyClass(deck, List.of(classId))).toList();
         return assembler.toSummaries(shared, userId);
     }
 
@@ -200,11 +209,38 @@ public class DeckService {
         deckRepository.save(deck);
     }
 
+    /** Replaces the complete set of class targets selected in the deck UI. */
+    @Transactional
+    public void syncShares(Long deckId, Long ownerId, List<Long> classIds) {
+        FlashcardDeck deck = accessResolver.requireOwner(deckId, ownerId);
+        List<Long> targets = classIds == null ? List.of() : classIds.stream()
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        for (Long classId : targets) {
+            if (!isOwnersClass(ownerId, classId)) {
+                throw new AccessDeniedException(MSG_SHARE_CLASS_INVALID);
+            }
+        }
+        deck.unshare();
+        targets.forEach(deck::shareTo);
+        deckRepository.save(deck);
+    }
+
     /** Reverts a deck to PRIVATE; owner-only. */
     @Transactional
     public void unshare(Long deckId, Long ownerId) {
         FlashcardDeck deck = accessResolver.requireOwner(deckId, ownerId);
         deck.unshare();
+        deckRepository.save(deck);
+    }
+
+    /** Removes one class target while preserving all remaining class shares. */
+    @Transactional
+    public void unshare(Long deckId, Long ownerId, Long classId) {
+        FlashcardDeck deck = accessResolver.requireOwner(deckId, ownerId);
+        if (classId == null || !deck.getSharedClassIds().contains(classId)) {
+            throw new IllegalArgumentException(MSG_SHARE_CLASS_INVALID);
+        }
+        deck.unshareFrom(classId);
         deckRepository.save(deck);
     }
 
@@ -247,6 +283,37 @@ public class DeckService {
             ids.add(e.getClassId());
         }
         return ids;
+    }
+
+    private List<Long> sharedClassIds(FlashcardDeck deck) {
+        List<Long> ids = new ArrayList<>(deck.getSharedClassIds());
+        if (ids.isEmpty() && deck.getClassId() != null) ids.add(deck.getClassId());
+        return ids;
+    }
+
+    private boolean targetsAnyClass(FlashcardDeck deck, List<Long> classIds) {
+        return sharedClassIds(deck).stream().anyMatch(classIds::contains);
+    }
+
+    private boolean matchesKeyword(DeckSummary deck, String keyword) {
+        if (keyword == null || keyword.isBlank()) return true;
+        String needle = keyword.toLowerCase(java.util.Locale.ROOT);
+        return containsIgnoreCase(deck.title(), needle)
+                || containsIgnoreCase(deck.subjectCode(), needle)
+                || containsIgnoreCase(deck.subjectName(), needle);
+    }
+
+    private boolean containsIgnoreCase(String value, String lowerNeedle) {
+        return value != null && value.toLowerCase(java.util.Locale.ROOT).contains(lowerNeedle);
+    }
+
+    private List<ClassOption> classOptions(List<Long> classIds) {
+        if (classIds.isEmpty()) return List.of();
+        List<ClassOption> options = new ArrayList<>();
+        for (ClassEntity c : classRepository.findAllById(classIds)) {
+            options.add(new ClassOption(c.getId(), c.getName()));
+        }
+        return options;
     }
 
     private static String trimToNull(String s) {

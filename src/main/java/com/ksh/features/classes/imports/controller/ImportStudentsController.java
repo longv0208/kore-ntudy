@@ -37,7 +37,7 @@ import java.util.UUID;
  * <ul>
  *   <li>{@code POST /upload}            — multipart upload, returns the preview rows.</li>
  *   <li>{@code POST /{sessionId}/confirm} — confirms the import, returns the summary.</li>
- *   <li>{@code GET  /template}          — downloads a 2-row sample .xlsx file.</li>
+ *   <li>{@code GET  /template}          — downloads a 25-student sample .xlsx file.</li>
  * </ul>
  *
  * <p>Authorization is enforced at two layers: {@link PreAuthorize} blocks

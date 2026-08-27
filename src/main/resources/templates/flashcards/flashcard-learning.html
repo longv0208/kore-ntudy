@@ -10,7 +10,8 @@
 
 <main class="fc-learning-shell">
   <div class="fc-learning-topbar">
-    <a class="fc-learning-back" th:href="@{|/my/flashcards/${deck.id()}|}">← Bộ thẻ</a>
+    <a class="fc-learning-back"
+       th:href="${publicStudy == true} ? @{|/s/${publicToken}|} : @{|/my/flashcards/${deck.id()}|}">← Bộ thẻ</a>
     <div class="fc-learning-heading">
       <span class="fc-learning-kicker">PHÒNG LUYỆN TẬP</span>
       <h1 th:text="${deck.title()}">Tên bộ thẻ</h1>
