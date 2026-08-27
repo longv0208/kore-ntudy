@@ -68,6 +68,9 @@
 
     const menu = document.createElement('div');
     menu.className = 'ksh-select-menu ksh-select-menu--portal';
+    const customMenuClasses = (select.dataset.kshSelectMenuClass || '')
+      .split(/\s+/).filter(Boolean);
+    if (customMenuClasses.length) menu.classList.add.apply(menu.classList, customMenuClasses);
     menu.id = 'ksh-select-menu-' + instanceId;
     menu.setAttribute('role', 'listbox');
     menu.setAttribute('aria-labelledby', trigger.id);

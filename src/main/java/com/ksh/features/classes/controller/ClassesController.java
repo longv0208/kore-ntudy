@@ -13,6 +13,7 @@ import com.ksh.security.KshUserDetails;
 import jakarta.validation.Valid;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -29,7 +30,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 import static com.ksh.common.IConstant.*;
 import static com.ksh.features.classes.controller.support.ClassDetailModelSupport.classUrl;
@@ -58,6 +62,14 @@ import static com.ksh.features.classes.controller.support.ClassDetailModelSuppor
 @PreAuthorize(Roles.PREAUTH_LECTURER_OR_ABOVE)
 public class ClassesController {
 
+    private static final String TAB_CURRENT = "current";
+    private static final String TAB_ARCHIVED = "archived";
+    private static final List<String> CURRENT_STATUSES = List.of(
+            ClassEntity.STATUS_PENDING,
+            ClassEntity.STATUS_REJECTED,
+            ClassEntity.STATUS_ACTIVE);
+    private static final List<String> ARCHIVED_STATUSES = List.of(ClassEntity.STATUS_ARCHIVED);
+
     private final ClassesService classesService;
     private final DepartmentRepository subjectRepository;
     private final ClassJoinRequestQuickViewService quickJoinRequests;
@@ -83,12 +95,30 @@ public class ClassesController {
     public String list(@AuthenticationPrincipal KshUserDetails user,
                        @PageableDefault(size = DEFAULT_PAGE_SIZE, sort = "createdAt",
                                direction = Sort.Direction.DESC) Pageable pageable,
+                       @RequestParam(defaultValue = TAB_CURRENT) String tab,
                        Model model) {
-        Page<ClassRow> page = classesService.listForUser(user.getId(), user.getRole(), pageable);
+        String selectedTab = TAB_ARCHIVED.equalsIgnoreCase(tab) ? TAB_ARCHIVED : TAB_CURRENT;
+        List<String> selectedStatuses = TAB_ARCHIVED.equals(selectedTab)
+                ? ARCHIVED_STATUSES : CURRENT_STATUSES;
+        Page<ClassRow> page = classesService.listForUserByStatuses(
+                user.getId(), user.getRole(), selectedStatuses, pageable);
+        if (page.getTotalPages() > 0 && pageable.getPageNumber() >= page.getTotalPages()) {
+            Pageable lastPage = PageRequest.of(
+                    page.getTotalPages() - 1, pageable.getPageSize(), pageable.getSort());
+            page = classesService.listForUserByStatuses(
+                    user.getId(), user.getRole(), selectedStatuses, lastPage);
+        }
         // Keep the existing template loop driven by ${classes} (a List). The Page
         // object is exposed separately as ${classesPage} for the pagination block.
         model.addAttribute(ATTR_CLASSES, page.getContent());
         model.addAttribute(ATTR_CLASSES_PAGE, page);
+        model.addAttribute("selectedTab", selectedTab);
+        model.addAttribute("currentClassCount", TAB_CURRENT.equals(selectedTab)
+                ? page.getTotalElements()
+                : classesService.countForUserByStatuses(user.getId(), user.getRole(), CURRENT_STATUSES));
+        model.addAttribute("archivedClassCount", TAB_ARCHIVED.equals(selectedTab)
+                ? page.getTotalElements()
+                : classesService.countForUserByStatuses(user.getId(), user.getRole(), ARCHIVED_STATUSES));
         model.addAttribute("pendingJoinRequests", quickJoinRequests.forOwnedClasses(
                 page.getContent().stream().map(ClassRow::id).toList(), user.getId()));
         return VIEW_CLASS_MANAGE;

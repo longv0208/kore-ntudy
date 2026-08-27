@@ -51,6 +51,7 @@ public class ClassesDtos {
             return switch (status == null ? "" : status) {
                 case ClassEntity.STATUS_PENDING -> "Chờ duyệt";
                 case ClassEntity.STATUS_REJECTED -> "Bị từ chối";
+                case ClassEntity.STATUS_ARCHIVED -> "Đã lưu trữ";
                 default -> null;
             };
         }
@@ -60,6 +61,7 @@ public class ClassesDtos {
             return switch (status == null ? "" : status) {
                 case ClassEntity.STATUS_PENDING -> "state-pending";
                 case ClassEntity.STATUS_REJECTED -> "state-rejected";
+                case ClassEntity.STATUS_ARCHIVED -> "state-archived";
                 default -> "";
             };
         }
