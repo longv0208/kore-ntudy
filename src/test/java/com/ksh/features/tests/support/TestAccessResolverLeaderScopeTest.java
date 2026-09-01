@@ -107,6 +107,37 @@ class TestAccessResolverLeaderScopeTest {
     }
 
     @org.junit.jupiter.api.Test
+    void publishedSharedBankSourceDoesNotRequireCreatorOrClassOwnership() {
+        when(exam.isPublished()).thenReturn(true);
+
+        assertThat(resolver.requireSharedTestBankSource(
+                TEST_ID, USER_ID, Role.LECTURER, false)).isSameAs(exam);
+        assertThat(resolver.requirePreviewableFromTestBank(
+                TEST_ID, USER_ID, Role.LEADER)).isSameAs(exam);
+
+        verify(classRepository, never()).findById(CLASS_ID);
+        verify(classAccessPolicy, never()).canAccess(clazz, USER_ID, Role.LECTURER);
+    }
+
+    @org.junit.jupiter.api.Test
+    void sharedPreviewRequiresAnAuthenticatedEducatorAndNeverIncludesPractice() {
+        when(exam.isPublished()).thenReturn(true);
+
+        assertThatThrownBy(() -> resolver.requirePreviewableFromTestBank(
+                TEST_ID, null, Role.LECTURER))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> resolver.requirePreviewableFromTestBank(
+                TEST_ID, USER_ID, Role.STUDENT))
+                .isInstanceOf(AccessDeniedException.class);
+
+        when(exam.isPractice()).thenReturn(true);
+        when(exam.getCreatedBy()).thenReturn(99L);
+        assertThatThrownBy(() -> resolver.requirePreviewableFromTestBank(
+                TEST_ID, USER_ID, Role.LECTURER))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @org.junit.jupiter.api.Test
     void leaderClassPickerIncludesAllAssignedSubjects() {
         ClassEntity firstSubjectClass = mock(ClassEntity.class);
         ClassEntity secondSubjectClass = mock(ClassEntity.class);

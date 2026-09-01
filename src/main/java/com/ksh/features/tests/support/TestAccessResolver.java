@@ -137,6 +137,47 @@ public class TestAccessResolver {
         return requireManageable(test, userId, role);
     }
 
+    /**
+     * Resolves a non-Practice test as a shared Test Bank source.  Publishing a
+     * test makes its read/distribution contract available to every educator;
+     * it deliberately does <em>not</em> grant editing, monitoring, deletion or
+     * question-bank mutation rights.  Those operations must continue to call
+     * {@link #requireManageable(Long, Long, Role)}.
+     *
+     * <p>The caller's target classes are still checked independently before a
+     * copy is made.  This method only opens the source snapshot.
+     */
+    public Test requireSharedTestBankSource(Long testId, Long userId, Role role,
+                                            boolean forUpdate) {
+        if (userId == null || !isEducatorRole(role)) {
+            throw new AccessDeniedException(NF_MSG);
+        }
+        Test test = forUpdate
+                ? testRepository.findByIdForUpdate(testId)
+                    .orElseThrow(() -> new EntityNotFoundException(NF_MSG))
+                : loadOrNotFound(testId);
+        if (test.isDeleted()) {
+            throw new EntityNotFoundException(NF_MSG);
+        }
+        if (test.isPractice()) {
+            throw new AccessDeniedException(NF_MSG);
+        }
+        return test;
+    }
+
+    /**
+     * A published, non-Practice Test Bank entry is previewable by every
+     * educator. Draft and archived entries keep the normal management scope.
+     */
+    public Test requirePreviewableFromTestBank(Long testId, Long userId, Role role) {
+        Test test = loadOrNotFound(testId);
+        if (userId != null && !test.isPractice() && test.isPublished()
+                && isEducatorRole(role)) {
+            return test;
+        }
+        return requireManageable(test, userId, role);
+    }
+
     private Test requireManageable(Test test, Long userId, Role role) {
         // Do not broaden management of student-owned Practice data.
         if (test.isPractice()) {
@@ -163,6 +204,10 @@ public class TestAccessResolver {
             }
         }
         throw new AccessDeniedException(NF_MSG);
+    }
+
+    private static boolean isEducatorRole(Role role) {
+        return role == Role.LECTURER || role == Role.LEADER || role == Role.ADMIN;
     }
 
     /**

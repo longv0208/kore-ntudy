@@ -46,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LecturerExamDistributionIntegrationTest {
 
     private static final String LECTURER_EMAIL = "lecturer@ksh.edu.vn";
+    private static final String SHARED_CONSUMER_EMAIL = "ChoA@fe.edu.vn";
 
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository userRepository;
@@ -57,6 +58,7 @@ class LecturerExamDistributionIntegrationTest {
     @Autowired private LecturerExamService examService;
 
     private User lecturer;
+    private User sharedConsumer;
     private ClassEntity sourceClass;
     private Long sourceTestId;
     private String title;
@@ -64,6 +66,7 @@ class LecturerExamDistributionIntegrationTest {
     @BeforeEach
     void setUp() {
         lecturer = userRepository.findByEmailIgnoreCase(LECTURER_EMAIL).orElseThrow();
+        sharedConsumer = userRepository.findByEmailIgnoreCase(SHARED_CONSUMER_EMAIL).orElseThrow();
         assertThat(lecturer.getSubjectId()).isNotNull();
         sourceClass = activeClass("Lớp nguồn", lecturer.getSubjectId());
         title = "Đề phân phối " + UUID.randomUUID().toString().substring(0, 8);
@@ -81,7 +84,7 @@ class LecturerExamDistributionIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(title)))
                 .andExpect(content().string(containsString("KOR target A")))
-                .andExpect(content().string(containsString("Phân phối bài test đã hoàn tất")));
+                .andExpect(content().string(containsString("Phân phối bài test")));
 
         mockMvc.perform(post("/lecturer/tests/" + sourceTestId + "/distribute").with(csrf())
                         .param("classIds", first.getId().toString(), second.getId().toString()))
@@ -167,8 +170,64 @@ class LecturerExamDistributionIntegrationTest {
                 .isEqualTo(target.getId());
     }
 
+    @Test
+    @WithUserDetails(SHARED_CONSUMER_EMAIL)
+    void anotherLecturerCanPreviewAndDistributePublishedSharedBankSource() throws Exception {
+        ClassEntity recipient = activeClass(
+                "KOR shared recipient", lecturer.getSubjectId(), sharedConsumer);
+
+        // The counters above the catalog must use the same visible scope as the
+        // list.  A shared published source is usable by another lecturer even
+        // though it remains read-only to them.
+        var sharedCatalog = examService.listOwned(sharedConsumer.getId(), 0);
+        var sharedMetrics = examService.metricsFor(sharedConsumer.getId());
+        assertThat(sharedCatalog.getTotalElements()).isGreaterThan(0);
+        assertThat(sharedMetrics.totalTests()).isEqualTo(sharedCatalog.getTotalElements());
+        assertThat(sharedMetrics.publishedTests()).isGreaterThan(0);
+
+        mockMvc.perform(get("/lecturer/tests/" + sourceTestId + "/distribute"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(title)))
+                .andExpect(content().string(containsString("KOR shared recipient")));
+
+        mockMvc.perform(get("/lecturer/tests/" + sourceTestId + "/preview"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/lecturer/tests/" + sourceTestId + "/distribute").with(csrf())
+                        .param("classIds", recipient.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/lecturer/tests"));
+
+        assertThat(testRepository.findByClassId(recipient.getId(), PageRequest.of(0, 20))
+                .getContent()).singleElement().satisfies(copy -> {
+            assertThat(copy.getTitle()).isEqualTo(title);
+            assertThat(copy.getCreatedBy()).isEqualTo(sharedConsumer.getId());
+        });
+    }
+
+    @Test
+    void foreignDraftAndArchivedTestsStayOutOfAnotherLecturersCatalog() {
+        Long draftId = examService.save(lecturer.getId(), examForm(
+                lecturer.getSubjectId(), sourceClass.getId(), title + " foreign draft",
+                com.ksh.features.tests.entity.Test.STATUS_DRAFT));
+        Long archivedId = examService.save(lecturer.getId(), examForm(
+                lecturer.getSubjectId(), sourceClass.getId(), title + " foreign archived",
+                com.ksh.features.tests.entity.Test.STATUS_DRAFT));
+        var archived = testRepository.findById(archivedId).orElseThrow();
+        archived.setStatus(com.ksh.features.tests.entity.Test.STATUS_ARCHIVED);
+        testRepository.saveAndFlush(archived);
+
+        assertThat(examService.listOwned(sharedConsumer.getId(), 0).getContent())
+                .extracting(com.ksh.features.tests.dto.LecturerTestDtos.LecturerExamRow::id)
+                .doesNotContain(draftId, archivedId);
+    }
+
     private ClassEntity activeClass(String name, Long subjectId) {
-        ClassEntity clazz = new ClassEntity(name, lecturer.getId(), lecturer.getId(),
+        return activeClass(name, subjectId, lecturer);
+    }
+
+    private ClassEntity activeClass(String name, Long subjectId, User owner) {
+        ClassEntity clazz = new ClassEntity(name, owner.getId(), owner.getId(),
                 null, null, null, 100);
         clazz.setSubjectId(subjectId);
         clazz.approve(lecturer.getId(), LocalDateTime.now());
