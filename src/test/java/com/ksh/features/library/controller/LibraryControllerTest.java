@@ -68,12 +68,25 @@ class LibraryControllerTest {
 
     @Test
     @WithUserDetails("lecturer@ksh.edu.vn")
+    void lecturer_personal_asset_inventory_renders_format_icons_and_right_detail_panel()
+            throws Exception {
+        mockMvc.perform(get("/lecturer/library/assets"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("library/assets"))
+                .andExpect(content().string(containsString("personal-library-hero.png")))
+                .andExpect(content().string(containsString("data-library-detail-panel")))
+                .andExpect(content().string(containsString("Đang sử dụng")))
+                .andExpect(content().string(containsString("Gần đây")));
+    }
+
+    @Test
+    @WithUserDetails("lecturer@ksh.edu.vn")
     void lecturer_library_page_uses_subject_lesson_flow_without_loose_attach_ui()
             throws Exception {
         mockMvc.perform(get("/lecturer/library/templates"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("library/index"))
-                .andExpect(content().string(containsString("Tạo bài học")))
+                .andExpect(content().string(not(containsString(">Tạo bài học<"))))
                 .andExpect(content().string(containsString("mã môn")))
                 .andExpect(content().string(not(containsString("libraryAttachWizard"))))
                 .andExpect(content().string(not(containsString("Thêm vào lớp"))))
@@ -81,7 +94,7 @@ class LibraryControllerTest {
     }
 
     @Test
-    @WithUserDetails("lecturer@ksh.edu.vn")
+    @WithUserDetails("leader@ksh.edu.vn")
     void root_redirects_to_canonical_lessons_and_form_owns_uploads() throws Exception {
         mockMvc.perform(get("/lecturer/library"))
                 .andExpect(status().is3xxRedirection())
@@ -94,5 +107,21 @@ class LibraryControllerTest {
                 .andExpect(content().string(containsString("Trình soạn thảo nội dung")))
                 .andExpect(content().string(containsString("Hoặc link video YouTube/Vimeo")))
                 .andExpect(content().string(containsString("Kéo thả file vào đây")));
+    }
+
+    @Test
+    @WithUserDetails("leader@ksh.edu.vn")
+    void library_selector_keeps_wide_hero_and_filters_without_semester_contract() throws Exception {
+        mockMvc.perform(get("/lecturer/library/list"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("library/list-library"))
+                .andExpect(content().string(containsString("library-list-hero")))
+                .andExpect(content().string(containsString("library-list-illustration")))
+                .andExpect(content().string(containsString("library-filter-bar")))
+                .andExpect(content().string(not(containsString("data-library-semester-filter"))))
+                .andExpect(content().string(containsString("data-library-status-filter")))
+                .andExpect(content().string(containsString("data-library-subject-filter")))
+                .andExpect(content().string(containsString("data-lucide-icon=\"graduation-cap\"")))
+                .andExpect(content().string(containsString("Xóa bộ lọc")));
     }
 }

@@ -52,14 +52,14 @@ class LessonTemplateServiceTest {
 
     @BeforeEach
     void setUp() {
-        lecturer = userRepository.findByEmailIgnoreCase("lecturer@ksh.edu.vn").orElseThrow();
+        lecturer = userRepository.findByEmailIgnoreCase("kor_leader@ksh.edu.vn").orElseThrow();
         assertThat(lecturer.getSubjectId()).as("seeded lecturer subject").isNotNull();
     }
 
     @Test
     void saveForm_persists_subject_chapter_lesson_hierarchy() {
         LessonTemplateRow row = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 2", "Bài kính ngữ"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 2", "Bài kính ngữ"));
 
         LessonTemplate saved = templateRepository.findById(row.id()).orElseThrow();
         assertThat(saved.getSubjectId()).isEqualTo(lecturer.getSubjectId());
@@ -75,12 +75,12 @@ class LessonTemplateServiceTest {
     @Test
     void distribute_creates_published_snapshot_in_each_same_subject_class() {
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 1", "Bài phân phối"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 1", "Bài phân phối"));
         ClassEntity first = activeClass("Library A");
         ClassEntity second = activeClass("Library B");
 
         var results = templateService.distribute(template.id(),
-                List.of(first.getId(), second.getId()), lecturer.getId(), Role.LECTURER);
+                List.of(first.getId(), second.getId()), lecturer.getId(), Role.LEADER);
 
         assertThat(results).hasSize(2);
         assertThat(results).allSatisfy(result -> {
@@ -96,14 +96,14 @@ class LessonTemplateServiceTest {
     @Test
     void distribute_again_refreshes_the_exact_snapshot_in_place() {
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 1", "Bài duy nhất"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 1", "Bài duy nhất"));
         ClassEntity clazz = activeClass("Library duplicate");
 
         Long lessonId = templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER).get(0).lessonId();
+                lecturer.getId(), Role.LEADER).get(0).lessonId();
 
         var redistributed = templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER);
+                lecturer.getId(), Role.LEADER);
 
         assertThat(redistributed).singleElement()
                 .extracting(result -> result.lessonId()).isEqualTo(lessonId);
@@ -114,23 +114,23 @@ class LessonTemplateServiceTest {
     @Test
     void distribute_rejects_class_that_is_still_awaiting_approval() {
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 1", "Bài chờ duyệt"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 1", "Bài chờ duyệt"));
         ClassEntity pending = new ClassEntity("Library pending", lecturer.getId(), lecturer.getId(),
                 null, null, null, 100);
         pending.setSubjectId(lecturer.getSubjectId());
         ClassEntity savedPending = classRepository.saveAndFlush(pending);
 
         assertThatThrownBy(() -> templateService.distribute(template.id(),
-                List.of(savedPending.getId()), lecturer.getId(), Role.LECTURER))
+                List.of(savedPending.getId()), lecturer.getId(), Role.LEADER))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("đang sử dụng");
     }
 
     @Test
-    void chapter_rename_and_reorder_mutate_only_the_actor_owned_rows() {
+    void admin_cannot_rename_or_reorder_even_its_own_library_rows() {
         int chapterNumber = 97;
         LessonTemplateRow foreign = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER,
+                lecturer.getId(), Role.LEADER,
                 richtextForm("Chương " + chapterNumber, "Bài của giảng viên"));
         User admin = userRepository.findByEmailIgnoreCase("admin@ksh.edu.vn").orElseThrow();
         LessonTemplate owned = templateRepository.saveAndFlush(new LessonTemplate(
@@ -138,19 +138,21 @@ class LessonTemplateServiceTest {
                 "Chương 97 · Của quản trị viên", 997,
                 "Bài 997 · Của quản trị viên", Lesson.CONTENT_TYPE_RICHTEXT));
 
-        templateService.renameChapter(admin.getId(), Role.ADMIN,
-                lecturer.getSubjectId(), chapterNumber, "Chương riêng đã đổi tên");
+        assertThatThrownBy(() -> templateService.renameChapter(admin.getId(), Role.ADMIN,
+                lecturer.getSubjectId(), chapterNumber, "Chương riêng đã đổi tên"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
 
         assertThat(templateRepository.findById(owned.getId()).orElseThrow().getChapterTitle())
-                .isEqualTo("Chương 97 · Chương riêng đã đổi tên");
+                .isEqualTo("Chương 97 · Của quản trị viên");
         assertThat(templateRepository.findById(foreign.id()).orElseThrow().getChapterTitle())
                 .isEqualTo("Chương 97 · Nội dung chương 97");
 
-        templateService.reorderChapters(admin.getId(), Role.ADMIN,
-                lecturer.getSubjectId(), List.of(chapterNumber));
+        assertThatThrownBy(() -> templateService.reorderChapters(admin.getId(), Role.ADMIN,
+                lecturer.getSubjectId(), List.of(chapterNumber)))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
 
         assertThat(templateRepository.findById(owned.getId()).orElseThrow().getChapterOrder())
-                .isEqualTo(1);
+                .isEqualTo(chapterNumber);
         assertThat(templateRepository.findById(foreign.id()).orElseThrow().getChapterOrder())
                 .isEqualTo(chapterNumber);
     }
@@ -158,20 +160,20 @@ class LessonTemplateServiceTest {
     @Test
     void rename_keeps_distributed_snapshot_immutable_until_explicit_redistribution() {
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER,
+                lecturer.getId(), Role.LEADER,
                 richtextForm("Chương 96", "Tên phân phối ban đầu"));
         ClassEntity clazz = activeClass("Library rename provenance");
         Long lessonId = templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER).get(0).lessonId();
+                lecturer.getId(), Role.LEADER).get(0).lessonId();
 
-        templateService.renameLesson(lecturer.getId(), Role.LECTURER,
+        templateService.renameLesson(lecturer.getId(), Role.LEADER,
                 template.id(), "Tên canonical sau khi đổi");
 
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getTitle())
                 .endsWith("· Tên phân phối ban đầu");
 
         var redistributed = templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER);
+                lecturer.getId(), Role.LEADER);
 
         assertThat(redistributed).singleElement()
                 .extracting(result -> result.lessonId()).isEqualTo(lessonId);
@@ -186,7 +188,7 @@ class LessonTemplateServiceTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void concurrent_distribution_creates_one_exact_template_snapshot() throws Exception {
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER,
+                lecturer.getId(), Role.LEADER,
                 richtextForm("Chương 98", "Phân phối đồng thời"));
         ClassEntity clazz = activeClass("Library concurrent provenance");
         sectionRepository.saveAndFlush(new Section(
@@ -223,12 +225,12 @@ class LessonTemplateServiceTest {
         create.setVideoSummary("  Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.  ");
 
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, create);
+                lecturer.getId(), Role.LEADER, create);
 
         LessonTemplate savedTemplate = templateRepository.findById(template.id()).orElseThrow();
         assertThat(savedTemplate.getVideoSummary())
                 .isEqualTo("Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.");
-        assertThat(templateService.loadForm(lecturer.getId(), Role.LECTURER,
+        assertThat(templateService.loadForm(lecturer.getId(), Role.LEADER,
                 template.id(), lecturer.getSubjectId()).getVideoSummary())
                 .isEqualTo("Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.");
         assertThat(templateRepository.searchOwnedSubject(
@@ -236,41 +238,41 @@ class LessonTemplateServiceTest {
                 PageRequest.of(0, 20)).getContent())
                 .extracting(LessonTemplate::getId)
                 .contains(template.id());
-        assertThat(templateService.list(lecturer.getId(), Role.LECTURER,
+        assertThat(templateService.list(lecturer.getId(), Role.LEADER,
                 lecturer.getSubjectId(), "phản xạ giao tiếp", 0, 20).page().getContent())
                 .extracting(LessonTemplateRow::id)
                 .contains(template.id());
 
         ClassEntity clazz = activeClass("Library video summary");
         Long lessonId = templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER).get(0).lessonId();
+                lecturer.getId(), Role.LEADER).get(0).lessonId();
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
                 .isEqualTo("Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.");
 
-        LessonTemplateForm edit = templateService.loadForm(lecturer.getId(), Role.LECTURER,
+        LessonTemplateForm edit = templateService.loadForm(lecturer.getId(), Role.LEADER,
                 template.id(), lecturer.getSubjectId());
         edit.setVideoSummary("  Phiên bản cập nhật: luyện nghe và trả lời trong 45 giây.  ");
-        templateService.saveForm(lecturer.getId(), Role.LECTURER, edit);
+        templateService.saveForm(lecturer.getId(), Role.LEADER, edit);
 
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
                 .isEqualTo("Hội thoại chào hỏi và phản xạ giao tiếp trong lớp học.");
         templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER);
+                lecturer.getId(), Role.LEADER);
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
                 .isEqualTo("Phiên bản cập nhật: luyện nghe và trả lời trong 45 giây.");
 
-        LessonTemplateForm clear = templateService.loadForm(lecturer.getId(), Role.LECTURER,
+        LessonTemplateForm clear = templateService.loadForm(lecturer.getId(), Role.LEADER,
                 template.id(), lecturer.getSubjectId());
         clear.setVideoUrl("   ");
         clear.setVideoSummary("Tóm tắt mồ côi không được phép lưu");
-        templateService.saveForm(lecturer.getId(), Role.LECTURER, clear);
+        templateService.saveForm(lecturer.getId(), Role.LEADER, clear);
 
         assertThat(templateRepository.findById(template.id()).orElseThrow().getVideoSummary())
                 .isNull();
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary())
                 .isEqualTo("Phiên bản cập nhật: luyện nghe và trả lời trong 45 giây.");
         templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER);
+                lecturer.getId(), Role.LEADER);
         assertThat(lessonRepository.findById(lessonId).orElseThrow().getVideoSummary()).isNull();
     }
 
@@ -287,7 +289,7 @@ class LessonTemplateServiceTest {
         create.setVideoSummary("Luyện hội thoại theo nội dung bài học.");
 
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, create);
+                lecturer.getId(), Role.LEADER, create);
         LessonTemplate saved = templateRepository.findById(template.id()).orElseThrow();
 
         assertThat(saved.getContentType()).isEqualTo(Lesson.CONTENT_TYPE_RICHTEXT);
@@ -297,7 +299,7 @@ class LessonTemplateServiceTest {
         assertThat(saved.getVideoUrl()).isEqualTo(video.getStoredPath());
 
         LessonTemplateForm edit = templateService.loadForm(
-                lecturer.getId(), Role.LECTURER, template.id(), lecturer.getSubjectId());
+                lecturer.getId(), Role.LEADER, template.id(), lecturer.getSubjectId());
         assertThat(edit.getContentType()).isEqualTo(Lesson.CONTENT_TYPE_RICHTEXT);
         assertThat(edit.getVideoLibraryAssetId()).isEqualTo(video.getId());
         assertThat(edit.getVideoUrl()).isEmpty();
@@ -305,7 +307,7 @@ class LessonTemplateServiceTest {
 
         ClassEntity clazz = activeClass("Library richtext uploaded video");
         Long lessonId = templateService.distribute(template.id(), List.of(clazz.getId()),
-                lecturer.getId(), Role.LECTURER).get(0).lessonId();
+                lecturer.getId(), Role.LEADER).get(0).lessonId();
         Lesson lesson = lessonRepository.findById(lessonId).orElseThrow();
         assertThat(lesson.getContentType()).isEqualTo(Lesson.CONTENT_TYPE_RICHTEXT);
         assertThat(lesson.getContentRichtext()).contains("Nội dung");
@@ -319,7 +321,7 @@ class LessonTemplateServiceTest {
     @Test
     void editing_template_does_not_overwrite_same_title_lesson_without_provenance() {
         LessonTemplateRow template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER,
+                lecturer.getId(), Role.LEADER,
                 richtextForm("Chương 94", "Bài trùng tên nhưng độc lập"));
         LessonTemplate canonical = templateRepository.findById(template.id()).orElseThrow();
         ClassEntity clazz = activeClass("Library provenance guard");
@@ -331,10 +333,10 @@ class LessonTemplateServiceTest {
         directLesson.publish();
         Long directLessonId = lessonRepository.saveAndFlush(directLesson).getId();
 
-        LessonTemplateForm edit = templateService.loadForm(lecturer.getId(), Role.LECTURER,
+        LessonTemplateForm edit = templateService.loadForm(lecturer.getId(), Role.LEADER,
                 template.id(), lecturer.getSubjectId());
         edit.setContentRichtext("<p>Nội dung canonical đã cập nhật</p>");
-        templateService.saveForm(lecturer.getId(), Role.LECTURER, edit);
+        templateService.saveForm(lecturer.getId(), Role.LEADER, edit);
 
         Lesson unchanged = lessonRepository.findById(directLessonId).orElseThrow();
         assertThat(unchanged.getSourceLessonTemplateId()).isNull();
@@ -344,7 +346,7 @@ class LessonTemplateServiceTest {
     @Test
     void library_is_a_subject_wide_canonical_hierarchy_not_an_owner_only_list() {
         LessonTemplateRow created = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 92", "Bài dùng chung"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 92", "Bài dùng chung"));
         User admin = userRepository.findByEmailIgnoreCase("admin@ksh.edu.vn").orElseThrow();
 
         var view = templateService.list(admin.getId(), Role.ADMIN,
@@ -366,16 +368,16 @@ class LessonTemplateServiceTest {
     @Test
     void insert_into_earlier_chapter_shifts_global_lesson_numbers() {
         LessonTemplateRow chapterOneFirst = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 90", "Một"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 90", "Một"));
         LessonTemplateRow chapterOneSecond = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 90", "Hai"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 90", "Hai"));
         LessonTemplateRow chapterTwoFirst = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 91", "Ba"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 91", "Ba"));
         int beforeInsert = templateRepository.findById(chapterTwoFirst.id()).orElseThrow()
                 .getDisplayOrder();
 
         LessonTemplateRow inserted = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, richtextForm("Chương 90", "Chèn sau bài 2"));
+                lecturer.getId(), Role.LEADER, richtextForm("Chương 90", "Chèn sau bài 2"));
 
         LessonTemplate first = templateRepository.findById(chapterOneFirst.id()).orElseThrow();
         LessonTemplate second = templateRepository.findById(chapterOneSecond.id()).orElseThrow();
@@ -408,7 +410,7 @@ class LessonTemplateServiceTest {
         }
         try {
             templateService.distribute(templateId, List.of(classId),
-                    lecturer.getId(), Role.LECTURER);
+                    lecturer.getId(), Role.LEADER);
             return true;
         } catch (IllegalArgumentException duplicate) {
             return false;

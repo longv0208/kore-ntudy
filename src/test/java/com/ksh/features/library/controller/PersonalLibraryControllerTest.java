@@ -1,8 +1,11 @@
 package com.ksh.features.library.controller;
 
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPickerPage;
+import com.ksh.features.library.dto.LibraryDtos.LibraryAssetDetail;
+import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPreview;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetRow;
 import com.ksh.features.library.service.LibraryService;
+import com.ksh.features.library.service.PersonalLibraryAssetPreviewService;
 import com.ksh.features.storage.ObjectStorage;
 import com.ksh.security.KshUserDetails;
 import com.ksh.security.Roles;
@@ -14,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.ui.ExtendedModelMap;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
@@ -31,13 +35,15 @@ class PersonalLibraryControllerTest {
 
     @Mock private LibraryService libraryService;
     @Mock private ObjectStorage objectStorage;
+    @Mock private PersonalLibraryAssetPreviewService previewService;
     @Mock private KshUserDetails user;
 
     private PersonalLibraryController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new PersonalLibraryController(libraryService, objectStorage);
+        controller = new PersonalLibraryController(
+                libraryService, objectStorage, previewService);
     }
 
     @Test
@@ -66,6 +72,47 @@ class PersonalLibraryControllerTest {
     }
 
     @Test
+    void details_are_owner_scoped_and_publish_server_generated_preview_url() {
+        when(user.getId()).thenReturn(7L);
+        LibraryAssetDetail detail = new LibraryAssetDetail(
+                11L, "Bảng điểm", "scores.xlsx", "DOCUMENT",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "XLSX", "excel", 128L, null, null,
+                "/lecturer/library/assets/11/preview",
+                "/lecturer/library/assets/11/content",
+                "/lecturer/library/assets/11/content?download=true", List.of());
+        when(libraryService.detail(7L, 11L)).thenReturn(detail);
+
+        var response = controller.details(11L, user);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(detail);
+        assertThat(response.getBody().previewUrl()).endsWith("/11/preview");
+        verify(libraryService).detail(7L, 11L);
+    }
+
+    @Test
+    void preview_uses_real_viewer_model_instead_of_the_download_response() {
+        when(user.getId()).thenReturn(7L);
+        LibraryAssetPreview preview = new LibraryAssetPreview(
+                11L, "Bảng điểm", "scores.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "XLSX", "excel", "SPREADSHEET",
+                "/lecturer/library/assets/11/content",
+                "/lecturer/library/assets/11/content?download=true",
+                "Điểm", List.of(List.of("Họ tên", "Điểm")), List.of(), null);
+        when(previewService.load(7L, 11L)).thenReturn(preview);
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String view = controller.preview(11L, user, model);
+
+        assertThat(view).isEqualTo("library/asset-preview");
+        assertThat(model.get("assetPreview")).isSameAs(preview);
+        verify(previewService).load(7L, 11L);
+        verifyNoInteractions(objectStorage);
+    }
+
+    @Test
     void cross_owner_content_not_found_never_reaches_object_storage() {
         when(user.getId()).thenReturn(7L);
         when(libraryService.contentHandle(7L, 99L))
@@ -87,7 +134,7 @@ class PersonalLibraryControllerTest {
         when(libraryService.upload(7L, file, "DOCUMENT"))
                 .thenReturn(new LibraryAssetRow(
                         1L, "slide.pdf", "slide.pdf", "DOCUMENT",
-                        "application/pdf", file.getSize(), null));
+                        "application/pdf", file.getSize(), null, null, false));
 
         String result = controller.upload(
                 file, "DOCUMENT", user, new RedirectAttributesModelMap());

@@ -66,14 +66,14 @@ class LessonTemplateStorageVideoEditTest {
         LessonTemplateAttachment supplementary = new LessonTemplateAttachment(
                 99L, 88L, "worksheet.pdf", "application/pdf", 123L, 0);
 
-        when(templateRepository.findByIdAndOwnerId(99L, 7L))
+        when(templateRepository.findById(99L))
                 .thenReturn(Optional.of(template));
-        when(subjectResolver.require(7L, Role.LECTURER, 55L))
+        when(subjectResolver.require(7L, Role.LEADER, 55L))
                 .thenReturn(mock(Department.class));
         when(templateAttachmentRepository.findByTemplateIdOrderByDisplayOrderAsc(99L))
                 .thenReturn(List.of(supplementary));
 
-        var form = service.loadForm(7L, Role.LECTURER, 99L, 55L);
+        var form = service.loadForm(7L, Role.LEADER, 99L, 55L);
 
         assertThat(form.getContentType()).isEqualTo(Lesson.CONTENT_TYPE_VIDEO);
         assertThat(form.getVideoProvider()).isEqualTo(VIDEO_PROVIDER_UPLOAD);

@@ -19,6 +19,7 @@
     var clearVideo = form.querySelector('[data-clear-primary-video]');
     var tabs = Array.prototype.slice.call(form.querySelectorAll('[data-library-form-tab]'));
     var panels = Array.prototype.slice.call(form.querySelectorAll('[data-library-form-panel]'));
+    var resourceOnly = form.getAttribute('data-resource-only') === 'true';
 
     function showPanel(name, moveFocus) {
       var activeTab = null;
@@ -52,6 +53,20 @@
         showPanel(tabs[nextIndex].getAttribute('data-library-form-tab'), true);
       });
     });
+
+    var infoPanel = form.querySelector('[data-library-form-panel="INFO"]');
+    var infoNext = form.querySelector('[data-library-info-next]');
+    if (infoNext) {
+      infoNext.addEventListener('click', function () {
+        var invalid = infoPanel && infoPanel.querySelector(':invalid');
+        if (invalid) {
+          invalid.reportValidity();
+          invalid.focus();
+          return;
+        }
+        showPanel('CONTENT', true);
+      });
+    }
 
     function primaryVideoId() {
       return videoId && videoId.value ? String(videoId.value) : '';
@@ -128,9 +143,19 @@
     }
 
     renderPrimaryVideo(null);
-    showPanel(contentType && contentType.value === 'VIDEO' ? 'VIDEO' : 'CONTENT');
+    showPanel(resourceOnly ? 'ATTACHMENTS' : (infoPanel ? 'INFO'
+      : (contentType && contentType.value === 'VIDEO' ? 'VIDEO' : 'CONTENT')));
 
-    form.addEventListener('submit', function () {
+    form.addEventListener('submit', function (event) {
+      var invalidIdentity = infoPanel && infoPanel.querySelector(':invalid');
+      if (invalidIdentity) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showPanel('INFO');
+        invalidIdentity.reportValidity();
+        invalidIdentity.focus();
+        return;
+      }
       if (primaryVideoId()) {
         if (provider) provider.value = 'UPLOAD';
         if (videoUrl) videoUrl.value = '';

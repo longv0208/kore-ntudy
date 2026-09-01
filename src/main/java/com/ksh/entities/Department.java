@@ -39,11 +39,14 @@ public class Department {
     private Long leaderUserId;
 
     /**
-     * Prevents further authoring of the canonical curriculum while keeping
-     * existing versions available for class distribution.
+     * Prevents lecturer resource additions; leader authoring remains available.
      */
     @Column(name = "library_locked", nullable = false)
     private boolean libraryLocked;
+
+    /** Retired flag retained only for schema compatibility; never controls permissions. */
+    @Column(name = "curriculum_structure_locked", nullable = false)
+    private boolean curriculumStructureLocked;
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
@@ -103,6 +106,10 @@ public class Department {
         this.libraryLocked = libraryLocked;
     }
 
+    public void setCurriculumStructureLocked(boolean curriculumStructureLocked) {
+        this.curriculumStructureLocked = curriculumStructureLocked;
+    }
+
     /** Flips the active flag and returns the new state. */
     public boolean toggleActive() {
         this.active = !this.active;
@@ -131,6 +138,10 @@ public class Department {
 
     public boolean isLibraryLocked() {
         return libraryLocked;
+    }
+
+    public boolean isCurriculumStructureLocked() {
+        return curriculumStructureLocked;
     }
 
     public boolean isActive() {
