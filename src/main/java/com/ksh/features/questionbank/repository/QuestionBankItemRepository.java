@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 /**
  * Repository for subject-scoped shared question contributions.
@@ -19,6 +20,7 @@ public interface QuestionBankItemRepository extends JpaRepository<QuestionBankIt
     interface SubjectQuestionCount {
         Long getSubjectId();
         long getQuestionCount();
+        LocalDateTime getLastUpdatedAt();
     }
 
     List<QuestionBankItem> findBySubjectIdOrderByUpdatedAtDescIdDesc(Long subjectId);
@@ -53,7 +55,9 @@ public interface QuestionBankItemRepository extends JpaRepository<QuestionBankIt
     Optional<QuestionBankItem> findByIdAndSubjectId(Long id, Long subjectId);
 
     @Query("""
-            SELECT i.subjectId AS subjectId, COUNT(i.id) AS questionCount
+            SELECT i.subjectId AS subjectId,
+                   COUNT(i.id) AS questionCount,
+                   MAX(i.updatedAt) AS lastUpdatedAt
             FROM QuestionBankItem i
             WHERE i.subjectId IN :subjectIds
             GROUP BY i.subjectId

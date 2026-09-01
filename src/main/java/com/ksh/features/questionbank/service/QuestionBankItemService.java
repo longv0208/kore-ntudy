@@ -9,6 +9,7 @@ import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.questionbank.dto.QuestionBankItemForm;
 import com.ksh.features.questionbank.dto.QuestionBankViews.ContributorOption;
 import com.ksh.features.questionbank.dto.QuestionBankViews.ChapterOption;
+import com.ksh.features.questionbank.dto.QuestionBankViews.CatalogMetrics;
 import com.ksh.features.questionbank.dto.QuestionBankViews.ItemDetail;
 import com.ksh.features.questionbank.dto.QuestionBankViews.ItemRow;
 import com.ksh.features.questionbank.dto.QuestionBankViews.LessonOption;
@@ -19,6 +20,7 @@ import com.ksh.features.questionbank.dto.QuestionBankViews.StatusCounts;
 import com.ksh.features.questionbank.dto.QuestionBankViews.SubjectReviewView;
 import com.ksh.features.questionbank.dto.QuestionBankViews.SubjectOption;
 import com.ksh.features.questionbank.dto.QuestionBankViews.SubjectCatalogRow;
+import com.ksh.features.questionbank.dto.QuestionBankViews.SubjectCatalogView;
 import com.ksh.features.questionbank.entity.QuestionBankItem;
 import com.ksh.features.questionbank.entity.QuestionBankOption;
 import com.ksh.features.questionbank.repository.QuestionBankItemRepository;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -341,9 +344,22 @@ public class QuestionBankItemService {
      */
     @Transactional(readOnly = true)
     public List<SubjectCatalogRow> subjectCatalog(Long userId, Role role, String query) {
+        return subjectCatalogView(userId, role, query, "ALL", "UPDATED_DESC").rows();
+    }
+
+    /**
+     * Returns the complete header-and-table read model with one pair of grouped
+     * count queries. Metrics intentionally describe the whole active catalog;
+     * search and table filters only narrow the rows beneath them.
+     */
+    @Transactional(readOnly = true)
+    public SubjectCatalogView subjectCatalogView(Long userId, Role role, String query,
+                                                 String bankStatus, String sort) {
         User actor = requireActor(userId, role);
         List<Department> subjects = allowedSubjects(actor);
-        if (subjects.isEmpty()) return List.of();
+        if (subjects.isEmpty()) {
+            return new SubjectCatalogView(new CatalogMetrics(0, 0, 0, 0), List.of());
+        }
 
         List<Long> subjectIds = subjects.stream().map(Department::getId).toList();
         Map<Long, LessonTemplateRepository.SubjectContentCount> contentCounts = lessonRepository
@@ -356,10 +372,7 @@ public class QuestionBankItemService {
                 .collect(Collectors.toMap(
                         QuestionBankItemRepository.SubjectQuestionCount::getSubjectId,
                         count -> count));
-        String normalizedQuery = normalizeQuery(query);
-
-        return subjects.stream()
-                .filter(subject -> matchesSubject(subject, normalizedQuery))
+        List<SubjectCatalogRow> allRows = subjects.stream()
                 .map(subject -> {
                     var content = contentCounts.get(subject.getId());
                     var questions = questionCounts.get(subject.getId());
@@ -367,9 +380,55 @@ public class QuestionBankItemService {
                             subject.getDescription(),
                             content == null ? 0 : content.getChapterCount(),
                             content == null ? 0 : content.getLessonCount(),
-                            questions == null ? 0 : questions.getQuestionCount());
+                            questions == null ? 0 : questions.getQuestionCount(),
+                            questions == null ? null : questions.getLastUpdatedAt());
                 })
                 .toList();
+        CatalogMetrics metrics = new CatalogMetrics(
+                allRows.size(),
+                allRows.stream().mapToLong(SubjectCatalogRow::chapterCount).sum(),
+                allRows.stream().mapToLong(SubjectCatalogRow::lessonCount).sum(),
+                allRows.stream().mapToLong(SubjectCatalogRow::questionCount).sum());
+
+        String normalizedQuery = normalizeQuery(query);
+        String normalizedBankStatus = normalizeBankStatus(bankStatus);
+        Comparator<SubjectCatalogRow> rowOrder = catalogOrder(sort);
+        List<SubjectCatalogRow> filteredRows = allRows.stream()
+                .filter(subject -> matchesSubject(subject, normalizedQuery))
+                .filter(row -> matchesBankStatus(row, normalizedBankStatus))
+                .sorted(rowOrder)
+                .toList();
+        return new SubjectCatalogView(metrics, filteredRows);
+    }
+
+    private static Comparator<SubjectCatalogRow> catalogOrder(String sort) {
+        String normalized = sort == null ? "" : sort.trim().toUpperCase();
+        Comparator<SubjectCatalogRow> byCode = Comparator.comparing(
+                SubjectCatalogRow::code, String.CASE_INSENSITIVE_ORDER);
+        return switch (normalized) {
+            case "CODE_ASC" -> byCode;
+            case "QUESTIONS_DESC" -> Comparator.comparingLong(
+                    SubjectCatalogRow::questionCount).reversed().thenComparing(byCode);
+            default -> Comparator.comparing(SubjectCatalogRow::lastUpdatedAt,
+                            Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(byCode);
+        };
+    }
+
+    private static String normalizeBankStatus(String value) {
+        if (value == null) return "ALL";
+        return switch (value.trim().toUpperCase()) {
+            case "READY", "EMPTY" -> value.trim().toUpperCase();
+            default -> "ALL";
+        };
+    }
+
+    private static boolean matchesBankStatus(SubjectCatalogRow row, String status) {
+        return switch (status) {
+            case "READY" -> row.questionCount() > 0;
+            case "EMPTY" -> row.questionCount() == 0;
+            default -> true;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -624,6 +683,12 @@ public class QuestionBankItemService {
         if (query == null) return true;
         return subject.getCode().toLowerCase().contains(query)
                 || subject.getName().toLowerCase().contains(query);
+    }
+
+    private static boolean matchesSubject(SubjectCatalogRow subject, String query) {
+        if (query == null) return true;
+        return subject.code().toLowerCase().contains(query)
+                || subject.name().toLowerCase().contains(query);
     }
 
     private static String preview(String html) {

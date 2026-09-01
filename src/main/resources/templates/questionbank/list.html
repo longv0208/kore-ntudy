@@ -10,7 +10,7 @@
   <link class="page-css" rel="stylesheet" th:href="@{/css/learning-ui.css}">
   <link class="page-css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
 </head>
-<body class="qb-body">
+<body class="qb-body" th:classappend="${catalogMode} ? ' qb-catalog-body'">
 <header th:replace="~{fragments/app-header :: appHeader('question-bank')}"></header>
 
 <main class="qb-page detail-page">
@@ -48,20 +48,67 @@
     Chưa có mã môn đang hoạt động. Vui lòng liên hệ quản trị viên để mở mã môn.
   </div>
 
-  <!-- Catalog is intentionally a row list: it scales better than horizontal subject chips. -->
+  <section class="qb-catalog-metrics" th:if="${!emptyDepartment and catalogMode}"
+           aria-label="Thống kê ngân hàng câu hỏi">
+    <article>
+      <span class="qb-metric-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2h5a3 3 0 0 1 3 3v15a3 3 0 0 0-3-3Z"/><path d="M21 18a1 1 0 0 0 1-1V5a2 2 0 0 0-2-2h-5a3 3 0 0 0-3 3v15a3 3 0 0 1 3-3Z"/></svg>
+      </span>
+      <div><small>Môn học đang hoạt động</small><strong th:text="${catalogMetrics.activeSubjectCount()}">0</strong><span>Tổng số môn</span></div>
+    </article>
+    <article>
+      <span class="qb-metric-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 12.5-9.17 4.17a2 2 0 0 1-1.66 0L2 12.5"/><path d="m22 17.5-9.17 4.17a2 2 0 0 1-1.66 0L2 17.5"/></svg>
+      </span>
+      <div><small>Chương</small><strong th:text="${catalogMetrics.chapterCount()}">0</strong><span>Tổng số chương</span></div>
+    </article>
+    <article>
+      <span class="qb-metric-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h5"/></svg>
+      </span>
+      <div><small>Bài học</small><strong th:text="${catalogMetrics.lessonCount()}">0</strong><span>Tổng số bài học</span></div>
+    </article>
+    <article>
+      <span class="qb-metric-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><path d="M12 18h.01"/></svg>
+      </span>
+      <div><small>Câu hỏi</small><strong th:text="${catalogMetrics.questionCount()}">0</strong><span>Tổng số câu hỏi</span></div>
+    </article>
+  </section>
+
   <section class="qb-subject-catalog" th:if="${!emptyDepartment and catalogMode}"
            aria-labelledby="qbCatalogTitle">
-    <div class="qb-catalog-controls">
-      <div>
-        <h2 id="qbCatalogTitle">Ngân hàng theo mã môn</h2>
-        <span th:text="${#lists.size(subjectOptions) + ' mã môn đang hoạt động'}">0 mã môn</span>
-      </div>
+    <h2 id="qbCatalogTitle" class="sr-only">Danh sách ngân hàng theo mã môn</h2>
+    <form class="qb-catalog-filters" method="get" th:action="@{/lecturer/question-bank}" role="search">
       <label class="qb-catalog-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <span class="sr-only">Tìm mã môn</span>
-        <input type="search" placeholder="Tìm theo mã môn hoặc tên môn…"
-               autocomplete="off" data-link-filter="#qbSubjectCatalogRows">
+        <input type="search" name="q" th:value="${query}"
+               placeholder="Tìm theo mã môn hoặc tên môn…" autocomplete="off">
       </label>
-    </div>
+      <label class="qb-catalog-select">
+        <span class="sr-only">Trạng thái ngân hàng</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <select name="bankStatus">
+          <option value="ALL" th:selected="${selectedBankStatus == 'ALL'}">Tất cả trạng thái</option>
+          <option value="READY" th:selected="${selectedBankStatus == 'READY'}">Đã có câu hỏi</option>
+          <option value="EMPTY" th:selected="${selectedBankStatus == 'EMPTY'}">Chưa có câu hỏi</option>
+        </select>
+      </label>
+      <label class="qb-catalog-select">
+        <span class="sr-only">Sắp xếp</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+        <select name="sort">
+          <option value="UPDATED_DESC" th:selected="${selectedCatalogSort == 'UPDATED_DESC'}">Mới cập nhật</option>
+          <option value="CODE_ASC" th:selected="${selectedCatalogSort == 'CODE_ASC'}">Mã môn A → Z</option>
+          <option value="QUESTIONS_DESC" th:selected="${selectedCatalogSort == 'QUESTIONS_DESC'}">Nhiều câu hỏi nhất</option>
+        </select>
+      </label>
+      <button type="submit" class="qb-catalog-filter-button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+        Bộ lọc
+      </button>
+    </form>
     <div class="qb-catalog-table" role="table" aria-label="Danh sách ngân hàng câu hỏi theo mã môn">
       <div class="qb-catalog-head" role="row">
         <span role="columnheader">Mã môn</span>
@@ -69,21 +116,27 @@
         <span role="columnheader">Chương</span>
         <span role="columnheader">Bài học</span>
         <span role="columnheader">Câu hỏi</span>
-        <span role="columnheader" class="sr-only">Mở</span>
+        <span role="columnheader">Cập nhật lần cuối</span>
+        <span role="columnheader">Thao tác</span>
       </div>
       <div id="qbSubjectCatalogRows">
-        <a class="qb-catalog-row" th:each="subject : ${subjectCatalog}"
-           th:href="@{/lecturer/question-bank(subjectId=${subject.id()})}"
-           th:attr="data-search-text=${subject.code() + ' ' + subject.name()}"
-           role="row">
-          <strong role="cell" th:text="${subject.code()}">KOR311</strong>
+        <div class="qb-catalog-row" th:each="subject : ${subjectCatalog}" role="row">
+          <strong role="cell"><span th:text="${subject.code()}">KOR311</span></strong>
           <span role="cell" th:text="${subject.name()}">Tiếng Hàn</span>
           <span role="cell" aria-label="Số chương" th:text="${subject.chapterCount()}">0</span>
           <span role="cell" aria-label="Số bài học" th:text="${subject.lessonCount()}">0</span>
           <span role="cell" aria-label="Số câu hỏi" th:text="${subject.questionCount()}">0</span>
-          <svg role="cell" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"
-               fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
-        </a>
+          <time role="cell" th:datetime="${subject.lastUpdatedAt()}"
+                th:text="${subject.lastUpdatedAt() != null ? #temporals.format(subject.lastUpdatedAt(), 'dd/MM/yyyy HH:mm') : 'Chưa cập nhật'}">—</time>
+          <span role="cell" class="qb-catalog-action">
+            <a th:href="@{/lecturer/question-bank(subjectId=${subject.id()})}">Mở ngân hàng
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+          </span>
+        </div>
+        <div class="qb-catalog-empty" th:if="${#lists.isEmpty(subjectCatalog)}">
+          Không tìm thấy mã môn phù hợp với bộ lọc.
+        </div>
       </div>
     </div>
   </section>

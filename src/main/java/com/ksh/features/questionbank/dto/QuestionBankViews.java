@@ -23,7 +23,18 @@ public final class QuestionBankViews {
 
     /** One subject row on the lecturer Question Bank entry catalog. */
     public record SubjectCatalogRow(Long id, String code, String name, String description,
-                                    long chapterCount, long lessonCount, long questionCount) {
+                                    long chapterCount, long lessonCount, long questionCount,
+                                    LocalDateTime lastUpdatedAt) {
+    }
+
+    /** Real totals shown above the subject catalog. */
+    public record CatalogMetrics(long activeSubjectCount, long chapterCount,
+                                 long lessonCount, long questionCount) {
+    }
+
+    /** One bounded read model for the catalog header, filters and table. */
+    public record SubjectCatalogView(CatalogMetrics metrics,
+                                     List<SubjectCatalogRow> rows) {
     }
 
     public record LessonOption(Long id, Long subjectId, String subjectCode,

@@ -2,6 +2,8 @@ package com.ksh.features.questionbank.controller;
 
 import com.ksh.features.questionbank.service.QuestionBankItemService;
 import com.ksh.features.questionbank.service.QuestionBankTestGenerationService;
+import com.ksh.features.questionbank.dto.QuestionBankViews.CatalogMetrics;
+import com.ksh.features.questionbank.dto.QuestionBankViews.SubjectCatalogView;
 import com.ksh.security.KshUserDetails;
 import com.ksh.security.Role;
 import org.junit.jupiter.api.Test;
@@ -52,14 +54,16 @@ class LecturerQuestionBankControllerTest {
         when(user.getRole()).thenReturn(Role.LECTURER);
         when(itemService.hasSubject(7L, Role.LECTURER)).thenReturn(true);
         when(itemService.subjectOptions(7L, Role.LECTURER)).thenReturn(java.util.List.of());
-        when(itemService.subjectCatalog(7L, Role.LECTURER, "kor"))
-                .thenReturn(java.util.List.of());
+        when(itemService.subjectCatalogView(7L, Role.LECTURER, "kor", "ALL", "UPDATED_DESC"))
+                .thenReturn(new SubjectCatalogView(
+                        new CatalogMetrics(0, 0, 0, 0), java.util.List.of()));
         ExtendedModelMap model = new ExtendedModelMap();
 
-        assertThat(controller.list(null, null, "kor", 0, 50, user, model))
+        assertThat(controller.list(null, null, "kor", "ALL", "UPDATED_DESC", 0, 50, user, model))
                 .isEqualTo("questionbank/list");
         assertThat(model.get("catalogMode")).isEqualTo(true);
-        assertThat(model).containsKey("subjectCatalog").doesNotContainKey("workspace");
+        assertThat(model).containsKeys("subjectCatalog", "catalogMetrics")
+                .doesNotContainKey("workspace");
         verify(itemService, never()).workspace(7L, Role.LECTURER, null, "kor");
     }
 }
