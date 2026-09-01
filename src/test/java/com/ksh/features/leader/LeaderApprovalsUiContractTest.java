@@ -33,11 +33,18 @@ class LeaderApprovalsUiContractTest {
         String styles = Files.readString(STYLES, StandardCharsets.UTF_8);
 
         assertThat(template)
-                .contains("class=\"admin-list-table-scroll\"")
+                .contains("class=\"admin-list-table-scroll leader-table-shell\"")
+                .contains("class=\"leader-approval-queue\"")
+                .contains("data-item-filter=\"#leader-approval-rows\"")
+                .contains("data-filter-item")
+                .contains("leader-empty-illustration")
                 .contains("class=\"leader-approval-actions\"")
                 .contains("class=\"sr-only\"")
                 .contains("data-label=\"Hành động\"");
         assertThat(styles)
+                .contains(".leader-approval-tabs")
+                .contains(".leader-approval-filter")
+                .contains(".leader-page .leader-workspace")
                 .contains(".leader-approval-table tbody td::before")
                 .contains("@media (max-width: 720px)");
     }

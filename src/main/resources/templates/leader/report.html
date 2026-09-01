@@ -6,59 +6,71 @@
   <link class="page-css" rel="stylesheet" th:href="@{/css/detail-page.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/admin.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/leader-department.css}">
-  <link class="page-css" rel="stylesheet" th:href="@{/css/experience-polish.css}">
 </head>
-<body class="ux-polish ux-leader-report">
+<body class="leader-page leader-report-page">
 <header th:replace="~{fragments/app-header :: appHeader('leader')}"></header>
 
 <div class="class-detail-layout leader-workspace">
   <aside th:replace="~{fragments/leader-sidebar :: leaderSidebar('report')}"></aside>
 
-  <main class="col">
+  <main class="col leader-main">
     <span id="flash-data"
           th:attr="data-flash-success=${flashSuccess},
                    data-flash-error=${flashError}"
           style="display:none;"></span>
 
-    <h1 class="detail-title">Báo cáo bộ môn</h1>
-    <p class="detail-sub">So sánh sĩ số và điểm trung bình theo lớp trong bộ môn.</p>
+    <div class="leader-page-heading leader-page-heading--icon">
+      <span class="leader-heading-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16V5"/></svg>
+      </span>
+      <span>
+        <h1 class="detail-title">Báo cáo bộ môn</h1>
+        <p class="detail-sub">So sánh sĩ số và điểm trung bình theo lớp trong bộ môn.</p>
+      </span>
+    </div>
 
     <div th:if="${emptyDepartment}" class="admin-list-empty" role="status">
       Bạn chưa được gán bộ môn. Liên hệ quản trị viên để được chỉ định trưởng bộ môn.
     </div>
 
-    <section class="admin-list-panel" th:if="${!emptyDepartment}">
-      <div th:if="${reportRows == null or reportRows.isEmpty()}" class="admin-list-empty">
+    <section class="leader-report-section" th:if="${!emptyDepartment}">
+      <div class="leader-section-heading">
+        <h2>Kết quả theo lớp</h2>
+        <span th:if="${reportRows != null}" th:text="${reportRows.size()} + ' lớp'">0 lớp</span>
+      </div>
+      <div th:if="${reportRows == null or reportRows.isEmpty()}" class="leader-empty-state">
         Chưa có lớp nào thuộc bộ môn.
       </div>
-      <table class="admin-list-table" th:if="${reportRows != null and !reportRows.isEmpty()}">
-        <thead>
-          <tr>
-            <th>Mã môn</th>
-            <th>Tên lớp</th>
-            <th>SV ACTIVE</th>
-            <th>Điểm TB bài kiểm tra</th>
-            <th>Điểm TB bài tập</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr th:each="row : ${reportRows}">
-            <td><code th:text="${row.subjectCode()}">KOR311</code></td>
-            <td th:text="${row.className()}">Tên</td>
-            <td th:text="${row.activeEnrollments()}">0</td>
-            <td>
-              <span th:if="${row.avgTestScore() != null}"
-                    th:text="${#numbers.formatDecimal(row.avgTestScore(), 1, 2)}">0.00</span>
-              <span th:if="${row.avgTestScore() == null}" class="muted">—</span>
-            </td>
-            <td>
-              <span th:if="${row.avgAssignmentScore() != null}"
-                    th:text="${#numbers.formatDecimal(row.avgAssignmentScore(), 1, 2)}">0.00</span>
-              <span th:if="${row.avgAssignmentScore() == null}" class="muted">—</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="leader-table-shell" th:if="${reportRows != null and !reportRows.isEmpty()}">
+        <table class="leader-data-table leader-report-table">
+          <thead>
+            <tr>
+              <th>Mã môn</th>
+              <th>Tên lớp</th>
+              <th>SV ACTIVE</th>
+              <th>Điểm TB bài kiểm tra</th>
+              <th>Điểm TB bài tập</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="row : ${reportRows}">
+              <td data-label="Mã môn"><code class="leader-subject-code" th:text="${row.subjectCode()}">KOR311</code></td>
+              <td data-label="Tên lớp"><strong th:text="${row.className()}">Tên</strong></td>
+              <td data-label="SV ACTIVE" th:text="${row.activeEnrollments()}">0</td>
+              <td data-label="Điểm TB bài kiểm tra">
+                <span th:if="${row.avgTestScore() != null}"
+                      th:text="${#numbers.formatDecimal(row.avgTestScore(), 1, 2)}">0.00</span>
+                <span th:if="${row.avgTestScore() == null}" class="muted">—</span>
+              </td>
+              <td data-label="Điểm TB bài tập">
+                <span th:if="${row.avgAssignmentScore() != null}"
+                      th:text="${#numbers.formatDecimal(row.avgAssignmentScore(), 1, 2)}">0.00</span>
+                <span th:if="${row.avgAssignmentScore() == null}" class="muted">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 </div>
