@@ -108,9 +108,11 @@ class NonPracticeLearningUiContractTest {
         assertThat(classes).contains(
                 "Lớp của tôi",
                 "Danh sách lớp đang mở",
+                "Lớp đã lưu trữ",
                 "classesTab == 'mine'",
                 "classesTab == 'open'",
-                "catalog-pagination");
+                "catalogSemesterGroups",
+                "classes-pagination cw-pagination");
         assertThat(lessons).contains(
                 "<th:block th:if=\"${!teachingView}\">",
                 "<th:block th:if=\"${teachingView}\">");

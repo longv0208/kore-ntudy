@@ -2,10 +2,13 @@ package com.ksh.features.library.service;
 
 import com.ksh.entities.LibraryAsset;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPageView;
+import com.ksh.features.library.dto.LibraryDtos.LibraryAssetDetail;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPickerItem;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPickerPage;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetRow;
+import com.ksh.features.library.dto.LibraryDtos.LibraryAssetUsage;
 import com.ksh.features.library.repository.LibraryAssetRepository;
+import com.ksh.features.library.repository.LibraryAssetRepository.AssetUsageProjection;
 import com.ksh.features.storage.StorageTransactionLifecycle;
 import com.ksh.features.upload.LibraryStorageService;
 import com.ksh.features.upload.LibraryStorageService.StoredLibraryFile;
@@ -18,8 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import static com.ksh.common.IConstant.DEFAULT_LIBRARY_PAGE_SIZE;
 import static com.ksh.common.IConstant.MAX_LIBRARY_PAGE_SIZE;
@@ -49,18 +55,52 @@ public class LibraryService {
     @Transactional(readOnly = true)
     public LibraryAssetPageView list(Long ownerId, String q, String kind,
                                      int page, int size) {
+        return list(ownerId, q, kind, "ALL", page, size);
+    }
+
+    /** Owner-private SSR inventory with real in-use and recent views. */
+    @Transactional(readOnly = true)
+    public LibraryAssetPageView list(Long ownerId, String q, String kind, String view,
+                                     int page, int size) {
         Long scopedOwnerId = requireOwnerId(ownerId);
         String normalizedQuery = normalizeQuery(q);
         String normalizedKind = normalizeKind(kind);
-        Page<LibraryAsset> assets = assetRepository.searchOwned(
-                scopedOwnerId, normalizedQuery, normalizedKind, pageRequest(page, size));
+        String normalizedView = normalizeView(view);
+        LocalDateTime recentSince = LocalDateTime.now().minusDays(30);
+        List<Long> referencedAssetIds = assetRepository.findReferencedAssetIdsByOwnerId(scopedOwnerId);
+        if (referencedAssetIds == null) referencedAssetIds = List.of();
+        Set<Long> referencedAssetIdSet = new HashSet<>(referencedAssetIds);
+        PageRequest pageable = pageRequest(page, size);
+        Page<LibraryAsset> assets;
+        if ("USED".equals(normalizedView)) {
+            assets = referencedAssetIds.isEmpty()
+                    ? Page.empty(pageable)
+                    : assetRepository.searchOwnedByIds(scopedOwnerId, referencedAssetIds,
+                            normalizedQuery, normalizedKind, pageable);
+        } else if ("RECENT".equals(normalizedView)) {
+            assets = assetRepository.searchRecentOwned(scopedOwnerId, recentSince,
+                    normalizedQuery, normalizedKind, pageable);
+        } else {
+            assets = assetRepository.searchOwned(
+                    scopedOwnerId, normalizedQuery, normalizedKind, pageable);
+        }
+        List<LibraryAsset> recentAssets = assetRepository
+                .findTop5ByOwnerIdOrderByUpdatedAtDescIdDesc(scopedOwnerId);
+        if (recentAssets == null) recentAssets = List.of();
         return new LibraryAssetPageView(
-                assets.map(LibraryService::toRow),
+                assets.map(asset -> toRow(asset, referencedAssetIdSet.contains(asset.getId()))),
+                recentAssets.stream()
+                        .map(asset -> toRow(asset, referencedAssetIdSet.contains(asset.getId())))
+                        .toList(),
                 normalizedQuery == null ? "" : normalizedQuery,
                 normalizedKind == null ? "" : normalizedKind,
+                normalizedView,
                 assetRepository.countByOwnerId(scopedOwnerId),
                 assetRepository.countByOwnerIdAndKind(scopedOwnerId, KIND_DOCUMENT),
-                assetRepository.countByOwnerIdAndKind(scopedOwnerId, KIND_VIDEO));
+                assetRepository.countByOwnerIdAndKind(scopedOwnerId, KIND_VIDEO),
+                referencedAssetIds.size(),
+                assetRepository.countByOwnerIdAndUpdatedAtGreaterThanEqual(
+                        scopedOwnerId, recentSince));
     }
 
     /** Owner-private JSON inventory for class and lesson-library pickers. */
@@ -79,6 +119,28 @@ public class LibraryService {
         return new LibraryAssetPickerPage(
                 items, assets.getNumber(), assets.getSize(),
                 assets.getTotalPages(), assets.getTotalElements());
+    }
+
+    /**
+     * Owner-scoped metadata plus exact durable usage locations for the detail
+     * drawer. Cross-owner ids fail before any reference query is exposed.
+     */
+    @Transactional(readOnly = true)
+    public LibraryAssetDetail detail(Long ownerId, Long assetId) {
+        Long scopedOwnerId = requireOwnerId(ownerId);
+        LibraryAsset asset = getOwnedAsset(scopedOwnerId, assetId);
+        LibraryAssetRow row = toRow(asset, false);
+        List<AssetUsageProjection> projections =
+                assetRepository.findUsagesByOwnerIdAndAssetId(scopedOwnerId, asset.getId());
+        List<LibraryAssetUsage> usages = projections == null ? List.of()
+                : projections.stream().map(LibraryService::toUsage).toList();
+        String base = "/lecturer/library/assets/" + asset.getId();
+        return new LibraryAssetDetail(
+                asset.getId(), asset.getTitle(), asset.getOriginalFilename(),
+                asset.getKind(), asset.getMimeType(), row.formatLabel(), row.formatClass(),
+                asset.getSizeBytes(), asset.getCreatedAt(), asset.getUpdatedAt(),
+                base + "/preview", base + "/content", base + "/content?download=true",
+                usages);
     }
 
     @Transactional
@@ -198,12 +260,7 @@ public class LibraryService {
     /** Counts every durable class/template reference that keeps the object live. */
     @Transactional(readOnly = true)
     public long countReferences(Long assetId) {
-        Long scopedAssetId = requireAssetId(assetId);
-        return assetRepository.countLessonAttachmentReferences(scopedAssetId)
-                + assetRepository.countLessonVideoReferences(scopedAssetId)
-                + assetRepository.countTemplateAttachmentReferences(scopedAssetId)
-                + assetRepository.countTemplatePdfReferences(scopedAssetId)
-                + assetRepository.countTemplateVideoReferences(scopedAssetId);
+        return assetRepository.countLiveReferences(requireAssetId(assetId));
     }
 
     private static PageRequest pageRequest(int page, int size) {
@@ -227,6 +284,15 @@ public class LibraryService {
         }
         // Invalid filters must not accidentally broaden into an unfiltered list.
         return "__INVALID_KIND__";
+    }
+
+    private static String normalizeView(String view) {
+        if (view == null || view.isBlank()) return "ALL";
+        String normalized = view.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "USED", "RECENT" -> normalized;
+            default -> "ALL";
+        };
     }
 
     private static String normalizeTitle(String title) {
@@ -255,9 +321,52 @@ public class LibraryService {
     }
 
     private static LibraryAssetRow toRow(LibraryAsset asset) {
+        return toRow(asset, false);
+    }
+
+    private static LibraryAssetRow toRow(LibraryAsset asset, boolean inUse) {
         return new LibraryAssetRow(
                 asset.getId(), asset.getTitle(), asset.getOriginalFilename(),
-                asset.getKind(), asset.getMimeType(), asset.getSizeBytes(), asset.getUpdatedAt());
+                asset.getKind(), asset.getMimeType(), asset.getSizeBytes(),
+                asset.getCreatedAt(), asset.getUpdatedAt(), inUse);
+    }
+
+    private static LibraryAssetUsage toUsage(AssetUsageProjection usage) {
+        String type = blankTo(usage.getUsageType(), "UNKNOWN");
+        if (type.startsWith("TEMPLATE_")) {
+            String title = blankTo(usage.getTemplateTitle(), "Bài giảng trong syllabus");
+            String chapter = blankTo(usage.getChapterTitle(), "Kho bài giảng");
+            String url = usage.getTemplateId() == null ? "/lecturer/library/templates"
+                    : "/lecturer/library/templates/" + usage.getTemplateId() + "/edit";
+            return new LibraryAssetUsage(type, title,
+                    chapter + " · Kho bài giảng", url,
+                    blankTo(usage.getPlacement(), "Tài liệu bài giảng"),
+                    usage.getUpdatedAt());
+        }
+        if ("CLASS_MATERIAL".equals(type)) {
+            String className = blankTo(usage.getClassName(), "Lớp học");
+            String url = usage.getClassId() == null ? "/lecturer/classes"
+                    : "/lecturer/classes/" + usage.getClassId() + "/materials";
+            return new LibraryAssetUsage(type, className,
+                    "Kho tài liệu dùng chung của lớp", url,
+                    blankTo(usage.getPlacement(), "Tài liệu lớp"),
+                    usage.getUpdatedAt());
+        }
+        String lessonTitle = blankTo(usage.getLessonTitle(), "Bài học");
+        String className = blankTo(usage.getClassName(), "Lớp học");
+        String sectionTitle = blankTo(usage.getSectionTitle(), "Chương học");
+        String url = usage.getClassId() == null ? "/lecturer/classes"
+                : "/lecturer/classes/" + usage.getClassId() + "/lessons"
+                + (usage.getSectionId() == null ? "" : "?section=" + usage.getSectionId()
+                + (usage.getLessonId() == null ? "" : "&lesson=" + usage.getLessonId()));
+        return new LibraryAssetUsage(type, lessonTitle,
+                className + " · " + sectionTitle, url,
+                blankTo(usage.getPlacement(), "Tài liệu bài học"),
+                usage.getUpdatedAt());
+    }
+
+    private static String blankTo(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     public record OwnedAssetContent(

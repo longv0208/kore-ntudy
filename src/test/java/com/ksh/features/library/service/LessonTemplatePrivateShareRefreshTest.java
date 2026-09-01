@@ -36,10 +36,12 @@ class LessonTemplatePrivateShareRefreshTest {
     @Autowired private ClassRepository classRepository;
 
     private User lecturer;
+    private User leader;
 
     @BeforeEach
     void setUp() {
         lecturer = userRepository.findByEmailIgnoreCase("lecturer@ksh.edu.vn").orElseThrow();
+        leader = userRepository.findByEmailIgnoreCase("kor_leader@ksh.edu.vn").orElseThrow();
     }
 
     @Test
@@ -54,14 +56,18 @@ class LessonTemplatePrivateShareRefreshTest {
                 "application/pdf", 20L, LibraryAsset.KIND_DOCUMENT));
 
         LessonTemplateForm form = new LessonTemplateForm();
+        form.setSubjectId(lecturer.getSubjectId());
         form.setChapterNumber(98);
         form.setChapterTitle("Nguồn gốc tài liệu");
         form.setTitle("Bảo toàn tài liệu riêng");
         form.setContentType(Lesson.CONTENT_TYPE_RICHTEXT);
         form.setContentRichtext("<p>Phiên bản 1</p>");
-        form.setMaterialAssetIds(List.of(canonicalAsset.getId()));
         var template = templateService.saveForm(
-                lecturer.getId(), Role.LECTURER, form);
+                leader.getId(), Role.LEADER, form);
+        LessonTemplateForm contribution = templateService.loadForm(
+                lecturer.getId(), Role.LECTURER, template.id(), lecturer.getSubjectId());
+        contribution.setMaterialAssetIds(List.of(canonicalAsset.getId()));
+        templateService.saveForm(lecturer.getId(), Role.LECTURER, contribution);
 
         ClassEntity clazz = new ClassEntity(
                 "Lớp provenance tài liệu", lecturer.getId(), lecturer.getId(),
@@ -86,9 +92,9 @@ class LessonTemplatePrivateShareRefreshTest {
                 .findFirst().orElseThrow();
 
         LessonTemplateForm edit = templateService.loadForm(
-                lecturer.getId(), Role.LECTURER, template.id(), lecturer.getSubjectId());
+                leader.getId(), Role.LEADER, template.id(), lecturer.getSubjectId());
         edit.setContentRichtext("<p>Phiên bản 2</p>");
-        templateService.saveForm(lecturer.getId(), Role.LECTURER, edit);
+        templateService.saveForm(leader.getId(), Role.LEADER, edit);
 
         assertThat(attachmentRepository.findByLessonIdOrderByUploadedAtAsc(lessonId))
                 .extracting(LessonAttachment::getId)

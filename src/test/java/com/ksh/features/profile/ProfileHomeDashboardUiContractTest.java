@@ -92,25 +92,31 @@ class ProfileHomeDashboardUiContractTest {
         String css = read("src/main/resources/static/css/lecturer-dashboard.css");
 
         assertThat(template)
-                .contains("class=\"ldash-stat-icon\"")
-                .contains("data-label=\"Tên lớp\"")
-                .contains("data-label=\"Hoàn thành TB\"")
+                .contains("class=\"ldash-metric-icon is-blue\"")
+                .contains("data-label=\"Lớp học\"")
+                .contains("data-label=\"Tiến độ trung bình\"")
+                .contains("data-label=\"Học kỳ\"")
+                .contains("class=\"ldash-progress\"")
+                .contains("<progress max=\"100\"")
                 .contains("Quản lý lớp học")
+                .contains("Kho bài giảng")
                 .contains("Chưa có lớp học trong phạm vi của bạn")
                 .doesNotContain("font-awesome")
                 .doesNotContain("cdnjs.cloudflare.com")
                 .doesNotContain("fa-solid")
                 .doesNotContain("style=");
         assertThat(css)
-                .contains("background: #f7f8fa")
-                .contains("color: #445064")
+                .contains("background: #f8faff")
+                .contains("--ld-blue: #1677f2")
                 .contains(".ldash-search {\n  display: flex")
-                .contains(".ldash-search .sr-only")
+                .contains(".lecturer-dash .sr-only")
                 .contains("flex: 1 1 auto")
-                .contains("flex: 0 0 auto")
+                .contains(".ldash-semester[data-semester^=\"SP\"]")
+                .contains(".ldash-semester[data-semester^=\"SU\"]")
+                .contains(".ldash-semester[data-semester^=\"FA\"]")
+                .contains("progress::-webkit-progress-value")
                 .contains("content: attr(data-label)")
-                .contains("@media (max-width: 520px)")
-                .contains("linear-gradient(180deg, #f1f8ff");
+                .contains("@media (max-width: 520px)");
     }
 
     private static String read(String path) throws IOException {

@@ -194,7 +194,7 @@ class QuestionBankItemServiceTest {
                 ACTOR_ID, Role.LECTURER, "intermediate");
 
         assertThat(rows).containsExactly(new SubjectCatalogRow(
-                SUBJECT_ID, "KOR311", "Korean Intermediate", null, 3, 8, 47));
+                SUBJECT_ID, "KOR311", "Korean Intermediate", null, 3, 8, 47, null));
     }
 
     @Test

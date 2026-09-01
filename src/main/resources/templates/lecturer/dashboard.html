@@ -15,63 +15,52 @@
 <main class="lecturer-dash">
   <header class="ldash-heading">
     <div>
-      <span class="ldash-eyebrow">Không gian giảng dạy</span>
       <h1>Tổng quan giảng dạy</h1>
-      <p>Theo dõi lớp học và tiến độ học tập trong đúng phạm vi của bạn.</p>
+      <p>Sĩ số và tiến độ được tổng hợp trực tiếp từ các lớp trong phạm vi bạn phụ trách.</p>
     </div>
-    <a class="ldash-primary-action" th:href="@{/lecturer/classes}">
-      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16v13H4z"/><path d="M8 6V4h8v2M8 11h8"/></svg>
-      Quản lý lớp học
-    </a>
+    <div class="ldash-heading-actions">
+      <a class="ldash-secondary-action" th:href="@{/lecturer/library/list}">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8"/></svg>
+        Kho bài giảng
+      </a>
+      <a class="ldash-primary-action" th:href="@{/lecturer/classes}">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16v13H4z"/><path d="M8 6V4h8v2M8 11h8"/></svg>
+        Quản lý lớp học
+      </a>
+    </div>
   </header>
 
-  <section class="ldash-stats" aria-label="Chỉ số giảng dạy">
-    <article class="ldash-stat-card">
-      <span class="ldash-stat-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M3 9 12 4l9 5-9 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5M21 9v6"/></svg>
+  <section class="ldash-overview" aria-label="Chỉ số giảng dạy">
+    <article class="ldash-metric">
+      <span class="ldash-metric-icon is-blue" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8v7H8zM9 18h6"/></svg>
       </span>
-      <div class="ldash-stat-copy">
-        <span>Tổng lớp</span>
-        <strong th:text="${teachingStats.totalClasses()}">0</strong>
-      </div>
+      <div><span>Tổng lớp phụ trách</span><strong th:text="${teachingStats.totalClasses()}">0</strong></div>
     </article>
-
-    <article class="ldash-stat-card">
-      <span class="ldash-stat-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 19c.6-3.4 2.6-5 6-5s5.4 1.6 6 5"/><path d="M16 5a3 3 0 0 1 0 6m1 3c2.3.4 3.6 2 4 5"/></svg>
+    <article class="ldash-metric">
+      <span class="ldash-metric-icon is-purple" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v2"/></svg>
       </span>
-      <div class="ldash-stat-copy">
-        <span>Tổng sinh viên</span>
-        <strong th:text="${teachingStats.totalStudents()}">0</strong>
-      </div>
+      <div><span>Lượt sinh viên</span><strong th:text="${teachingStats.totalStudents()}">0</strong></div>
     </article>
-
-    <article class="ldash-stat-card">
-      <span class="ldash-stat-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/><path d="m9 15 2 2 4-5"/></svg>
+    <article class="ldash-metric">
+      <span class="ldash-metric-icon is-green" aria-hidden="true">
+        <i class="ldash-status-dot"></i>
       </span>
-      <div class="ldash-stat-copy">
-        <span>Lớp đang hoạt động</span>
-        <strong th:text="${teachingStats.activeClasses()}">0</strong>
-      </div>
+      <div><span>Lớp đang hoạt động</span><strong th:text="${teachingStats.activeClasses()}">0</strong></div>
     </article>
-
-    <article class="ldash-stat-card">
-      <span class="ldash-stat-icon" aria-hidden="true">
+    <article class="ldash-metric">
+      <span class="ldash-metric-icon is-orange" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M4 19V9m5 10v-5m5 5V6m5 13V3"/></svg>
       </span>
-      <div class="ldash-stat-copy">
-        <span>Tiến độ trung bình</span>
-        <strong th:text="${teachingStats.avgCompletionPercent()} + '%'">0%</strong>
-      </div>
+      <div><span>Tiến độ TB theo lớp</span><strong th:text="${teachingStats.avgCompletionPercent()} + '%'">0%</strong></div>
     </article>
   </section>
 
   <section class="ldash-panel" aria-labelledby="ldashClassesTitle">
     <header class="ldash-panel-head">
       <div>
-        <span class="ldash-panel-kicker">Lớp phụ trách</span>
-        <h2 id="ldashClassesTitle">Danh sách lớp</h2>
+        <h2 id="ldashClassesTitle">Tiến độ các lớp</h2>
         <p th:text="${teachingClassRows.totalElements} + ' lớp'
               + (${teachingQuery != null and !#strings.isEmpty(teachingQuery)} ? ' khớp tìm kiếm' : '')">
           0 lớp
@@ -80,37 +69,54 @@
 
       <form class="ldash-search" method="get" th:action="@{/lecturer/dashboard}" role="search">
         <input type="hidden" name="size" th:value="${teachingSize}">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
         <label for="ldashSearch" class="sr-only">Tìm kiếm lớp học</label>
-        <input id="ldashSearch" type="search" name="q" th:value="${teachingQuery}"
-               placeholder="Tìm theo tên lớp hoặc mã môn" autocomplete="off">
+        <span class="ldash-search-field">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+          <input id="ldashSearch" type="search" name="q" th:value="${teachingQuery}"
+                 placeholder="Tìm lớp học hoặc mã môn…" autocomplete="off">
+        </span>
+        <a class="ldash-clear" th:if="${teachingQuery != null and !#strings.isEmpty(teachingQuery)}"
+           th:href="@{/lecturer/dashboard(size=${teachingSize})}">Xóa lọc</a>
         <button type="submit">Tìm</button>
       </form>
     </header>
 
     <div class="ldash-table-wrap" th:if="${teachingClassRows.totalElements > 0}">
-      <table class="ldash-table" aria-label="Danh sách lớp phụ trách">
+      <table class="ldash-table" aria-label="Tiến độ các lớp phụ trách">
         <thead>
           <tr>
-            <th>Tên lớp</th>
-            <th>Mã môn</th>
+            <th>Lớp học</th>
+            <th>Học kỳ</th>
             <th>Trạng thái</th>
-            <th class="is-centered">Sĩ số</th>
-            <th class="is-centered">Hoàn thành TB</th>
-            <th class="is-centered">Thao tác</th>
+            <th class="is-centered">Sinh viên</th>
+            <th>Tiến độ trung bình</th>
+            <th class="is-centered"><span class="sr-only">Thao tác</span></th>
           </tr>
         </thead>
         <tbody>
           <tr th:each="r : ${teachingClassRows.content}">
-            <td data-label="Tên lớp"><strong th:text="${r.name()}">Lớp</strong></td>
-            <td data-label="Mã môn"><code th:text="${r.code() != null ? r.code() : '—'}">KOR311</code></td>
+            <td data-label="Lớp học">
+              <div class="ldash-class-cell">
+                <span class="ldash-class-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8v7H8zM9 18h6"/></svg>
+                </span>
+                <span><strong th:text="${r.name()}">Lớp</strong><small th:text="${r.code() != null ? r.code() : '—'}">KOR311</small></span>
+              </div>
+            </td>
+            <td data-label="Học kỳ"><span class="ldash-semester" th:text="${r.displaySemester()}"
+                                                    th:attr="data-semester=${r.displaySemester()}">SU26</span></td>
             <td data-label="Trạng thái">
               <span class="ldash-status"
                     th:classappend="${r.status() != null ? #strings.toLowerCase(r.status()) : ''}"
                     th:text="${r.displayStatus()}">Trạng thái</span>
             </td>
-            <td data-label="Sĩ số" class="is-centered" th:text="${r.studentCount()}">0</td>
-            <td data-label="Hoàn thành TB" class="is-centered" th:text="${r.avgPercent()} + '%'">0%</td>
+            <td data-label="Sinh viên" class="is-centered" th:text="${r.studentCount()}">0</td>
+            <td data-label="Tiến độ trung bình">
+              <div class="ldash-progress">
+                <progress max="100" th:value="${r.avgPercent()}" th:attr="aria-label=${'Tiến độ ' + r.name()}">0%</progress>
+                <strong th:text="${r.avgPercent()} + '%'">0%</strong>
+              </div>
+            </td>
             <td data-label="Thao tác" class="is-centered">
               <a class="ldash-link" th:href="@{|/lecturer/classes/${r.id()}/progress|}">
                 Xem tiến độ
@@ -141,7 +147,7 @@
       <a class="ldash-secondary-action" th:href="@{/lecturer/dashboard}">Xóa bộ lọc</a>
     </div>
 
-    <div class="ldash-pager">
+    <div class="ldash-pager" th:if="${teachingClassRows.totalPages > 1}">
       <div th:replace="~{fragments/pager :: pager(${teachingClassRows}, '/lecturer/dashboard', ${params})}"></div>
     </div>
   </section>

@@ -11,7 +11,15 @@
 <main class="class-page">
   <div class="class-form-card">
     <h1 th:text="${mode == 'edit' ? 'Chỉnh sửa lớp học' : 'Tạo lớp học mới'}">Tạo lớp học mới</h1>
-    <p class="class-form-intro">Chọn mã môn trong catalog tiếng Hàn. Lớp mới sẽ ở trạng thái nháp để LEADER duyệt.</p>
+    <p class="class-form-intro">Chọn mã môn trong catalog tiếng Hàn. Lớp mới sẽ ở trạng thái chờ LEADER duyệt.</p>
+
+    <aside class="class-semester-banner">
+      <span>Học kỳ của lớp</span>
+      <strong th:text="${currentSemesterCode}">SU26</strong>
+      <small th:text="${currentSemesterLabel} + ' · tự động gắn khi tạo và không thể đổi sang kỳ cũ'">
+        Học kỳ Hè 2026 · tự động gắn khi tạo
+      </small>
+    </aside>
 
     <form th:action="@{${formAction}}" method="post" th:object="${form}" novalidate>
       <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">

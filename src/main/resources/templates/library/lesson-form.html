@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head(${form.id == null ? 'Thêm bài học' : 'Sửa tài nguyên bài học'}, ~{::link.page-css})}">
+<head th:replace="~{fragments/head :: head(${resourceOnly ? 'Thêm tài nguyên' : (form.id == null ? 'Thêm bài học' : 'Biên tập bài học')}, ~{::link.page-css})}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/app-shell.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/detail-page.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/library.css}">
@@ -14,15 +14,16 @@
 <main class="detail-page library-lesson-form-page">
   <form class="detail-card library-lesson-form" method="post" enctype="multipart/form-data"
         th:action="@{/lecturer/library/templates}" th:object="${form}"
-        th:attr="data-inline-action=@{/lecturer/library/templates/inline}"
+        th:attr="data-inline-action=@{/lecturer/library/templates/inline},data-resource-only=${resourceOnly}"
         data-library-lesson-form>
     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
     <input type="hidden" th:field="*{id}">
     <input type="hidden" th:field="*{subjectId}">
+    <input type="hidden" th:field="*{newChapter}">
     <input type="hidden" th:field="*{chapterNumber}">
-    <input type="hidden" th:field="*{chapterTitle}">
     <input type="hidden" th:field="*{lessonNumber}">
-    <input type="hidden" th:field="*{title}">
+    <input type="hidden" th:if="${form.id != null}" th:field="*{chapterTitle}">
+    <input type="hidden" th:if="${form.id != null}" th:field="*{title}">
     <input type="hidden" th:field="*{contentType}" data-library-content-type>
     <!-- Preserve a legacy/canonical PDF primary body while editing hierarchy,
          video summary or supplementary resources. The personal video picker
@@ -30,23 +31,67 @@
     <input type="hidden" th:field="*{pdfLibraryAssetId}">
 
     <nav class="library-authoring-tabs" role="tablist" aria-label="Nội dung bài giảng">
+      <button type="button" role="tab" id="libraryFormTabInfo"
+              th:if="${!resourceOnly and form.id == null}"
+              aria-controls="libraryFormPanelInfo" data-library-form-tab="INFO"
+              class="is-active" aria-selected="true" tabindex="0">Thông tin</button>
       <button type="button" role="tab" id="libraryFormTabContent"
+              th:if="${!resourceOnly}"
               aria-controls="libraryFormPanelContent" data-library-form-tab="CONTENT"
-              th:classappend="${form.contentType != 'VIDEO'} ? ' is-active'"
-              th:attr="aria-selected=${form.contentType != 'VIDEO'},tabindex=${form.contentType != 'VIDEO'} ? '0' : '-1'">Nội dung bài học</button>
+              th:classappend="${form.id != null and form.contentType != 'VIDEO'} ? ' is-active'"
+              th:attr="aria-selected=${form.id != null and form.contentType != 'VIDEO'},tabindex=${form.id != null and form.contentType != 'VIDEO'} ? '0' : '-1'">Nội dung bài học</button>
       <button type="button" role="tab" id="libraryFormTabVideo"
+              th:if="${!resourceOnly}"
               aria-controls="libraryFormPanelVideo" data-library-form-tab="VIDEO"
-              th:classappend="${form.contentType == 'VIDEO'} ? ' is-active'"
-              th:attr="aria-selected=${form.contentType == 'VIDEO'},tabindex=${form.contentType == 'VIDEO'} ? '0' : '-1'">Video</button>
+              th:classappend="${form.id != null and form.contentType == 'VIDEO'} ? ' is-active'"
+              th:attr="aria-selected=${form.id != null and form.contentType == 'VIDEO'},tabindex=${form.id != null and form.contentType == 'VIDEO'} ? '0' : '-1'">Video</button>
       <button type="button" role="tab" id="libraryFormTabAttachments"
               aria-controls="libraryFormPanelAttachments" data-library-form-tab="ATTACHMENTS"
-              aria-selected="false" tabindex="-1">Tài liệu đính kèm</button>
+              th:classappend="${resourceOnly} ? ' is-active'"
+              th:attr="aria-selected=${resourceOnly},tabindex=${resourceOnly} ? '0' : '-1'">Tài liệu đính kèm</button>
     </nav>
 
+    <section class="library-form-section library-identity-panel" id="libraryFormPanelInfo"
+             th:if="${!resourceOnly and form.id == null}"
+             aria-labelledby="libraryFormTabInfo" role="tabpanel"
+             data-library-form-panel="INFO">
+      <div class="library-identity-heading">
+        <div>
+          <h2>Đặt tên chương và bài học</h2>
+          <p th:text="${form.newChapter}
+              ? 'Tên được lưu ngay khi tạo; không cần quay lại sửa tiêu đề mặc định.'
+              : 'Bài học mới sẽ được thêm vào chương hiện tại.'">
+            Đặt tên trước khi soạn nội dung.
+          </p>
+        </div>
+        <span th:text="${'Chương ' + form.chapterNumber + ' · Bài ' + form.lessonNumber}">Chương 1 · Bài 1</span>
+      </div>
+      <label>
+        <span>Tên chương</span>
+        <input type="text" th:field="*{chapterTitle}" maxlength="200" required
+               th:readonly="${!form.newChapter}" autocomplete="off">
+        <small th:if="${!form.newChapter}">Đang thêm bài vào chương có sẵn; đổi tên chương trực tiếp tại danh sách bài học.</small>
+        <small class="field-error" th:if="${#fields.hasErrors('chapterTitle')}"
+               th:errors="*{chapterTitle}">Tên chương không hợp lệ</small>
+      </label>
+      <label>
+        <span>Tên bài học</span>
+        <input type="text" th:field="*{title}" maxlength="300" required
+               autocomplete="off" placeholder="Ví dụ: Chào hỏi và giới thiệu bản thân">
+        <small>Tên hiển thị trong syllabus và trong lớp sau khi phân phối.</small>
+        <small class="field-error" th:if="${#fields.hasErrors('title')}"
+               th:errors="*{title}">Tên bài học không hợp lệ</small>
+      </label>
+      <button type="button" class="btn-primary library-info-next" data-library-info-next>
+        Tiếp tục tới nội dung
+      </button>
+    </section>
+
     <section class="library-form-section library-editor-main" id="libraryFormPanelContent"
+             th:if="${!resourceOnly}"
              aria-labelledby="libraryFormTabContent"
              role="tabpanel" data-library-form-panel="CONTENT"
-             th:hidden="${form.contentType == 'VIDEO'}">
+             th:hidden="${form.id == null or form.contentType == 'VIDEO'}">
       <h2 id="lessonContentTitle">Nội dung bài học</h2>
       <p>Soạn trực tiếp như văn bản thông thường; hệ thống tự lưu định dạng an toàn.</p>
       <input type="hidden" th:field="*{contentRichtext}" data-library-richtext-value>
@@ -54,9 +99,10 @@
     </section>
 
     <section class="library-form-section library-primary-video" id="libraryFormPanelVideo"
+             th:if="${!resourceOnly}"
              aria-labelledby="libraryFormTabVideo"
              role="tabpanel" data-library-form-panel="VIDEO"
-             th:hidden="${form.contentType != 'VIDEO'}">
+             th:hidden="${form.id == null or form.contentType != 'VIDEO'}">
       <h2 id="lessonVideoTitle">Video bài giảng</h2>
       <p>Chọn video MP4 đã upload trong kho cá nhân hoặc dùng một liên kết YouTube/Vimeo.</p>
       <input type="hidden" th:field="*{videoProvider}" data-library-video-provider>
@@ -96,8 +142,10 @@
 
     <section class="library-form-section library-optional-resources" id="libraryFormPanelAttachments"
              aria-labelledby="libraryFormTabAttachments"
-             role="tabpanel" data-library-form-panel="ATTACHMENTS" hidden>
-      <h2 id="lessonResourcesTitle">Tài liệu đính kèm</h2>
+             role="tabpanel" data-library-form-panel="ATTACHMENTS"
+             th:hidden="${!resourceOnly}">
+      <h2 id="lessonResourcesTitle" th:text="${resourceOnly} ? 'Thêm tài nguyên cho bài học' : 'Tài liệu đính kèm'">Tài liệu đính kèm</h2>
+      <p th:if="${resourceOnly}">Bạn chỉ có thể bổ sung tài nguyên. Tiêu đề, vị trí và nội dung bài học do trưởng bộ môn quản lý.</p>
       <div class="library-file-dropzone" data-library-file-dropzone tabindex="0">
         <strong>Tải tệp mới cho bài giảng</strong>
         <span>Kéo thả file vào đây hoặc chọn nhiều PDF, DOC/DOCX, PPT/PPTX, XLS/XLSX, ZIP và video MP4. Tệp mới cũng được lưu vào kho cá nhân để dùng lại.</span>
@@ -139,7 +187,8 @@
     <div class="form-actions">
       <button type="button" class="btn-ghost" data-library-cancel
               th:attr="data-library-cancel-url=@{/lecturer/library/templates(subjectId=${form.subjectId})}">Huỷ</button>
-      <button type="submit" class="btn-primary">Lưu thay đổi</button>
+      <button type="submit" class="btn-primary"
+              th:text="${resourceOnly} ? 'Thêm tài nguyên' : 'Lưu thay đổi'">Lưu thay đổi</button>
     </div>
   </form>
 </main>

@@ -6,6 +6,7 @@
   <link class="page-css" rel="stylesheet" th:href="@{/css/pager.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/learning-ui.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/experience-polish.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/test-catalog.css}">
 </head>
 <body class="ux-polish ux-test-catalog">
 <header th:replace="~{fragments/app-header :: appHeader('tests')}"></header>
@@ -14,89 +15,261 @@
       th:attr="data-flash-success=${flashSuccess},data-flash-error=${flashError}"
       style="display:none;"></span>
 
-<main class="tst-page">
-  <div class="tst-toolbar">
-    <h1 class="tst-page-title">Quản lý bài test</h1>
-    <a class="tst-btn tst-btn-primary" th:href="@{/lecturer/tests/new}">Tạo bài test</a>
-  </div>
+<main class="tst-page tst-catalog-page">
+  <nav class="tst-breadcrumb" aria-label="Đường dẫn">
+    <span>Kho học liệu</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    <strong>Quản lý bài test</strong>
+  </nav>
 
-  <section class="tst-section">
-    <form method="get" class="tst-filter-grid">
-      <label class="sr-only" for="testSearch">Tìm theo tiêu đề bài test</label>
-      <input class="tst-input" id="testSearch" type="search" name="q" placeholder="Tìm theo tiêu đề"
-             th:value="${examFilter.keyword()}">
-      <label class="sr-only" for="testStatus">Lọc theo trạng thái</label>
-      <select class="tst-input" id="testStatus" name="status" data-ksh-select>
-        <option value="">Mọi trạng thái</option>
-        <option value="DRAFT" th:selected="${examFilter.status() == 'DRAFT'}">Bản nháp</option>
-        <option value="PUBLISHED" th:selected="${examFilter.status() == 'PUBLISHED'}">Đã xuất bản</option>
-        <option value="ARCHIVED" th:selected="${examFilter.status() == 'ARCHIVED'}">Đã lưu trữ</option>
-      </select>
-      <label class="sr-only" for="testType">Lọc theo loại bài test</label>
-      <select class="tst-input" id="testType" name="type" data-ksh-select>
-        <option value="">Mọi loại</option>
-        <option value="MOCK" th:selected="${examFilter.type() == 'MOCK'}">Thi thử</option>
-        <option value="MODULE" th:selected="${examFilter.type() == 'MODULE'}">Theo học phần</option>
-        <option value="PRACTICE" th:selected="${examFilter.type() == 'PRACTICE'}">Luyện tập</option>
-      </select>
-      <label class="sr-only" for="testClass">Lọc theo lớp</label>
-      <select class="tst-input" id="testClass" name="classId" data-ksh-select
-              data-ksh-searchable data-ksh-search-placeholder="Gõ tên lớp…">
-        <option value="">Mọi lớp</option>
-        <option th:each="clazz : ${ledClasses}" th:value="${clazz.id()}"
-                th:text="${clazz.name()}" th:selected="${examFilter.classId() == clazz.id()}">Lớp</option>
-      </select>
-      <button class="tst-btn" type="submit">Lọc</button>
+  <section class="tst-catalog-hero" aria-labelledby="testCatalogTitle">
+    <div>
+      <h1 class="tst-page-title" id="testCatalogTitle">Quản lý bài test</h1>
+      <p>Tạo, quản lý và theo dõi các bài test trong phạm vi bạn phụ trách.</p>
+    </div>
+    <svg class="tst-hero-illustration" viewBox="0 0 330 120" aria-hidden="true">
+      <defs>
+        <linearGradient id="testHeroBlue" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#dce9ff"/><stop offset="1" stop-color="#8bb2ff"/>
+        </linearGradient>
+      </defs>
+      <path d="M36 104c62-18 208-18 270 0" fill="none" stroke="#d8e6ff" stroke-width="2"/>
+      <g transform="translate(76 17) rotate(-9 66 42)">
+        <rect x="5" y="7" width="112" height="72" rx="8" fill="url(#testHeroBlue)"/>
+        <rect x="20" y="24" width="52" height="7" rx="3.5" fill="#fff" opacity=".88"/>
+        <rect x="20" y="39" width="72" height="6" rx="3" fill="#fff" opacity=".72"/>
+        <rect x="20" y="53" width="40" height="15" rx="3" fill="#fff" opacity=".8"/>
+      </g>
+      <path d="M181 91 196 62l18 13 20-30 24 46Z" fill="#b9d1ff"/>
+      <path d="M221 85a40 40 0 1 0 40-40v40Z" fill="#2f6fed"/>
+      <path d="M263 42a40 40 0 0 0-26 10l26 30Z" fill="#78a4ff"/>
+      <path d="m293 28 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="#b7d0ff"/>
+    </svg>
+  </section>
+
+  <section class="tst-metric-grid" aria-label="Tổng quan bài test">
+    <article class="tst-metric-card tst-metric-total">
+      <span class="tst-metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+      <span><small>Tổng bài test</small><strong th:text="${testMetrics.totalTests()}">0</strong><em>Tất cả bài test bạn có thể truy cập</em></span>
+    </article>
+    <article class="tst-metric-card tst-metric-published">
+      <span class="tst-metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
+      <span><small>Đã phát hành</small><strong th:text="${testMetrics.publishedTests()}">0</strong><em>Sẵn sàng dùng làm nguồn hoặc theo dõi</em></span>
+    </article>
+    <article class="tst-metric-card tst-metric-draft">
+      <span class="tst-metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+      <span><small>Bản nháp</small><strong th:text="${testMetrics.draftTests()}">0</strong><em>Chưa phát hành</em></span>
+    </article>
+    <article class="tst-metric-card tst-metric-questions">
+      <span class="tst-metric-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.7c0 1.8-2.4 2-2.4 3.8M12 17h.01"/></svg></span>
+      <span><small>Tổng số câu hỏi</small><strong th:text="${testMetrics.totalQuestions()}">0</strong><em>Trong kho bài test bạn có thể truy cập</em></span>
+    </article>
+  </section>
+
+  <section class="tst-catalog-surface" aria-label="Danh sách bài test">
+    <form method="get" class="tst-catalog-filters">
+      <label class="tst-search-control" for="testSearch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="sr-only">Tìm theo tiêu đề bài test</span>
+        <input id="testSearch" type="search" name="q"
+               placeholder="Tìm theo tiêu đề, mô tả..." th:value="${examFilter.keyword()}">
+      </label>
+
+      <label class="tst-select-control" for="testStatus">
+        <span class="sr-only">Lọc theo trạng thái</span>
+        <select id="testStatus" name="status">
+          <option value="">Mọi trạng thái</option>
+          <option value="DRAFT" th:selected="${examFilter.status() == 'DRAFT'}">Bản nháp</option>
+          <option value="PUBLISHED" th:selected="${examFilter.status() == 'PUBLISHED'}">Đã phát hành</option>
+          <option value="ARCHIVED" th:selected="${examFilter.status() == 'ARCHIVED'}">Đã lưu trữ</option>
+        </select>
+      </label>
+
+      <label class="tst-select-control" for="testType">
+        <span class="sr-only">Lọc theo loại bài test</span>
+        <select id="testType" name="type">
+          <option value="">Mọi loại test</option>
+          <option value="MOCK" th:selected="${examFilter.type() == 'MOCK'}">Thi thử</option>
+          <option value="MODULE" th:selected="${examFilter.type() == 'MODULE'}">Theo học phần</option>
+          <option value="PRACTICE" th:selected="${examFilter.type() == 'PRACTICE'}">Luyện tập</option>
+        </select>
+      </label>
+
+      <label class="tst-select-control" for="testClass">
+        <span class="sr-only">Lọc theo lớp</span>
+        <select id="testClass" name="classId">
+          <option value="">Mọi lớp</option>
+          <option th:each="clazz : ${ledClasses}" th:value="${clazz.id()}"
+                  th:text="${clazz.name()}" th:selected="${examFilter.classId() == clazz.id()}">Lớp</option>
+        </select>
+      </label>
+
+      <button class="tst-filter-submit" type="submit">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16l-6.5 7.5V19l-3 1.5v-9Z"/></svg>
+        Bộ lọc
+      </button>
     </form>
+
+    <div class="tst-catalog-actions">
+      <span><strong th:text="${examsPage.totalElements}">0</strong> bài test</span>
+      <div>
+        <span class="tst-sort-label">Sắp xếp: <strong>Mới nhất</strong></span>
+        <a class="tst-bank-link" th:href="@{/lecturer/question-bank}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+          Mở ngân hàng câu hỏi
+        </a>
+        <a class="tst-create-link" th:href="@{/lecturer/tests/new}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Tạo bài test
+        </a>
+      </div>
+    </div>
+
     <div class="tst-empty" th:if="${examsPage.totalElements == 0}">
-      Bạn chưa tạo bài test nào.
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 15h6"/></svg>
+      <strong>Không tìm thấy bài test phù hợp.</strong>
+      <span>Thử thay đổi bộ lọc hoặc tạo bài test đầu tiên.</span>
     </div>
 
     <div class="tst-table-wrap" th:if="${examsPage.totalElements > 0}">
-    <table class="tst-table">
-      <colgroup>
-        <col class="tst-col-title"><col class="tst-col-type"><col class="tst-col-status">
-        <col class="tst-col-class"><col class="tst-col-count"><col class="tst-col-actions">
-      </colgroup>
-      <thead>
-      <tr>
-        <th>Tiêu đề</th><th>Loại</th><th>Trạng thái</th><th>Lớp</th>
-        <th>Số câu</th><th>Thao tác</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr th:each="exam : ${examsPage.content}">
-        <td th:text="${exam.title()}">Tên</td>
-        <td><span class="tst-badge" th:classappend="'tst-badge-' + ${exam.type()}"
-                  th:text="${exam.type()}">MOCK</span></td>
-        <td><span class="tst-status" th:classappend="'tst-status-' + ${exam.status()}"
-                  th:text="${exam.status()}">DRAFT</span></td>
-        <td>
-          <span th:if="${exam.className() != null}" th:text="${exam.className()}">Lớp</span>
-          <span th:if="${exam.className() == null}" class="tst-independent-scope">Test Bank độc lập</span>
-        </td>
-        <td th:text="${exam.totalQuestions()}">0</td>
-        <td class="tst-row-actions">
-          <div class="tst-row-actions-inner">
-          <a class="tst-icon-action" title="Sửa bài test" aria-label="Sửa bài test" th:href="@{|/lecturer/tests/${exam.id()}/edit|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></a>
-          <a class="tst-icon-action" title="Xem trước" aria-label="Xem trước" th:href="@{|/lecturer/tests/${exam.id()}/preview|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></a>
-          <a th:if="${exam.status() == 'PUBLISHED'}"
-             class="tst-icon-action" title="Phân phối" aria-label="Phân phối" th:href="@{|/lecturer/tests/${exam.id()}/distribute|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></a>
-          <a class="tst-icon-action" title="Theo dõi" aria-label="Theo dõi" th:href="@{|/lecturer/tests/${exam.id()}/edit?tab=monitor|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 3-3 3 2 5-6"/></svg></a>
-          <a class="tst-icon-action" title="Bài nộp" aria-label="Bài nộp" th:href="@{|/lecturer/tests/${exam.id()}/edit?tab=submissions|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></a>
-          </div>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+      <table class="tst-table tst-catalog-table">
+        <thead>
+        <tr>
+          <th>Tiêu đề</th><th>Loại test</th><th>Trạng thái</th><th>Lớp</th>
+          <th>Số câu hỏi</th><th>Thời gian</th><th>Ngày cập nhật</th><th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="tst-catalog-row" tabindex="0" th:each="exam : ${examsPage.content}"
+            th:attr="data-test-detail=${exam.id()},aria-label=|Mở chi tiết ${exam.title()}|">
+          <td class="tst-title-cell">
+            <strong th:text="${exam.title()}">Tên bài test</strong>
+            <span>
+              <span th:text="|Bài test #${exam.id()}|">Bài test #1</span>
+              <em class="tst-shared-source" th:if="${!exam.canManage()}">Đề dùng chung</em>
+            </span>
+          </td>
+          <td>
+            <span class="tst-badge" th:classappend="'tst-badge-' + ${exam.type()}"
+                  th:switch="${exam.type()}">
+              <th:block th:case="'MOCK'">Thi thử</th:block>
+              <th:block th:case="'MODULE'">Học phần</th:block>
+              <th:block th:case="'PRACTICE'">Luyện tập</th:block>
+              <th:block th:case="*" th:text="${exam.type()}">Khác</th:block>
+            </span>
+          </td>
+          <td>
+            <span class="tst-status" th:classappend="'tst-status-' + ${exam.status()}"
+                  th:switch="${exam.status()}">
+              <th:block th:case="'PUBLISHED'">● Đã phát hành</th:block>
+              <th:block th:case="'DRAFT'">● Bản nháp</th:block>
+              <th:block th:case="'ARCHIVED'">● Đã lưu trữ</th:block>
+              <th:block th:case="*" th:text="${exam.status()}">Khác</th:block>
+            </span>
+          </td>
+          <td>
+            <span th:if="${exam.className() != null}" th:text="${exam.className()}">Lớp</span>
+            <span th:if="${exam.className() == null}" class="tst-independent-scope">Test Bank độc lập</span>
+          </td>
+          <td><strong class="tst-number" th:text="${exam.totalQuestions()}">0</strong></td>
+          <td th:text="${exam.durationMinutes() == null ? '—' : exam.durationMinutes() + ' phút'}">—</td>
+          <td class="tst-updated-cell">
+            <time th:if="${exam.updatedAt() != null}"
+                  th:datetime="${exam.updatedAt()}"
+                  th:text="${#temporals.format(exam.updatedAt(), 'dd/MM/yyyy HH:mm')}">31/08/2026 12:00</time>
+            <span th:if="${exam.updatedAt() == null}">—</span>
+          </td>
+          <td class="tst-row-actions">
+            <div class="tst-row-actions-inner">
+            <button class="tst-icon-action" type="button" data-open-test-detail
+                    title="Xem chi tiết" aria-label="Xem chi tiết bài test">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <details class="tst-row-menu">
+              <summary aria-label="Mở menu thao tác"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></summary>
+              <div>
+                <a th:if="${exam.canManage()}" th:href="@{|/lecturer/tests/${exam.id()}/edit|}">Chỉnh sửa</a>
+                <a th:if="${exam.type() != 'PRACTICE'}" th:href="@{|/lecturer/tests/${exam.id()}/preview|}">Xem trước</a>
+                <a th:if="${exam.status() == 'PUBLISHED' and exam.type() != 'PRACTICE'}" th:href="@{|/lecturer/tests/${exam.id()}/distribute|}">Phân phối</a>
+                <a th:if="${exam.canManage()}" th:href="@{|/lecturer/tests/${exam.id()}/edit?tab=monitor|}">Theo dõi</a>
+                <a th:if="${exam.canManage()}" th:href="@{|/lecturer/tests/${exam.id()}/edit?tab=submissions|}">Bài nộp</a>
+              </div>
+            </details>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
     </div>
 
     <div th:replace="~{fragments/pager :: pager(${examsPage}, '/lecturer/tests', ${examPagerParams})}"></div>
   </section>
+
+  <template th:each="exam : ${examsPage.content}" th:id="|testDetailTemplate-${exam.id()}|">
+    <article class="tst-detail-content">
+      <section class="tst-detail-identity">
+        <span class="tst-detail-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+        <div>
+          <h2 th:text="${exam.title()}">Tên bài test</h2>
+          <span class="tst-detail-code" th:text="|Bài test #${exam.id()}|">Bài test #1</span>
+          <span class="tst-shared-source" th:if="${!exam.canManage()}">Đề dùng chung · chỉ đọc</span>
+        </div>
+      </section>
+
+      <dl class="tst-detail-facts">
+        <div><dt>Trạng thái</dt><dd><span class="tst-status" th:classappend="'tst-status-' + ${exam.status()}" th:switch="${exam.status()}"><th:block th:case="'PUBLISHED'">● Đã phát hành</th:block><th:block th:case="'DRAFT'">● Bản nháp</th:block><th:block th:case="'ARCHIVED'">● Đã lưu trữ</th:block><th:block th:case="*" th:text="${exam.status()}">Khác</th:block></span></dd></div>
+        <div><dt>Loại</dt><dd th:switch="${exam.type()}"><span th:case="'MOCK'">Thi thử</span><span th:case="'MODULE'">Học phần</span><span th:case="'PRACTICE'">Luyện tập</span><span th:case="*" th:text="${exam.type()}">Khác</span></dd></div>
+        <div><dt>Số câu</dt><dd th:text="${exam.totalQuestions()}">0</dd></div>
+        <div><dt>Cập nhật</dt><dd th:text="${exam.updatedAt() == null ? '—' : #temporals.format(exam.updatedAt(), 'dd/MM/yyyy HH:mm')}">—</dd></div>
+      </dl>
+
+      <section class="tst-detail-section">
+        <h3>Lớp áp dụng</h3>
+        <p class="tst-class-pill" th:text="${exam.className() == null ? 'Test Bank độc lập' : exam.className()}">Lớp</p>
+      </section>
+
+      <section class="tst-detail-section">
+        <h3>Mô tả</h3>
+        <div class="tst-detail-description" th:if="${exam.description() != null and !exam.description().isBlank()}" th:utext="${exam.description()}">Mô tả</div>
+        <p class="tst-detail-muted" th:if="${exam.description() == null or exam.description().isBlank()}">Bài test chưa có mô tả.</p>
+      </section>
+
+      <section class="tst-detail-section">
+        <h3>Thống kê nhanh</h3>
+        <div class="tst-detail-stats">
+          <span><strong th:text="${exam.totalQuestions()}">0</strong><small>Tổng số câu</small></span>
+          <span><strong th:text="${exam.durationMinutes() == null ? '—' : exam.durationMinutes()}">—</strong><small>Phút làm bài</small></span>
+          <span><strong th:text="${exam.createdAt() == null ? '—' : #temporals.format(exam.createdAt(), 'dd/MM/yyyy')}">—</strong><small>Ngày tạo</small></span>
+        </div>
+      </section>
+
+      <section class="tst-detail-section tst-detail-actions">
+        <h3>Hành động</h3>
+        <div>
+          <a class="is-primary" th:if="${exam.canManage()}" th:href="@{|/lecturer/tests/${exam.id()}/edit|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Chỉnh sửa</a>
+          <a th:if="${exam.type() != 'PRACTICE'}" th:href="@{|/lecturer/tests/${exam.id()}/preview|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>Xem trước</a>
+          <a class="is-wide" th:if="${exam.status() == 'PUBLISHED' and exam.type() != 'PRACTICE'}" th:href="@{|/lecturer/tests/${exam.id()}/distribute|}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Phân phối cho lớp</a>
+          <a th:if="${exam.canManage()}" th:href="@{|/lecturer/tests/${exam.id()}/edit?tab=monitor|}">Theo dõi</a>
+          <a th:if="${exam.canManage()}" th:href="@{|/lecturer/tests/${exam.id()}/edit?tab=submissions|}">Bài nộp</a>
+        </div>
+      </section>
+    </article>
+  </template>
 </main>
+
+<div class="tst-detail-drawer" id="testDetailDrawer" hidden>
+  <button class="tst-drawer-backdrop" type="button" data-close-test-detail aria-label="Đóng chi tiết"></button>
+  <aside class="tst-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="testDrawerTitle">
+    <header>
+      <h2 id="testDrawerTitle">Chi tiết bài test</h2>
+      <button type="button" data-close-test-detail aria-label="Đóng chi tiết"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+    </header>
+    <div class="tst-drawer-body" id="testDetailDrawerBody"></div>
+  </aside>
+</div>
 
 <script th:src="@{/js/app.js}"></script>
 <script th:src="@{/js/flashcard-common.js}"></script>
-<script th:src="@{/js/learning-select.js}"></script>
+<script th:src="@{/js/test-lecturer-list.js}"></script>
 </body>
 </html>

@@ -31,6 +31,7 @@ class LibraryAuthoringLockControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository userRepository;
     @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private com.ksh.features.library.repository.LessonTemplateRepository templateRepository;
 
     private Department subject;
 
@@ -48,7 +49,7 @@ class LibraryAuthoringLockControllerTest {
         mockMvc.perform(get("/lecturer/library/templates")
                         .param("subjectId", subject.getId().toString()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Khóa biên soạn")));
+                .andExpect(content().string(containsString("Khóa thêm tài nguyên GV")));
 
         mockMvc.perform(post("/lecturer/library/templates/subjects/{subjectId}/lock",
                         subject.getId())
@@ -60,9 +61,10 @@ class LibraryAuthoringLockControllerTest {
         mockMvc.perform(get("/lecturer/library/templates")
                         .param("subjectId", subject.getId().toString()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Mở khóa biên soạn")))
-                .andExpect(content().string(containsString("chế độ chỉ đọc")))
-                .andExpect(content().string(not(containsString(">Tạo bài học<"))));
+                .andExpect(content().string(containsString("Cho phép GV thêm tài nguyên")))
+                .andExpect(content().string(containsString(">Tạo bài học<")))
+                .andExpect(content().string(containsString("data-inline-edit")))
+                .andExpect(content().string(not(containsString("structure-lock"))));
     }
 
     @Test
@@ -74,9 +76,39 @@ class LibraryAuthoringLockControllerTest {
         mockMvc.perform(get("/lecturer/library/templates")
                         .param("subjectId", subject.getId().toString()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Trưởng bộ môn đã khóa phiên bản hiện tại")))
-                .andExpect(content().string(not(containsString("Mở khóa biên soạn"))))
-                .andExpect(content().string(not(containsString("Khóa biên soạn"))))
+                .andExpect(content().string(not(containsString("library-lock-btn"))))
+                .andExpect(content().string(not(containsString(">Tạo bài học<"))))
                 .andExpect(content().string(not(containsString("data-inline-edit"))));
+    }
+
+    @Test
+    @WithUserDetails("lecturer@ksh.edu.vn")
+    void unlocked_lecturer_gets_only_resource_form_not_syllabus_editor() throws Exception {
+        var lesson = templateRepository
+                .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId()).get(0);
+        mockMvc.perform(get("/lecturer/library/templates/{id}/edit", lesson.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-resource-only=\"true\"")))
+                .andExpect(content().string(containsString("Thêm tài nguyên")))
+                .andExpect(content().string(not(containsString("id=\"libraryFormTabContent\""))))
+                .andExpect(content().string(not(containsString("id=\"libraryFormTabVideo\""))));
+        mockMvc.perform(get("/lecturer/library/templates/new")
+                        .param("subjectId", subject.getId().toString()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithUserDetails("kor_leader@ksh.edu.vn")
+    void kor_leader_sees_authoring_and_drag_controls_even_when_locked() throws Exception {
+        subject.setLibraryLocked(true);
+        departmentRepository.saveAndFlush(subject);
+        mockMvc.perform(get("/lecturer/library/templates")
+                        .param("subjectId", subject.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Cho phép GV thêm tài nguyên")))
+                .andExpect(content().string(containsString("data-inline-edit")))
+                .andExpect(content().string(containsString("library-lesson-drag-handle")))
+                .andExpect(content().string(containsString("library-drag-handle")))
+                .andExpect(content().string(containsString(">Tạo bài học<")));
     }
 }

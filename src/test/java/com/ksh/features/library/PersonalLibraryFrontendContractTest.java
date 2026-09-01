@@ -44,6 +44,8 @@ class PersonalLibraryFrontendContractTest {
                 "accept=\".pdf,.docx,.pptx,.xlsx,.zip,video/mp4,.mp4\"",
                 "enctype=\"multipart/form-data\"",
                 "@{/lecturer/library/assets/upload}",
+                "/lecturer/library/assets/${item.id()}/details",
+                "/lecturer/library/assets/${item.id()}/preview",
                 "/lecturer/library/assets/${item.id()}/content",
                 "/lecturer/library/assets/${item.id()}/rename",
                 "/lecturer/library/assets/${item.id()}/delete",
@@ -62,7 +64,32 @@ class PersonalLibraryFrontendContractTest {
                 "data-library-upload-form",
                 "form.checkValidity()",
                 "data-library-delete-form",
-                "window.confirm");
+                "window.confirm",
+                "setupDetailPanel()",
+                "data-library-detail-trigger",
+                "data-row-detail-trigger",
+                "data-detail-usage-status",
+                "loadDetail(trigger, request)",
+                "renderUsage(usages, fallbackInUse)",
+                "personal-library-usage-item",
+                "placeMenu(details)",
+                "personal-library-detail-open");
+        assertThat(page).contains(
+                "personal-library-hero.png",
+                "Cập nhật gần đây",
+                "libraryRecentAssets",
+                "dd/MM/yyyy · HH:mm",
+                "data-library-detail-panel",
+                "data-row-detail-trigger",
+                "data-detail-view",
+                "data-detail-usage",
+                "data-detail-usage-list",
+                "data-detail-download",
+                "data-detail-share",
+                "item.formatLabel()",
+                "item.formatClass()",
+                "item.iconLabel()",
+                "data-asset-icon");
     }
 
     @Test

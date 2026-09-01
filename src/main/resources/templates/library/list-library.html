@@ -8,27 +8,97 @@
 <header th:replace="~{fragments/app-header :: appHeader('library')}"></header>
 
 <main class="library-list-page">
-  <div class="library-list-header">
-    <h1>Kho bài giảng</h1>
-    <p>Chọn một mã môn để xem hoặc quản lý bài giảng.</p>
-  </div>
+  <section class="library-list-hero" aria-labelledby="libraryListTitle">
+    <div class="library-list-header">
+      <h1 id="libraryListTitle">Kho bài giảng</h1>
+      <p>Khám phá, quản lý và chia sẻ bài giảng dùng chung theo từng mã môn.</p>
+    </div>
+    <svg class="library-list-illustration" viewBox="0 0 520 180" aria-hidden="true">
+      <defs>
+        <linearGradient id="libraryBookCover" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#72b5ff"/><stop offset="1" stop-color="#2f7ce5"/>
+        </linearGradient>
+        <linearGradient id="libraryPageFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f7fbff"/><stop offset="1" stop-color="#d9ebff"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="292" cy="157" rx="200" ry="13" fill="#d9eaff" opacity=".82"/>
+      <path d="M48 144c18-65 58-91 103-90-6 36-27 72-69 94z" fill="#dceeff"/>
+      <path d="M92 143c-8-41-7-74 0-104 39 22 61 57 52 103z" fill="#cfe6ff"/>
+      <path d="M77 144l39-73M87 120l31-8M98 98l-12-22" fill="none" stroke="#a9cff8" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="174" cy="80" r="34" fill="#fff" opacity=".9"/>
+      <circle cx="174" cy="80" r="24" fill="#49a0fa"/>
+      <path d="m169 68 17 12-17 12z" fill="#fff"/>
+      <rect x="108" y="137" width="120" height="17" rx="8.5" fill="#4e9af1"/>
+      <path d="M221 45c46-14 82-2 105 19v83c-28-18-61-23-105-8z" fill="url(#libraryBookCover)"/>
+      <path d="M225 51c38-11 69-1 95 18v70c-30-14-59-16-95-6z" fill="url(#libraryPageFill)"/>
+      <path d="M326 64c25-20 61-29 101-14v88c-42-12-75-6-101 10z" fill="url(#libraryBookCover)"/>
+      <path d="M331 69c24-15 52-23 89-14v77c-36-7-65-1-89 8z" fill="url(#libraryPageFill)"/>
+      <path d="M326 65v82" stroke="#1f6fda" stroke-width="5"/>
+      <g fill="none" stroke="#bdd9f8" stroke-width="2" stroke-linecap="round">
+        <path d="M239 73c25-5 48-1 67 8M239 85c25-5 48-1 67 8M239 97c25-5 48-1 67 8M239 109c25-5 48-1 67 8"/>
+        <path d="M344 79c20-7 39-10 61-7M344 91c20-7 39-10 61-7M344 103c20-7 39-10 61-7M344 115c20-7 39-10 61-7"/>
+      </g>
+      <path d="M426 72h66c8 0 14 6 14 14v63h-86V78c0-3 3-6 6-6z" fill="#3688ee"/>
+      <path d="M435 63h31l10 12h30v17h-71z" fill="#72b5ff"/>
+      <path d="M486 29v23M474 41h24" stroke="#a9d4ff" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="42" cy="104" r="6" fill="#bfe0ff"/><circle cx="466" cy="123" r="8" fill="#d7ebff"/>
+    </svg>
+  </section>
 
-  <div class="library-list-search">
-    <label class="library-subject-search">
-      <span class="sr-only">Tìm mã môn trong Library</span>
-      <input type="search" placeholder="Gõ mã môn, ví dụ KOR311…"
+  <section class="library-filter-bar" aria-label="Bộ lọc kho bài giảng">
+    <label class="library-filter-search">
+      <span class="sr-only">Tìm môn trong Kho bài giảng</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input type="search" placeholder="Tìm theo mã môn, tên môn…"
              autocomplete="off" data-library-list-filter>
     </label>
-  </div>
+
+    <label class="library-filter-select">
+      <span class="sr-only">Lọc theo trạng thái nội dung</span>
+      <select data-library-status-filter>
+        <option value="">Trạng thái</option>
+        <option value="ready">Đã có nội dung</option>
+        <option value="empty">Chưa có nội dung</option>
+      </select>
+    </label>
+
+    <label class="library-filter-select library-filter-subject">
+      <span class="sr-only">Lọc theo môn học</span>
+      <svg class="library-filter-icon" data-lucide-icon="graduation-cap"
+           viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0z"/>
+        <path d="M22 10v6"/>
+        <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
+      </svg>
+      <select data-library-subject-filter>
+        <option value="">Môn học</option>
+        <option th:each="subject : ${librarySubjectStats}"
+                th:value="${subject.code()}" th:text="${subject.code()}">KOR311</option>
+      </select>
+    </label>
+
+    <button class="library-filter-reset" type="button" data-library-filter-reset>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      Xóa bộ lọc
+    </button>
+  </section>
 
   <div class="library-list-container" th:if="${!librarySubjectStats.isEmpty()}">
     <div class="library-subject-cards">
       <a class="library-subject-card" th:each="subject : ${librarySubjectStats}"
          th:href="@{/lecturer/library/templates(subjectId=${subject.id()})}"
-         th:attr="data-search-text=${subject.code() + ' ' + subject.name()}">
+         th:attr="data-search-text=${subject.code() + ' ' + subject.name()},
+                  data-subject-code=${subject.code()},
+                  data-library-status=${subject.lessonCount() > 0 ? 'ready' : 'empty'}">
         <div class="card-header">
-          <strong class="subject-code" th:text="${subject.code()}">KOR311</strong>
-          <span class="subject-name" th:text="${subject.name()}">Tiếng Hàn</span>
+          <span class="library-subject-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2h5a3 3 0 0 1 3 3v15a3 3 0 0 0-3-3Z"/><path d="M21 18a1 1 0 0 0 1-1V5a2 2 0 0 0-2-2h-5a3 3 0 0 0-3 3v15a3 3 0 0 1 3-3Z"/></svg>
+          </span>
+          <span class="library-subject-card-heading">
+            <strong class="subject-code" th:text="${subject.code()}">KOR311</strong>
+            <span class="subject-name" th:text="${subject.name()}">Tiếng Hàn</span>
+          </span>
         </div>
         <p class="subject-description" th:if="${subject.description() != null}"
            th:text="${subject.description()}"></p>
@@ -51,23 +121,48 @@
     <h3>Chưa có mã môn nào</h3>
     <p>Hiện tại bạn chưa có mã môn nào để quản lý bài giảng.</p>
   </div>
+  <div class="content-empty library-filter-empty" hidden data-library-filter-empty>
+    <h3>Không tìm thấy môn học phù hợp</h3>
+    <p>Thử đổi từ khóa hoặc xóa các bộ lọc đang chọn.</p>
+  </div>
 </main>
 
 <script th:src="@{/js/app.js}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.querySelector('[data-library-list-filter]');
-    const cards = document.querySelectorAll('.library-subject-card');
+    const statusFilter = document.querySelector('[data-library-status-filter]');
+    const subjectFilter = document.querySelector('[data-library-subject-filter]');
+    const resetButton = document.querySelector('[data-library-filter-reset]');
+    const emptyState = document.querySelector('[data-library-filter-empty]');
+    const cards = Array.from(document.querySelectorAll('.library-subject-card'));
 
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        cards.forEach(card => {
-          const searchText = card.getAttribute('data-search-text').toLowerCase();
-          card.style.display = searchText.includes(query) ? '' : 'none';
-        });
+    const applyFilters = () => {
+      const query = (searchInput?.value || '').trim().toLocaleLowerCase('vi');
+      const status = statusFilter?.value || '';
+      const subject = subjectFilter?.value || '';
+      let visible = 0;
+      cards.forEach(card => {
+        const matches = (!query || (card.dataset.searchText || '').toLocaleLowerCase('vi').includes(query))
+          && (!status || card.dataset.libraryStatus === status)
+          && (!subject || card.dataset.subjectCode === subject);
+        card.hidden = !matches;
+        if (matches) visible += 1;
       });
-    }
+      if (emptyState) emptyState.hidden = visible !== 0 || cards.length === 0;
+    };
+
+    [searchInput, statusFilter, subjectFilter].forEach(control => {
+      control?.addEventListener(control === searchInput ? 'input' : 'change', applyFilters);
+    });
+    resetButton?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      [statusFilter, subjectFilter].forEach(select => {
+        if (select) select.selectedIndex = 0;
+      });
+      applyFilters();
+      searchInput?.focus();
+    });
   });
 </script>
 </body>

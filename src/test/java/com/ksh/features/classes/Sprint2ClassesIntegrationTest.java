@@ -73,6 +73,9 @@ class Sprint2ClassesIntegrationTest {
     void list_lecturer_sees_only_own_classes() throws Exception {
         ClassEntity own = saveClass("Lect-Own", lecturer.getId(), "OWN01");
         ClassEntity other = saveClass("Leader-Own", leader.getId(), "HDA01");
+        own.approve(leader.getId(), java.time.LocalDateTime.now());
+        other.approve(leader.getId(), java.time.LocalDateTime.now());
+        classRepository.saveAllAndFlush(java.util.List.of(own, other));
 
         mockMvc.perform(get("/lecturer/classes"))
                 .andExpect(status().isOk())
@@ -83,8 +86,11 @@ class Sprint2ClassesIntegrationTest {
     @Test
     @WithUserDetails("leader@ksh.edu.vn")
     void list_leader_sees_same_department_classes() throws Exception {
-        saveClass("By-Lect", lecturer.getId(), "BYL01");
-        saveClass("By-Leader", leader.getId(), "BYH01");
+        ClassEntity byLecturer = saveClass("By-Lect", lecturer.getId(), "BYL01");
+        ClassEntity byLeader = saveClass("By-Leader", leader.getId(), "BYH01");
+        byLecturer.approve(leader.getId(), java.time.LocalDateTime.now());
+        byLeader.approve(leader.getId(), java.time.LocalDateTime.now());
+        classRepository.saveAllAndFlush(java.util.List.of(byLecturer, byLeader));
 
         mockMvc.perform(get("/lecturer/classes"))
                 .andExpect(status().isOk())
@@ -95,8 +101,11 @@ class Sprint2ClassesIntegrationTest {
     @Test
     @WithUserDetails("admin@ksh.edu.vn")
     void list_admin_sees_all() throws Exception {
-        saveClass("Admin-See-1", lecturer.getId(), "ADM01");
-        saveClass("Admin-See-2", leader.getId(), "ADM02");
+        ClassEntity first = saveClass("Admin-See-1", lecturer.getId(), "ADM01");
+        ClassEntity second = saveClass("Admin-See-2", leader.getId(), "ADM02");
+        first.approve(leader.getId(), java.time.LocalDateTime.now());
+        second.approve(leader.getId(), java.time.LocalDateTime.now());
+        classRepository.saveAllAndFlush(java.util.List.of(first, second));
 
         mockMvc.perform(get("/lecturer/classes"))
                 .andExpect(status().isOk())
@@ -121,12 +130,28 @@ class Sprint2ClassesIntegrationTest {
 
         mockMvc.perform(get("/lecturer/classes").param("size", "100"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString(pending.getName())))
-                .andExpect(content().string(containsString(rejected.getName())))
                 .andExpect(content().string(containsString(active.getName())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(pending.getName()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(rejected.getName()))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(archived.getName()))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Hiện xếp hạng"))))
                 .andExpect(content().string(containsString("tab=archived")));
+
+        mockMvc.perform(get("/lecturer/classes")
+                        .param("tab", "pending")
+                        .param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(pending.getName())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(active.getName()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(rejected.getName()))));
+
+        mockMvc.perform(get("/lecturer/classes")
+                        .param("tab", "rejected")
+                        .param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(rejected.getName())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(active.getName()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(pending.getName()))));
 
         mockMvc.perform(get("/lecturer/classes")
                         .param("tab", "archived")
@@ -142,16 +167,20 @@ class Sprint2ClassesIntegrationTest {
     @Test
     @WithUserDetails("lecturer@ksh.edu.vn")
     void list_pagination_is_centered_component_and_preserves_selected_tab() throws Exception {
-        saveClass("Pagination-First-Unique", lecturer.getId(), "PGN01");
-        saveClass("Pagination-Second-Unique", lecturer.getId(), "PGN02");
-        saveClass("Pagination-Third-Unique", lecturer.getId(), "PGN03");
+        ClassEntity first = saveClass("Pagination-First-Unique", lecturer.getId(), "PGN01");
+        ClassEntity second = saveClass("Pagination-Second-Unique", lecturer.getId(), "PGN02");
+        ClassEntity third = saveClass("Pagination-Third-Unique", lecturer.getId(), "PGN03");
+        first.approve(leader.getId(), java.time.LocalDateTime.now());
+        second.approve(leader.getId(), java.time.LocalDateTime.now());
+        third.approve(leader.getId(), java.time.LocalDateTime.now());
+        classRepository.saveAllAndFlush(java.util.List.of(first, second, third));
 
         mockMvc.perform(get("/lecturer/classes")
                         .param("tab", "current")
                         .param("page", "1")
                         .param("size", "1"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("class=\"classes-pagination\"")))
+                .andExpect(content().string(containsString("class=\"classes-pagination cw-pagination\"")))
                 .andExpect(content().string(containsString("Trang 2 trên ")))
                 .andExpect(content().string(containsString("tab=current&amp;page=0&amp;size=1")))
                 .andExpect(content().string(containsString("tab=current&amp;page=2&amp;size=1")));
@@ -185,7 +214,7 @@ class Sprint2ClassesIntegrationTest {
 
         mockMvc.perform(get("/lecturer/classes"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Chưa có lớp học nào")));
+                .andExpect(content().string(containsString("Chưa có lớp học phù hợp")));
     }
 
     // ───────────────────── Create ─────────────────────
@@ -204,7 +233,7 @@ class Sprint2ClassesIntegrationTest {
                         .param("endDate", "2026-12-31")
                         .param("maxStudents", "50"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/lecturer/classes"));
+                .andExpect(redirectedUrl("/lecturer/classes?tab=pending"));
 
         assertThat(classRepository.count()).isEqualTo(before + 1);
         assertThat(activityRepository.count()).isEqualTo(activityBefore + 1);

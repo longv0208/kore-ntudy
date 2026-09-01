@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -63,12 +64,12 @@ class LecturerDashboardControllerTest {
                 .andExpect(model().attributeExists("teachingSize"))
                 .andExpect(model().attributeExists("params"))
                 .andExpect(content().string(containsString("Tổng quan giảng dạy")))
-                .andExpect(content().string(containsString("Tổng lớp")))
-                .andExpect(content().string(containsString("Tổng sinh viên")))
+                .andExpect(content().string(containsString("Tổng lớp phụ trách")))
+                .andExpect(content().string(containsString("Lượt sinh viên")))
                 .andExpect(content().string(containsString("Lớp đang hoạt động")))
-                .andExpect(content().string(containsString("Tiến độ trung bình")))
-                .andExpect(content().string(containsString("Danh sách lớp")))
-                .andExpect(content().string(containsString("Tìm theo tên lớp hoặc mã môn")));
+                .andExpect(content().string(containsString("Tiến độ TB theo lớp")))
+                .andExpect(content().string(containsString("Tiến độ các lớp")))
+                .andExpect(content().string(containsString("Tìm lớp học hoặc mã môn")));
     }
 
     @Test
@@ -87,10 +88,11 @@ class LecturerDashboardControllerTest {
     @Test
     @WithUserDetails("admin@ksh.edu.vn")
     void admin_can_open_dashboard() throws Exception {
-        mockMvc.perform(get("/lecturer/dashboard"))
+        mockMvc.perform(get("/lecturer/dashboard").param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("lecturer/dashboard"))
-                .andExpect(content().string(containsString("Tổng quan giảng dạy")));
+                .andExpect(content().string(containsString("Tổng quan giảng dạy")))
+                .andExpect(content().string(not(containsString("page=-1"))));
     }
 
     @Test

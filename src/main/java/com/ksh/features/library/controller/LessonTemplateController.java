@@ -2,9 +2,11 @@ package com.ksh.features.library.controller;
 
 import com.ksh.features.library.dto.LibraryDtos.LessonTemplatePageView;
 import com.ksh.features.library.dto.LessonTemplateForm;
+import com.ksh.features.library.imports.SyllabusImportTemplate;
 import com.ksh.features.library.service.LessonTemplateService;
 import com.ksh.features.storage.profile.StorageProfileException;
 import com.ksh.security.Roles;
+import com.ksh.security.Role;
 import com.ksh.security.KshUserDetails;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -23,10 +25,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -59,9 +65,12 @@ public class LessonTemplateController {
             "redirect:" + URL_LIBRARY + "/templates";
 
     private final LessonTemplateService templateService;
+    private final SyllabusImportTemplate syllabusImportTemplate;
 
-    public LessonTemplateController(LessonTemplateService templateService) {
+    public LessonTemplateController(LessonTemplateService templateService,
+                                    SyllabusImportTemplate syllabusImportTemplate) {
         this.templateService = templateService;
+        this.syllabusImportTemplate = syllabusImportTemplate;
     }
 
     @GetMapping
@@ -90,6 +99,40 @@ public class LessonTemplateController {
         return VIEW_LIBRARY;
     }
 
+    @PostMapping("/subjects/{subjectId}/syllabus/import")
+    public String importSyllabus(@PathVariable Long subjectId,
+                                 @RequestParam("file") MultipartFile file,
+                                 @AuthenticationPrincipal KshUserDetails user,
+                                 RedirectAttributes ra) {
+        try {
+            int count = templateService.importSyllabus(
+                    user.getId(), user.getRole(), subjectId, file);
+            ra.addFlashAttribute(ATTR_FLASH_SUCCESS,
+                    "Đã nhập " + count + " bài học từ syllabus");
+        } catch (AccessDeniedException | IllegalArgumentException | EntityNotFoundException ex) {
+            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
+        } catch (RuntimeException ex) {
+            log.error("Failed to import syllabus for subject {}", subjectId, ex);
+            ra.addFlashAttribute(ATTR_FLASH_ERROR, MSG_GENERIC_RETRY);
+        }
+        return redirectTemplates(subjectId);
+    }
+
+    @GetMapping(value = "/syllabus/template",
+            produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> downloadSyllabusTemplate() {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", "mau-import-syllabus.xlsx");
+            return new ResponseEntity<>(syllabusImportTemplate.build(), headers, HttpStatus.OK);
+        } catch (IOException exception) {
+            log.error("Failed to generate syllabus import template", exception);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @PostMapping("/subjects/{subjectId}/lock")
     public String setSubjectLibraryLock(@PathVariable Long subjectId,
                                         @RequestParam boolean locked,
@@ -99,8 +142,8 @@ public class LessonTemplateController {
             templateService.setSubjectLibraryLocked(
                     user.getId(), user.getRole(), subjectId, locked);
             ra.addFlashAttribute(ATTR_FLASH_SUCCESS, locked
-                    ? "Đã khóa khung chương trình; nội dung hiện chuyển sang chỉ đọc"
-                    : "Đã mở khóa khung chương trình; có thể tiếp tục biên soạn");
+                    ? "Đã khóa quyền thêm tài nguyên của giảng viên"
+                    : "Đã cho phép giảng viên thêm tài nguyên");
         } catch (AccessDeniedException | IllegalArgumentException | EntityNotFoundException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
         }
@@ -134,6 +177,16 @@ public class LessonTemplateController {
                                             @RequestParam String title,
                                             @AuthenticationPrincipal KshUserDetails user) {
         templateService.renameLesson(user.getId(), user.getRole(), id, title);
+        return Map.of("ok", true);
+    }
+
+    @PostMapping("/{id}/move")
+    @ResponseBody
+    public Map<String, Object> moveLesson(@PathVariable Long id,
+                                          @RequestParam int chapterNumber,
+                                          @RequestParam(required = false) Long beforeId,
+                                          @AuthenticationPrincipal KshUserDetails user) {
+        templateService.moveLesson(user.getId(), user.getRole(), id, chapterNumber, beforeId);
         return Map.of("ok", true);
     }
 
@@ -185,7 +238,9 @@ public class LessonTemplateController {
         }
         try {
             templateService.saveForm(user.getId(), user.getRole(), form);
-            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã lưu bài học trong Library");
+            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, user.getRole() == Role.LECTURER
+                    ? "Đã thêm tài nguyên vào bài học"
+                    : "Đã lưu bài học trong Library");
             return redirectTemplates(form.getSubjectId());
         } catch (AccessDeniedException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
@@ -220,7 +275,8 @@ public class LessonTemplateController {
         try {
             var saved = templateService.saveForm(user.getId(), user.getRole(), form);
             return ResponseEntity.ok(Map.of("ok", true, "id", saved.id(),
-                    "message", "Đã lưu bài học và tài nguyên"));
+                    "message", user.getRole() == Role.LECTURER
+                            ? "Đã thêm tài nguyên" : "Đã lưu bài học và tài nguyên"));
         } catch (AccessDeniedException ex) {
             return ResponseEntity.status(HttpStatus.LOCKED)
                     .body(Map.of("ok", false, "message", ex.getMessage()));
@@ -305,7 +361,7 @@ public class LessonTemplateController {
                                  RedirectAttributes ra) {
         try {
             templateService.detachResource(user.getId(), user.getRole(), id, assetId);
-            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã gỡ tài nguyên và cập nhật các lớp đã phân phối");
+            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã gỡ tài nguyên khỏi kho bài giảng");
         } catch (AccessDeniedException | IllegalArgumentException | EntityNotFoundException ex) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
         } catch (RuntimeException ex) {
@@ -317,11 +373,14 @@ public class LessonTemplateController {
 
     private void populateForm(Model model, LessonTemplateForm form, KshUserDetails user) {
         model.addAttribute("form", form);
-        model.addAttribute("materialOptions", templateService.materialOptions(user.getId()));
+        model.addAttribute("materialOptions", templateService.materialOptions(
+                user.getId(), user.getRole(), form.getId()));
         model.addAttribute("librarySubject",
                 templateService.subjectContext(user.getId(), user.getRole(), form.getSubjectId()));
         model.addAttribute("librarySubjectOptions",
                 templateService.subjectOptions(user.getId(), user.getRole()));
+        model.addAttribute("resourceOnly",
+                user.getRole() == Role.LECTURER && form.getId() != null);
     }
 
     private static String redirectTemplates(Long subjectId) {

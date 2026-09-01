@@ -24,7 +24,6 @@ system settings (including SMTP email configuration).
   - `GET /admin/dashboard` — main dashboard
   - `GET /admin/users` — user list (partial)
   - `GET /admin/departments` — department list (placeholder)
-  - `GET /admin/classes` — class overview (placeholder)
 - Service: `com.ksh.features.auth.service.admin.AdminDashboardService`
 - DTOs: `com.ksh.features.auth.dto.admin.AdminDashboardDtos`
   - `DashboardStats` — 4 stat card numbers

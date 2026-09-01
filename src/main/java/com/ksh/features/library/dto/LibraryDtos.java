@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * DTOs for the lecturer personal file library (SSR page + JSON picker).
@@ -21,8 +22,79 @@ public final class LibraryDtos {
             String kind,
             String mimeType,
             long sizeBytes,
-            LocalDateTime updatedAt
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            boolean inUse
     ) {
+        public String extension() {
+            if (originalFilename == null) return "";
+            int dot = originalFilename.lastIndexOf('.');
+            if (dot < 0 || dot == originalFilename.length() - 1) return "";
+            return originalFilename.substring(dot + 1).toLowerCase(Locale.ROOT);
+        }
+
+        public String formatLabel() {
+            String extension = extension();
+            if (!extension.isBlank()) return extension.toUpperCase(Locale.ROOT);
+            return switch (mimeFamily()) {
+                case "excel" -> "XLSX";
+                case "word" -> "DOCX";
+                case "powerpoint" -> "PPTX";
+                case "pdf" -> "PDF";
+                case "video" -> "VIDEO";
+                case "image" -> "IMAGE";
+                case "archive" -> "ZIP";
+                default -> "FILE";
+            };
+        }
+
+        public String formatClass() {
+            String extensionClass = switch (extension()) {
+                case "xls", "xlsx", "csv" -> "excel";
+                case "doc", "docx" -> "word";
+                case "ppt", "pptx" -> "powerpoint";
+                case "pdf" -> "pdf";
+                case "mp4", "mov", "webm", "m4v" -> "video";
+                case "png", "jpg", "jpeg", "gif", "webp", "svg" -> "image";
+                case "zip", "rar", "7z" -> "archive";
+                default -> "";
+            };
+            if (!extensionClass.isBlank()) return extensionClass;
+            String mimeClass = mimeFamily();
+            return "file".equals(mimeClass) && "VIDEO".equals(kind) ? "video" : mimeClass;
+        }
+
+        /** Compact product-style mark rendered inside the coloured file tile. */
+        public String iconLabel() {
+            return switch (formatClass()) {
+                case "excel" -> "X";
+                case "word" -> "W";
+                case "powerpoint" -> "P";
+                case "pdf" -> "PDF";
+                case "video" -> "\u25b6";
+                case "image" -> "IMG";
+                case "archive" -> "ZIP";
+                default -> "FILE";
+            };
+        }
+
+        private String mimeFamily() {
+            String normalized = mimeType == null ? "" : mimeType.toLowerCase(Locale.ROOT);
+            if (normalized.contains("spreadsheet") || normalized.contains("excel")
+                    || normalized.equals("text/csv")) return "excel";
+            if (normalized.contains("wordprocessingml") || normalized.contains("msword")) {
+                return "word";
+            }
+            if (normalized.contains("presentationml") || normalized.contains("powerpoint")) {
+                return "powerpoint";
+            }
+            if (normalized.equals("application/pdf")) return "pdf";
+            if (normalized.startsWith("video/")) return "video";
+            if (normalized.startsWith("image/")) return "image";
+            if (normalized.contains("zip") || normalized.contains("rar")
+                    || normalized.contains("7z")) return "archive";
+            return "file";
+        }
     }
 
     /**
@@ -32,11 +104,73 @@ public final class LibraryDtos {
      */
     public record LibraryAssetPageView(
             Page<LibraryAssetRow> page,
+            List<LibraryAssetRow> recentlyUpdated,
             String q,
             String kind,
+            String view,
             long totalCount,
             long documentCount,
-            long videoCount
+            long videoCount,
+            long inUseCount,
+            long recentCount
+    ) {
+    }
+
+    /**
+     * Owner-private detail payload used by the asset drawer. URLs are
+     * server-generated so the browser never has to infer an unsafe asset id or
+     * guess where a durable reference lives.
+     */
+    public record LibraryAssetDetail(
+            Long id,
+            String title,
+            String originalFilename,
+            String kind,
+            String mimeType,
+            String formatLabel,
+            String formatClass,
+            long sizeBytes,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            String previewUrl,
+            String contentUrl,
+            String downloadUrl,
+            List<LibraryAssetUsage> usages
+    ) {
+        public boolean inUse() {
+            return usages != null && !usages.isEmpty();
+        }
+    }
+
+    /** One exact, durable place that currently references an owned asset. */
+    public record LibraryAssetUsage(
+            String type,
+            String title,
+            String subtitle,
+            String url,
+            String placement,
+            LocalDateTime updatedAt
+    ) {
+    }
+
+    /**
+     * Safe server-side preview model. Browser-native media uses contentUrl;
+     * OOXML/text previews carry bounded, escaped cells or paragraphs.
+     */
+    public record LibraryAssetPreview(
+            Long id,
+            String title,
+            String originalFilename,
+            String mimeType,
+            String formatLabel,
+            String formatClass,
+            String previewKind,
+            String contentUrl,
+            String downloadUrl,
+            String sheetName,
+            List<List<String>> tableRows,
+            List<String> textBlocks,
+            String message
     ) {
     }
 
@@ -114,6 +248,8 @@ public final class LibraryDtos {
             LocalDateTime updatedAt,
             int attachmentCount,
             boolean canManage,
+            boolean canManageStructure,
+            boolean canAddResources,
             List<LessonResourceRow> resources
     ) {
     }

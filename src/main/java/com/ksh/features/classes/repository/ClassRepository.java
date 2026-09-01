@@ -137,6 +137,99 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
 
     long countByStatusIn(Collection<String> statuses);
 
+    @Query("SELECT DISTINCT c.semester FROM ClassEntity c")
+    List<String> findDistinctSemesterCodes();
+
+    interface LecturerLabel {
+        Long getClassId();
+        String getLecturerName();
+    }
+
+    @Query("SELECT c.id AS classId, u.fullName AS lecturerName FROM ClassEntity c, User u "
+            + "WHERE c.lecturerId = u.id AND c.id IN :classIds")
+    List<LecturerLabel> findLecturerLabels(@Param("classIds") Collection<Long> classIds);
+
+    /** Unique owners and co-lecturers; callers must pass an already-authorized class scope. */
+    @Query(value = """
+            SELECT COUNT(DISTINCT teaching.lecturer_id) FROM (
+                SELECT c.lecturer_id FROM classes c WHERE c.id IN :classIds AND c.is_deleted = 0
+                UNION
+                SELECT cc.lecturer_id FROM class_co_lecturers cc
+                JOIN classes c ON c.id = cc.class_id
+                WHERE c.id IN :classIds AND c.is_deleted = 0
+            ) teaching
+            """, nativeQuery = true)
+    long countDistinctTeachingUsers(@Param("classIds") Collection<Long> classIds);
+
+    @Query("""
+            SELECT c FROM ClassEntity c, Department s
+            WHERE c.subjectId = s.id
+              AND c.status IN :statuses
+              AND (:semester = '' OR c.semester = :semester)
+              AND (:subjectCode = '' OR LOWER(s.code) = LOWER(:subjectCode))
+              AND (:query = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(s.code) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR EXISTS (SELECT u.id FROM User u WHERE u.id = c.lecturerId
+                       AND LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))))
+              AND (c.lecturerId = :lecturerId
+                   OR c.id IN (SELECT cc.classId FROM ClassCoLecturer cc
+                               WHERE cc.lecturerId = :lecturerId))
+            ORDER BY SUBSTRING(c.semester, 3, 2) DESC,
+              CASE SUBSTRING(c.semester, 1, 2) WHEN 'FA' THEN 3 WHEN 'SU' THEN 2 ELSE 1 END DESC,
+              s.code ASC, c.name ASC
+            """)
+    Page<ClassEntity> searchAccessibleToLecturer(
+            @Param("lecturerId") Long lecturerId,
+            @Param("statuses") Collection<String> statuses,
+            @Param("semester") String semester,
+            @Param("subjectCode") String subjectCode,
+            @Param("query") String query,
+            Pageable pageable);
+
+    @Query("""
+            SELECT c FROM ClassEntity c, Department s
+            WHERE c.subjectId = s.id
+              AND c.subjectId IN :subjectIds
+              AND c.status IN :statuses
+              AND (:semester = '' OR c.semester = :semester)
+              AND (:subjectCode = '' OR LOWER(s.code) = LOWER(:subjectCode))
+              AND (:query = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(s.code) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR EXISTS (SELECT u.id FROM User u WHERE u.id = c.lecturerId
+                       AND LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))))
+            ORDER BY SUBSTRING(c.semester, 3, 2) DESC,
+              CASE SUBSTRING(c.semester, 1, 2) WHEN 'FA' THEN 3 WHEN 'SU' THEN 2 ELSE 1 END DESC,
+              s.code ASC, c.name ASC
+            """)
+    Page<ClassEntity> searchLeaderClasses(
+            @Param("subjectIds") Collection<Long> subjectIds,
+            @Param("statuses") Collection<String> statuses,
+            @Param("semester") String semester,
+            @Param("subjectCode") String subjectCode,
+            @Param("query") String query,
+            Pageable pageable);
+
+    @Query("""
+            SELECT c FROM ClassEntity c, Department s
+            WHERE c.subjectId = s.id
+              AND c.status IN :statuses
+              AND (:semester = '' OR c.semester = :semester)
+              AND (:subjectCode = '' OR LOWER(s.code) = LOWER(:subjectCode))
+              AND (:query = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(s.code) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR EXISTS (SELECT u.id FROM User u WHERE u.id = c.lecturerId
+                       AND LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))))
+            ORDER BY SUBSTRING(c.semester, 3, 2) DESC,
+              CASE SUBSTRING(c.semester, 1, 2) WHEN 'FA' THEN 3 WHEN 'SU' THEN 2 ELSE 1 END DESC,
+              s.code ASC, c.name ASC
+            """)
+    Page<ClassEntity> searchAdministrativeClasses(
+            @Param("statuses") Collection<String> statuses,
+            @Param("semester") String semester,
+            @Param("subjectCode") String subjectCode,
+            @Param("query") String query,
+            Pageable pageable);
+
     /**
      * Returns the distinct lecturer ids that teach any of the given classes.
      * Used by messaging's recipient gate to map a student's ACTIVE-enrollment
@@ -206,10 +299,35 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
             WHERE c.subjectId = s.id
               AND c.status = :status
               AND (:query = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))
-                   OR LOWER(s.code) LIKE LOWER(CONCAT('%', :query, '%')))
+                   OR LOWER(s.code) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR EXISTS (SELECT u.id FROM User u WHERE u.id = c.lecturerId
+                       AND LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))))
             ORDER BY c.createdAt DESC
             """)
     Page<ClassEntity> searchActiveCatalog(@Param("status") String status,
                                           @Param("query") String query,
                                           Pageable pageable);
+
+    @Query("""
+            SELECT c FROM ClassEntity c, Department s
+            WHERE c.subjectId = s.id
+              AND c.status = :status
+              AND (:semester = '' OR c.semester = :semester)
+              AND (:subjectCode = '' OR LOWER(s.code) = LOWER(:subjectCode))
+              AND (:query = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(s.code) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR EXISTS (SELECT u.id FROM User u WHERE u.id = c.lecturerId
+                       AND LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))))
+            ORDER BY SUBSTRING(c.semester, 3, 2) DESC,
+              CASE SUBSTRING(c.semester, 1, 2)
+                WHEN 'FA' THEN 3 WHEN 'SU' THEN 2 ELSE 1
+              END DESC,
+              s.code ASC, c.createdAt DESC
+            """)
+    Page<ClassEntity> searchActiveCatalogFiltered(
+            @Param("status") String status,
+            @Param("query") String query,
+            @Param("semester") String semester,
+            @Param("subjectCode") String subjectCode,
+            Pageable pageable);
 }

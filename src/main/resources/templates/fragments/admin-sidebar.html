@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <!--
   Fragment: adminSidebar(activeTab)
-    activeTab : 'dashboard' | 'users' | 'departments' | 'classes'
+    activeTab : 'dashboard' | 'semesters' | 'users' | 'departments'
               | 'permissions' | 'settings'
 
   Render mot card sidebar 280px (cot trai layout admin).
@@ -30,6 +30,22 @@
                         <rect x="14" y="12" width="7" height="9" rx="1"/>
                         <rect x="3" y="16" width="7" height="5" rx="1"/>
                     </svg>Dashboard
+                </a>
+            </li>
+            <li>
+                <a th:href="@{/admin/semesters}"
+                   th:classappend="${activeTab == 'semesters'} ? 'active' : ''">
+                    <svg class="ico ico-sm" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 2v4"/>
+                        <path d="M16 2v4"/>
+                        <rect width="18" height="18" x="3" y="4" rx="2"/>
+                        <path d="M3 10h18"/>
+                        <path d="M8 14h.01"/>
+                        <path d="M12 14h.01"/>
+                        <path d="M16 14h.01"/>
+                        <path d="M8 18h.01"/>
+                        <path d="M12 18h.01"/>
+                    </svg>Học kỳ
                 </a>
             </li>
             <li>
@@ -63,15 +79,6 @@
                         <line x1="7" y1="8" x2="17" y2="8"/>
                         <line x1="7" y1="12" x2="13" y2="12"/>
                     </svg>System Prompt
-                </a>
-            </li>
-            <li>
-                <a th:href="@{/admin/classes}"
-                   th:classappend="${activeTab == 'classes'} ? 'active' : ''">
-                    <svg class="ico ico-sm" viewBox="0 0 24 24">
-                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                        <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-                    </svg>Lớp học
                 </a>
             </li>
             <li>

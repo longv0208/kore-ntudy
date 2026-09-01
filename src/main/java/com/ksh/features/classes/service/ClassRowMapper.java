@@ -32,6 +32,13 @@ final class ClassRowMapper {
     static ClassRow toRow(ClassEntity e, int index, String displayCode,
                           long studentCount, long lectureCount,
                           long assignmentCount, long materialCount) {
+        return toRow(e, index, displayCode, studentCount, lectureCount,
+                assignmentCount, materialCount, "—");
+    }
+
+    static ClassRow toRow(ClassEntity e, int index, String displayCode,
+                          long studentCount, long lectureCount,
+                          long assignmentCount, long materialCount, String lecturerName) {
         String createdAtIso = e.getCreatedAt() != null ? e.getCreatedAt().toString() : "";
         String code = displayCode != null && !displayCode.isBlank() ? displayCode : "—";
         return new ClassRow(
@@ -42,7 +49,11 @@ final class ClassRowMapper {
                 Math.toIntExact(studentCount), Math.toIntExact(lectureCount),
                 Math.toIntExact(assignmentCount), Math.toIntExact(materialCount),
                 createdAtIso,
-                e.getStatus()
+                e.getStatus(),
+                e.getSemester(),
+                lecturerName,
+                e.getUpdatedAt() == null ? "—" : e.getUpdatedAt().format(
+                        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
         );
     }
 
@@ -58,6 +69,7 @@ final class ClassRowMapper {
         m.put("endDate", e.getEndDate() != null ? e.getEndDate().toString() : null);
         m.put("maxStudents", e.getMaxStudents());
         m.put("status", e.getStatus());
+        m.put("semester", e.getSemester());
         return m;
     }
 }

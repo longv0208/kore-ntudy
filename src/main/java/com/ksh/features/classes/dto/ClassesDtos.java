@@ -36,8 +36,17 @@ public class ClassesDtos {
             int assignmentCount,
             int materialCount,
             String createdAtIso,
-            String status
+            String status,
+            String semester,
+            String lecturerName,
+            String updatedAtLabel
     ) {
+        public ClassRow(Long id, String name, String code, String gradientCss,
+                        int studentCount, int lectureCount, int assignmentCount, int materialCount,
+                        String createdAtIso, String status, String semester) {
+            this(id, name, code, gradientCss, studentCount, lectureCount, assignmentCount,
+                    materialCount, createdAtIso, status, semester, "—", "—");
+        }
         /** Returns the first two characters of the class name, uppercased, for use as a thumbnail label. */
         public String thumbLabel() {
             if (name == null || name.isBlank()) return "?";

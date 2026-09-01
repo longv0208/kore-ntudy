@@ -94,7 +94,13 @@ public class GeneralSettingsController {
             return VIEW_SETTINGS_GENERAL;
         }
 
-        service.save(form, principal.getId());
+        try {
+            service.save(form, principal.getId());
+        } catch (IllegalArgumentException exception) {
+            result.rejectValue("currentSemester", "semester.invalid", exception.getMessage());
+            model.addAttribute(ATTR_ACTIVE_TAB, TAB_SETTINGS);
+            return VIEW_SETTINGS_GENERAL;
+        }
         redirectAttributes.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_SAVED);
         return REDIRECT_BASE;
     }

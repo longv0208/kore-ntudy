@@ -7,6 +7,7 @@ import com.ksh.features.admin.departments.repository.DepartmentRepository;
 import com.ksh.features.classes.dto.ClassesDtos.ClassForm;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.service.approval.ClassPendingReviewEvent;
+import com.ksh.features.classes.semester.AcademicSemesterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -27,15 +28,18 @@ final class ClassCreator {
     private final ClassActivityWriter activityWriter;
     private final DepartmentRepository subjectRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AcademicSemesterService semesterService;
 
     ClassCreator(ClassRepository classRepository,
                  ClassActivityWriter activityWriter,
                  DepartmentRepository subjectRepository,
-                 ApplicationEventPublisher eventPublisher) {
+                 ApplicationEventPublisher eventPublisher,
+                 AcademicSemesterService semesterService) {
         this.classRepository = classRepository;
         this.activityWriter = activityWriter;
         this.subjectRepository = subjectRepository;
         this.eventPublisher = eventPublisher;
+        this.semesterService = semesterService;
     }
 
     ClassEntity create(ClassForm form, Long userId) {
@@ -47,6 +51,7 @@ final class ClassCreator {
                 form.description(), form.startDate(), form.endDate(),
                 form.maxStudents());
         entity.setSubjectId(subject.getId());
+        entity.assignSemester(semesterService.currentCode());
         ClassEntity saved = classRepository.saveAndFlush(entity);
         activityWriter.write(saved.getId(), ClassActivity.TYPE_CREATED,
                 "Tạo lớp " + saved.getName(), userId);

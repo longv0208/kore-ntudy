@@ -45,7 +45,9 @@ public interface TestRepository extends JpaRepository<Test, Long> {
                                     Pageable pageable);
 
     @Query("SELECT t FROM Test t WHERE "
-            + "(:admin = true OR (:includeCreated = true AND t.createdBy = :userId) OR t.classId IN :classIds OR t.subjectId IN :subjectIds)"
+            + "((t.status = 'PUBLISHED' AND t.type <> 'PRACTICE')"
+            + " OR :admin = true OR (:includeCreated = true AND t.createdBy = :userId)"
+            + " OR t.classId IN :classIds OR t.subjectId IN :subjectIds)"
             + " AND (:admin = false OR t.type <> 'PRACTICE')"
             + " AND (:classId IS NULL OR t.classId = :classId)"
             + " AND (:status IS NULL OR t.status = :status)"
@@ -61,6 +63,24 @@ public interface TestRepository extends JpaRepository<Test, Long> {
                                 @Param("status") String status,
                                 @Param("type") String type,
                                 Pageable pageable);
+
+    /**
+     * Catalog totals. Every published non-Practice entry is shared read-only
+     * with educators; drafts and archived entries remain management-scoped.
+     */
+    @Query("SELECT COUNT(t), "
+            + "COALESCE(SUM(CASE WHEN t.status = 'PUBLISHED' THEN 1 ELSE 0 END), 0), "
+            + "COALESCE(SUM(CASE WHEN t.status = 'DRAFT' THEN 1 ELSE 0 END), 0), "
+            + "COALESCE(SUM(t.totalQuestions), 0) FROM Test t WHERE "
+            + "((t.status = 'PUBLISHED' AND t.type <> 'PRACTICE')"
+            + " OR :admin = true OR (:includeCreated = true AND t.createdBy = :userId) "
+            + "OR t.classId IN :classIds OR t.subjectId IN :subjectIds)"
+            + " AND (:admin = false OR t.type <> 'PRACTICE')")
+    List<Object[]> summarizeManageable(@Param("userId") Long userId,
+                                       @Param("classIds") Collection<Long> classIds,
+                                       @Param("subjectIds") Collection<Long> subjectIds,
+                                       @Param("admin") boolean admin,
+                                       @Param("includeCreated") boolean includeCreated);
 
     /**
      * Exams attached to classes inside one LEADER department scope.

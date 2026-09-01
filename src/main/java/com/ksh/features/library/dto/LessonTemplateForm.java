@@ -12,6 +12,7 @@ public class LessonTemplateForm {
 
     private Long id;
     private Long subjectId;
+    private boolean newChapter;
 
     private int chapterNumber = 1;
 
@@ -46,6 +47,8 @@ public class LessonTemplateForm {
     public void setId(Long id) { this.id = id; }
     public Long getSubjectId() { return subjectId; }
     public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
+    public boolean isNewChapter() { return newChapter; }
+    public void setNewChapter(boolean newChapter) { this.newChapter = newChapter; }
     public int getChapterNumber() { return chapterNumber; }
     public void setChapterNumber(int chapterNumber) { this.chapterNumber = chapterNumber; }
     public String getChapterTitle() { return chapterTitle; }

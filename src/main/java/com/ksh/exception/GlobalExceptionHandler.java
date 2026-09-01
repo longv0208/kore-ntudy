@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
@@ -126,6 +127,17 @@ public class GlobalExceptionHandler {
         }
         model.addAttribute("status", HttpStatus.BAD_REQUEST.value());
         model.addAttribute("message", message);
+        return "error";
+    }
+
+    /** Preserve Spring MVC's 405 boundary for intentionally absent mutation routes. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public String handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
+                                         HttpServletRequest request, Model model) {
+        log.info("405 tai [{}]: {}", request.getRequestURI(), ex.getMessage());
+        model.addAttribute("status", HttpStatus.METHOD_NOT_ALLOWED.value());
+        model.addAttribute("message", "Phương thức này không được hỗ trợ.");
         return "error";
     }
 

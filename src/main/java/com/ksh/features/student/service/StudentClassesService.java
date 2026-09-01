@@ -10,6 +10,8 @@ import com.ksh.features.student.dto.StudentClassesDtos.EnrolledClassRow;
 import com.ksh.features.student.dto.StudentClassesDtos.CatalogClassRow;
 import com.ksh.features.admin.departments.repository.DepartmentRepository;
 import com.ksh.entities.Department;
+import com.ksh.features.classes.semester.AcademicSemester;
+import com.ksh.features.classes.dto.ClassOverview;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -56,23 +58,74 @@ public class StudentClassesService {
     /** ACTIVE enrolled classes, most recent join first. Soft-deleted classes hidden. */
     @Transactional(readOnly = true)
     public List<EnrolledClassRow> listEnrolledClasses(Long userId) {
-        return mapRows(enrollmentRepository
-                .findAllByUserIdAndStatusOrderByJoinedAtDesc(userId, Enrollment.STATUS_ACTIVE));
+        return listEnrolledClasses(userId, "", "", "");
+    }
+
+    public List<EnrolledClassRow> listEnrolledClasses(Long userId, String query,
+                                                       String semester, String subjectCode) {
+        return mapRows(enrollmentRepository.findAllByUserIdAndStatusOrderByJoinedAtDesc(
+                userId, Enrollment.STATUS_ACTIVE), query, semester, subjectCode);
+    }
+
+    /** All current requests/enrollments and historical classes, excluding removed membership. */
+    @Transactional(readOnly = true)
+    public List<EnrolledClassRow> listWorkspaceClasses(Long userId, String query,
+                                                       String semester, String subjectCode) {
+        return mapRows(enrollmentRepository.findAllByUserId(userId).stream()
+                .filter(e -> !Enrollment.STATUS_REMOVED.equals(e.getStatus())).toList(),
+                query, semester, subjectCode, true);
+    }
+
+    @Transactional(readOnly = true)
+    public ClassOverview workspaceOverview(List<EnrolledClassRow> rows) {
+        if (rows.isEmpty()) return ClassOverview.empty();
+        List<Long> ids = rows.stream().map(EnrolledClassRow::classId).distinct().toList();
+        return new ClassOverview(ids.size(), rows.stream().filter(r -> !r.archived()
+                && Enrollment.STATUS_ACTIVE.equals(r.status())).count(),
+                rows.stream().filter(EnrolledClassRow::archived).count(),
+                enrollmentRepository.countDistinctStudentsInClasses(ids),
+                classRepository.countDistinctTeachingUsers(ids));
+    }
+
+    @Transactional(readOnly = true)
+    public ClassOverview catalogOverview(String query, String semester, String subjectCode) {
+        List<ClassEntity> classes = classRepository.searchActiveCatalogFiltered(
+                ClassEntity.STATUS_ACTIVE, query == null ? "" : query.trim(),
+                normalizeSemester(semester), normalizeSubjectCode(subjectCode),
+                org.springframework.data.domain.Pageable.unpaged()).getContent();
+        if (classes.isEmpty()) return ClassOverview.empty();
+        List<Long> ids = classes.stream().map(ClassEntity::getId).toList();
+        return new ClassOverview(ids.size(), ids.size(), 0,
+                enrollmentRepository.countDistinctStudentsInClasses(ids),
+                classRepository.countDistinctTeachingUsers(ids));
     }
 
     /** PENDING join requests for the student (awaiting owner approval). */
     @Transactional(readOnly = true)
     public List<EnrolledClassRow> listPendingClasses(Long userId) {
-        return mapRows(enrollmentRepository
-                .findAllByUserIdAndStatusOrderByJoinedAtDesc(userId, Enrollment.STATUS_PENDING));
+        return listPendingClasses(userId, "", "", "");
+    }
+
+    public List<EnrolledClassRow> listPendingClasses(Long userId, String query,
+                                                      String semester, String subjectCode) {
+        return mapRows(enrollmentRepository.findAllByUserIdAndStatusOrderByJoinedAtDesc(
+                userId, Enrollment.STATUS_PENDING), query, semester, subjectCode);
     }
 
     /** All leader-approved ACTIVE classes, optionally filtered by name/subject code. */
     @Transactional(readOnly = true)
     public Page<CatalogClassRow> listActiveCatalog(Long userId, String query, int page, int size) {
+        return listActiveCatalog(userId, query, "", "", page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CatalogClassRow> listActiveCatalog(Long userId, String query,
+                                                   String semester, String subjectCode,
+                                                   int page, int size) {
         String normalizedQuery = query == null ? "" : query.trim();
-        Page<ClassEntity> classPage = classRepository.searchActiveCatalog(
+        Page<ClassEntity> classPage = classRepository.searchActiveCatalogFiltered(
                 ClassEntity.STATUS_ACTIVE, normalizedQuery,
+                normalizeSemester(semester), normalizeSubjectCode(subjectCode),
                 PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 50))));
         List<ClassEntity> classes = classPage.getContent();
         Map<Long, Department> subjects = new HashMap<>();
@@ -102,12 +155,19 @@ public class StudentClassesService {
                     clazz.getId(), clazz.getName(), code, subjectName,
                     lecturer.name(), lecturer.email(),
                     Enrollment.STATUS_PENDING.equals(status),
-                    Enrollment.STATUS_ACTIVE.equals(status)));
+                    Enrollment.STATUS_ACTIVE.equals(status),
+                    clazz.getSemester()));
         }
         return new PageImpl<>(rows, classPage.getPageable(), classPage.getTotalElements());
     }
 
-    private List<EnrolledClassRow> mapRows(List<Enrollment> enrollments) {
+    private List<EnrolledClassRow> mapRows(List<Enrollment> enrollments, String query,
+                                           String semester, String subjectCode) {
+        return mapRows(enrollments, query, semester, subjectCode, false);
+    }
+
+    private List<EnrolledClassRow> mapRows(List<Enrollment> enrollments, String query,
+                                           String semester, String subjectCode, boolean includeArchived) {
         if (enrollments.isEmpty()) {
             return List.of();
         }
@@ -132,20 +192,38 @@ public class StudentClassesService {
         }
 
         List<EnrolledClassRow> rows = new ArrayList<>(enrollments.size());
+        String queryFilter = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+        String semesterFilter = normalizeSemester(semester);
+        String subjectFilter = normalizeSubjectCode(subjectCode);
         int idx = 0;
         for (Enrollment e : enrollments) {
             ClassEntity c = classById.get(e.getClassId());
             // Soft-deleted class → hide row.
-            if (c == null || !ClassEntity.STATUS_ACTIVE.equals(c.getStatus())) continue;
+            if (c == null) continue;
+            boolean archived = ClassEntity.STATUS_ARCHIVED.equals(c.getStatus());
+            if (!ClassEntity.STATUS_ACTIVE.equals(c.getStatus()) && !(includeArchived && archived)) continue;
+            if (archived && !Enrollment.STATUS_ACTIVE.equals(e.getStatus())
+                    && !Enrollment.STATUS_COMPLETED.equals(e.getStatus())) continue;
+            String code = subjectCodes.getOrDefault(c.getSubjectId(), "—");
+            if (!semesterFilter.isEmpty() && !semesterFilter.equals(c.getSemester())) continue;
+            if (!subjectFilter.isEmpty() && !subjectFilter.equalsIgnoreCase(code)) continue;
+            if (!queryFilter.isEmpty()
+                    && !c.getName().toLowerCase(java.util.Locale.ROOT).contains(queryFilter)
+                    && !code.toLowerCase(java.util.Locale.ROOT).contains(queryFilter)
+                    && !lecturerNames.getOrDefault(c.getLecturerId(), "—")
+                        .toLowerCase(java.util.Locale.ROOT).contains(queryFilter)) continue;
             String lecName = lecturerNames.getOrDefault(c.getLecturerId(), "—");
             String gradient = gradientFor(idx++);
             rows.add(new EnrolledClassRow(
                     c.getId(),
                     c.getName(),
-                    subjectCodes.getOrDefault(c.getSubjectId(), "—"),
+                    code,
                     lecName,
                     e.getJoinedAt(),
-                    gradient
+                    gradient,
+                    c.getSemester(),
+                    e.getStatus(),
+                    archived
             ));
         }
         return rows;
@@ -154,6 +232,34 @@ public class StudentClassesService {
     private static String gradientFor(int index) {
         String[] colors = AVATAR_GRADIENTS[Math.floorMod(index, AVATAR_GRADIENTS.length)];
         return "linear-gradient(135deg," + colors[0] + "," + colors[1] + ")";
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> semesterOptions() {
+        return classRepository.findDistinctSemesterCodes().stream()
+                .filter(value -> value != null && !value.isBlank())
+                .sorted((left, right) -> Integer.compare(
+                        AcademicSemester.parse(right).orderKey(),
+                        AcademicSemester.parse(left).orderKey()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Department> subjectOptions() {
+        return subjectRepository.findByActiveTrueOrderByNameAsc();
+    }
+
+    private static String normalizeSemester(String value) {
+        if (value == null || value.isBlank()) return "";
+        try {
+            return AcademicSemester.parse(value).code();
+        } catch (IllegalArgumentException ignored) {
+            return "";
+        }
+    }
+
+    private static String normalizeSubjectCode(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private record LecturerContact(String name, String email) {

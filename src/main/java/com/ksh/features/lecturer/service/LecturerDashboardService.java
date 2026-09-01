@@ -3,6 +3,7 @@ package com.ksh.features.lecturer.service;
 import com.ksh.entities.ClassEntity;
 import com.ksh.entities.Department;
 import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.classes.semester.AcademicSemester;
 import com.ksh.features.lecturer.dto.LecturerDashboardDtos.ClassDashboardRow;
 import com.ksh.features.lecturer.dto.LecturerDashboardDtos.TeachingDashboardView;
 import com.ksh.features.lecturer.dto.LecturerDashboardDtos.TeachingStats;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.Comparator;
 
 /**
  * Aggregates teaching KPIs and per-class rows for the lecturer dashboard.
@@ -96,10 +98,22 @@ public class LecturerDashboardService {
                     classId,
                     clazz.getName(),
                     subjectCodes.getOrDefault(clazz.getSubjectId(), "—"),
+                    clazz.getSemester(),
                     clazz.getStatus(),
                     students,
                     classAvg));
         }
+
+        // A teaching overview must lead with work that still needs attention.
+        // Repository creation order can put recently seeded historical rows
+        // above the current semester, so apply an explicit domain order before
+        // searching and paginating.
+        allRows.sort(Comparator
+                .comparingInt((ClassDashboardRow row) -> statusOrder(row.status()))
+                .thenComparing(Comparator.comparingInt(
+                        (ClassDashboardRow row) -> semesterOrder(row.semester())).reversed())
+                .thenComparing(ClassDashboardRow::name,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
 
         int overallAvg = (int) Math.round((double) avgSum / classes.size());
         TeachingStats stats = new TeachingStats(
@@ -109,5 +123,21 @@ public class LecturerDashboardService {
         List<ClassDashboardRow> filtered = querySupport.filterByQuery(allRows, q);
         Page<ClassDashboardRow> pageObj = querySupport.paginate(filtered, page, size);
         return new TeachingDashboardView(stats, pageObj);
+    }
+
+    private static int statusOrder(String status) {
+        if (ClassEntity.STATUS_ACTIVE.equals(status)) return 0;
+        if (ClassEntity.STATUS_PENDING.equals(status)) return 1;
+        if (ClassEntity.STATUS_REJECTED.equals(status)) return 2;
+        if (ClassEntity.STATUS_ARCHIVED.equals(status)) return 3;
+        return 2;
+    }
+
+    private static int semesterOrder(String semester) {
+        try {
+            return AcademicSemester.parse(semester).orderKey();
+        } catch (IllegalArgumentException ignored) {
+            return Integer.MIN_VALUE;
+        }
     }
 }

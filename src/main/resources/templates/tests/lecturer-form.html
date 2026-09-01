@@ -41,6 +41,7 @@
       <a th:href="${testReturnUrl}" class="toolbar-back">← Quay lại</a>
       <span class="toolbar-spacer"></span>
       <a class="toolbar-secondary"
+         th:if="${examForm == null or examForm.type() != 'PRACTICE'}"
          th:href="@{'/lecturer/tests/' + ${test.id()} + '/preview'}">Xem trước</a>
       <button type="submit" form="lfForm" id="lfSave" class="toolbar-save"
               th:disabled="${activeDetailTab != 'info' or (examForm != null and examForm.questionBankLocked)}">Lưu bài test</button>

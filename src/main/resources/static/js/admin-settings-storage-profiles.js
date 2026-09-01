@@ -58,7 +58,7 @@
         button.setAttribute('aria-busy', 'true');
         result.hidden = false;
         result.className = 'storage-connection-result is-testing';
-        result.textContent = 'Đang xác minh quyền truy cập bucket bằng cấu hình đã lưu…';
+        result.textContent = 'Đang kiểm tra backend lưu trữ bằng cấu hình đã lưu…';
 
         fetch('/admin/settings/storage-profiles/'
           + encodeURIComponent(profileCode) + '/test', {

@@ -1,5 +1,6 @@
 package com.ksh.entities;
 
+import com.ksh.features.classes.semester.AcademicSemester;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -57,6 +58,10 @@ public class ClassEntity {
     @Setter
     @Column(name = "subject_id")
     private Long subjectId;
+
+    /** Immutable academic semester assigned automatically when the class is created. */
+    @Column(nullable = false, length = 4)
+    private String semester;
 
     @Column(name = "start_date")
     private LocalDate startDate;
@@ -118,6 +123,11 @@ public class ClassEntity {
         this.endDate = endDate;
         this.maxStudents = maxStudents != null ? maxStudents : 100;
         this.status = STATUS_PENDING;
+        // Directly constructed fixtures and legacy seed paths still receive a
+        // historically accurate semester. The normal create flow replaces it
+        // with the configured current semester before the entity is persisted.
+        this.semester = AcademicSemester.from(
+                startDate != null ? startDate : LocalDate.now()).code();
     }
 
     // ── Business helpers ───────────────────────────────────────────
@@ -143,6 +153,19 @@ public class ClassEntity {
         if (maxStudents != null) {
             this.maxStudents = maxStudents;
         }
+    }
+
+    /**
+     * Assigns the current semester before first persistence. Once a class has
+     * an identity, its historical semester is immutable.
+     */
+    public void assignSemester(String semester) {
+        String normalized = AcademicSemester.parse(semester).code();
+        if (this.id != null && this.semester != null && !this.semester.isBlank()
+                && !this.semester.equals(normalized)) {
+            throw new IllegalStateException("Học kỳ của lớp đã được xác lập");
+        }
+        this.semester = normalized;
     }
 
     /**

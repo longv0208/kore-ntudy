@@ -1,10 +1,12 @@
 package com.ksh.features.library.controller;
 
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPageView;
+import com.ksh.features.library.dto.LibraryDtos.LibraryAssetDetail;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetPickerPage;
 import com.ksh.features.library.dto.LibraryDtos.LibraryAssetRow;
 import com.ksh.features.library.service.LibraryService;
 import com.ksh.features.library.service.LibraryService.OwnedAssetContent;
+import com.ksh.features.library.service.PersonalLibraryAssetPreviewService;
 import com.ksh.features.storage.ObjectStorage;
 import com.ksh.features.storage.StoredObject;
 import com.ksh.features.storage.StoredObjectResource;
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
@@ -59,30 +62,38 @@ public class PersonalLibraryController {
 
     private final LibraryService libraryService;
     private final ObjectStorage objectStorage;
+    private final PersonalLibraryAssetPreviewService previewService;
 
     public PersonalLibraryController(LibraryService libraryService,
-                                     ObjectStorage objectStorage) {
+                                     ObjectStorage objectStorage,
+                                     PersonalLibraryAssetPreviewService previewService) {
         this.libraryService = libraryService;
         this.objectStorage = objectStorage;
+        this.previewService = previewService;
     }
 
     @GetMapping
     public String page(@RequestParam(name = "q", defaultValue = "") String q,
                        @RequestParam(name = "kind", defaultValue = "") String kind,
+                       @RequestParam(name = "view", defaultValue = "ALL") String assetView,
                        @RequestParam(name = "page", defaultValue = "0") int page,
                        @RequestParam(name = "size",
                                defaultValue = "" + DEFAULT_LIBRARY_PAGE_SIZE) int size,
                        @AuthenticationPrincipal KshUserDetails user,
                        Model model) {
-        LibraryAssetPageView view = libraryService.list(
-                user.getId(), q, kind, page, size);
-        model.addAttribute("libraryPage", view.page());
-        model.addAttribute("libraryQuery", view.q());
-        model.addAttribute("libraryKind", view.kind());
-        model.addAttribute("librarySize", view.page().getSize());
-        model.addAttribute("libraryTotalCount", view.totalCount());
-        model.addAttribute("libraryDocumentCount", view.documentCount());
-        model.addAttribute("libraryVideoCount", view.videoCount());
+        LibraryAssetPageView pageView = libraryService.list(
+                user.getId(), q, kind, assetView, page, size);
+        model.addAttribute("libraryPage", pageView.page());
+        model.addAttribute("libraryRecentAssets", pageView.recentlyUpdated());
+        model.addAttribute("libraryQuery", pageView.q());
+        model.addAttribute("libraryKind", pageView.kind());
+        model.addAttribute("libraryView", pageView.view());
+        model.addAttribute("librarySize", pageView.page().getSize());
+        model.addAttribute("libraryTotalCount", pageView.totalCount());
+        model.addAttribute("libraryDocumentCount", pageView.documentCount());
+        model.addAttribute("libraryVideoCount", pageView.videoCount());
+        model.addAttribute("libraryInUseCount", pageView.inUseCount());
+        model.addAttribute("libraryRecentCount", pageView.recentCount());
         return VIEW;
     }
 
@@ -96,6 +107,35 @@ public class PersonalLibraryController {
                     defaultValue = "" + DEFAULT_LIBRARY_PAGE_SIZE) int size,
             @AuthenticationPrincipal KshUserDetails user) {
         return libraryService.listForPicker(user.getId(), q, kind, page, size);
+    }
+
+    /** Owner-private drawer metadata with exact lesson/template reference URLs. */
+    @GetMapping(value = "/{id}/details", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<LibraryAssetDetail> details(
+            @PathVariable Long id,
+            @AuthenticationPrincipal KshUserDetails user) {
+        try {
+            return ResponseEntity.ok(libraryService.detail(user.getId(), id));
+        } catch (IllegalArgumentException | EntityNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Real read-only viewer. Browser-native formats are embedded inline;
+     * supported Office/text formats receive a bounded server-side preview.
+     */
+    @GetMapping("/{id}/preview")
+    public String preview(@PathVariable Long id,
+                          @AuthenticationPrincipal KshUserDetails user,
+                          Model model) {
+        try {
+            model.addAttribute("assetPreview", previewService.load(user.getId(), id));
+            return "library/asset-preview";
+        } catch (IllegalArgumentException | EntityNotFoundException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
     }
 
     @PostMapping("/upload")

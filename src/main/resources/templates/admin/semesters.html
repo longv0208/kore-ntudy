@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Quản lý học kỳ', ~{::link.page-css})}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/app-shell.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/class-detail.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/admin.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/semesters.css}">
+</head>
+<body>
+<header th:replace="~{fragments/app-header :: appHeader('admin')}"></header>
+<div class="class-detail-layout">
+  <aside th:replace="~{fragments/admin-sidebar :: adminSidebar('semesters')}"></aside>
+  <main class="semester-page">
+    <div class="semester-heading"><div><h1>Quản lý học kỳ</h1>
+      <p>Một kỳ hiện hành · SP (Xuân) → SU (Hè) → FA (Thu) → SP năm sau</p>
+    </div><a class="semester-link" th:href="@{/lecturer/classes}">Xem lớp học →</a></div>
+    <p class="semester-notice is-success" role="status" th:if="${flashSuccess}" th:text="${flashSuccess}"></p>
+    <p class="semester-notice is-error" role="alert" th:if="${flashError}" th:text="${flashError}"></p>
+
+    <section class="semester-current" th:classappend="${'season-' + currentSemester.season()}">
+      <div class="semester-current-top">
+        <div class="semester-current-title"><span class="semester-code" th:text="${currentSemester.code}"></span>
+          <div><span class="semester-status">● Đang diễn ra</span><h2 th:text="${currentSemester.name}"></h2></div>
+        </div>
+        <span class="semester-next">Tiếp theo <strong th:text="${currentSemester.nextCode()}"></strong></span>
+      </div>
+      <div class="semester-timing">
+        <div><span>Bắt đầu</span><strong th:text="${#temporals.format(currentSemester.startAt, 'dd/MM/yyyy · HH:mm')}"></strong></div>
+        <div><span>Kết thúc</span><strong th:text="${currentSemester.endAt != null ? #temporals.format(currentSemester.endAt, 'dd/MM/yyyy · HH:mm') : 'Chưa hẹn · chuyển kỳ thủ công'}"></strong></div>
+      </div>
+      <p class="semester-timezone">Giờ Việt Nam (GMT+7). Lớp mới luôn được tạo trong kỳ hiện hành.</p>
+    </section>
+
+    <div class="semester-actions-grid">
+      <section class="semester-card">
+        <h2>Hẹn lịch chuyển kỳ</h2>
+        <p>Đến thời điểm đã hẹn, kỳ hiện hành tự kết thúc và kỳ kế tiếp tự bắt đầu. Để trống để bỏ lịch tự động.</p>
+        <form method="post" th:action="@{/admin/semesters/schedule}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+          <input type="hidden" name="expectedCurrent" th:value="${currentSemester.code}">
+          <input type="hidden" name="expectedRevision" th:value="${currentSemester.revision}">
+          <label for="semester-end">Thời điểm kết thúc <span th:text="${currentSemester.code}"></span></label>
+          <input id="semester-end" type="datetime-local" name="endAt" step="60"
+                 th:value="${currentSemester.endAt != null ? #temporals.format(currentSemester.endAt, 'yyyy-MM-dd''T''HH:mm') : ''}">
+          <button type="submit" class="semester-button is-outline">Lưu lịch kết thúc</button>
+        </form>
+      </section>
+      <section class="semester-card">
+        <h2>Kết thúc và tạo kỳ mới</h2>
+        <p>Chuyển ngay tại thời điểm hiện tại. Thời điểm kết thúc kỳ cũ chính là thời điểm bắt đầu kỳ mới.</p>
+        <form method="post" th:action="@{/admin/semesters/transition}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+          <input type="hidden" name="expectedCurrent" th:value="${currentSemester.code}">
+          <input type="hidden" name="expectedRevision" th:value="${currentSemester.revision}">
+          <label for="semester-next-end">Lịch kết thúc <span th:text="${currentSemester.nextCode()}"></span> (không bắt buộc)</label>
+          <input id="semester-next-end" type="datetime-local" name="nextEndAt" step="60">
+          <button type="submit" class="semester-button"
+                  th:text="${'Kết thúc ' + currentSemester.code + ' và bắt đầu ' + currentSemester.nextCode()}"></button>
+        </form>
+      </section>
+    </div>
+
+    <section class="semester-history" aria-labelledby="semester-history-title">
+      <h2 id="semester-history-title">Lịch sử học kỳ</h2>
+      <p>Đủ thứ tự SP → SU → FA. Kỳ lịch sử không có mốc thời gian được giữ nguyên, không tự suy đoán ngày học.</p>
+      <div class="semester-history-list">
+        <article class="semester-history-row" th:each="term : ${semesters}" th:if="${!term.latest}"
+                 th:classappend="${'season-' + term.season()}">
+          <span class="semester-code" th:text="${term.code}"></span>
+          <div class="semester-history-info"><h3 th:text="${term.name}"></h3>
+            <p th:if="${term.startAt != null && term.endAt != null}"
+               th:text="${#temporals.format(term.startAt, 'dd/MM/yyyy · HH:mm') + ' — ' + #temporals.format(term.endAt, 'dd/MM/yyyy · HH:mm')}"></p>
+            <p th:unless="${term.startAt != null && term.endAt != null}">Dữ liệu lịch sử · chưa ghi nhận thời gian học kỳ</p>
+          </div>
+          <span class="semester-history-status">Đã kết thúc</span>
+          <a class="semester-link" th:href="@{/lecturer/classes(semester=${term.code})}" th:aria-label="${'Xem lớp ' + term.code}">Xem lớp →</a>
+        </article>
+      </div>
+    </section>
+  </main>
+</div>
+<script th:src="@{/js/app.js}"></script>
+</body></html>

@@ -59,6 +59,8 @@ public class LecturerQuestionBankController {
     public String list(@RequestParam(name = "subjectId", required = false) Long subjectId,
                        @RequestParam(name = "status", required = false) String status,
                        @RequestParam(name = "q", required = false) String q,
+                       @RequestParam(name = "bankStatus", defaultValue = "ALL") String bankStatus,
+                       @RequestParam(name = "sort", defaultValue = "UPDATED_DESC") String sort,
                        @RequestParam(name = "page", defaultValue = "0") int page,
                        @RequestParam(name = "size", defaultValue = "25") int size,
                        @AuthenticationPrincipal KshUserDetails user,
@@ -72,13 +74,21 @@ public class LecturerQuestionBankController {
         if (emptyDepartment) {
             model.addAttribute("catalogMode", true);
             model.addAttribute("subjectCatalog", java.util.List.of());
+            model.addAttribute("catalogMetrics",
+                    new com.ksh.features.questionbank.dto.QuestionBankViews.CatalogMetrics(0, 0, 0, 0));
+            model.addAttribute("selectedBankStatus", "ALL");
+            model.addAttribute("selectedCatalogSort", "UPDATED_DESC");
             model.addAttribute(ATTR_QB_ITEMS, java.util.List.of());
             return VIEW_QB_LIST;
         }
         if (subjectId == null) {
+            var catalog = itemService.subjectCatalogView(
+                    user.getId(), user.getRole(), q, bankStatus, sort);
             model.addAttribute("catalogMode", true);
-            model.addAttribute("subjectCatalog",
-                    itemService.subjectCatalog(user.getId(), user.getRole(), q));
+            model.addAttribute("subjectCatalog", catalog.rows());
+            model.addAttribute("catalogMetrics", catalog.metrics());
+            model.addAttribute("selectedBankStatus", normalizeBankStatus(bankStatus));
+            model.addAttribute("selectedCatalogSort", normalizeCatalogSort(sort));
             model.addAttribute(ATTR_QB_ITEMS, java.util.List.of());
             return VIEW_QB_LIST;
         }
@@ -108,6 +118,22 @@ public class LecturerQuestionBankController {
         return switch (normalized) {
             case "DRAFT", "REVIEW", "APPROVED", "REJECTED", "ARCHIVED" -> normalized;
             default -> "ALL";
+        };
+    }
+
+    private static String normalizeBankStatus(String status) {
+        if (status == null) return "ALL";
+        return switch (status.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "READY", "EMPTY" -> status.trim().toUpperCase(java.util.Locale.ROOT);
+            default -> "ALL";
+        };
+    }
+
+    private static String normalizeCatalogSort(String sort) {
+        if (sort == null) return "UPDATED_DESC";
+        return switch (sort.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "CODE_ASC", "QUESTIONS_DESC" -> sort.trim().toUpperCase(java.util.Locale.ROOT);
+            default -> "UPDATED_DESC";
         };
     }
 

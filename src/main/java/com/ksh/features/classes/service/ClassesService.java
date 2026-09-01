@@ -5,8 +5,12 @@ import com.ksh.entities.ClassEntity;
 import com.ksh.features.admin.departments.repository.DepartmentRepository;
 import com.ksh.features.classes.dto.ClassesDtos.ClassForm;
 import com.ksh.features.classes.dto.ClassesDtos.ClassRow;
+import com.ksh.features.classes.dto.ClassOverview;
+import com.ksh.features.classes.dto.ClassStatusCounts;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
+import com.ksh.features.classes.semester.AcademicSemester;
+import com.ksh.features.classes.semester.AcademicSemesterService;
 import com.ksh.features.lessons.repository.LessonRepository;
 import com.ksh.features.lessons.repository.LessonAttachmentRepository;
 import com.ksh.features.assignments.repository.AssignmentRepository;
@@ -73,7 +77,8 @@ public class ClassesService {
                           LessonRepository lessonRepository,
                           AssignmentRepository assignmentRepository,
                           LessonAttachmentRepository attachmentRepository,
-                          ApplicationEventPublisher eventPublisher) {
+                          ApplicationEventPublisher eventPublisher,
+                          AcademicSemesterService semesterService) {
         this.classRepository = classRepository;
         this.activityWriter = activityWriter;
         this.subjectRepository = subjectRepository;
@@ -83,7 +88,7 @@ public class ClassesService {
         this.assignmentRepository = assignmentRepository;
         this.attachmentRepository = attachmentRepository;
         this.creator = new ClassCreator(classRepository, activityWriter,
-                subjectRepository, eventPublisher);
+                subjectRepository, eventPublisher, semesterService);
     }
 
     // ───────────────────── Public CRUD API ──────────────────────────
@@ -147,6 +152,94 @@ public class ClassesService {
         return mapRows(page, pageable);
     }
 
+    /** Role-scoped class list with durable semester and subject-code filters. */
+    @Transactional(readOnly = true)
+    public Page<ClassRow> listForUserByStatusesAndFilters(
+            Long userId, Role role, Collection<String> statuses,
+            String semester, String subjectCode, String query, Pageable pageable) {
+        return mapRows(searchClasses(userId, role, statuses, semester, subjectCode, query, pageable), pageable);
+    }
+
+    private Page<ClassEntity> searchClasses(Long userId, Role role, Collection<String> statuses,
+            String semester, String subjectCode, String query, Pageable pageable) {
+        if (statuses == null || statuses.isEmpty()) return Page.empty(pageable);
+        String semesterFilter = normalizeSemesterFilter(semester);
+        String subjectFilter = subjectCode == null ? "" : subjectCode.trim();
+        String queryFilter = query == null ? "" : query.trim();
+        Page<ClassEntity> page;
+        if (role == Role.LECTURER) {
+            page = classRepository.searchAccessibleToLecturer(
+                    userId, statuses, semesterFilter, subjectFilter, queryFilter, pageable);
+        } else if (role == Role.LEADER) {
+            List<Long> subjectIds = accessPolicy.leaderSubjectIds(userId);
+            page = subjectIds.isEmpty() ? Page.empty(pageable)
+                    : classRepository.searchLeaderClasses(
+                            subjectIds, statuses, semesterFilter, subjectFilter,
+                            queryFilter, pageable);
+        } else if (role == Role.ADMIN) {
+            page = classRepository.searchAdministrativeClasses(
+                    statuses, semesterFilter, subjectFilter, queryFilter, pageable);
+        } else {
+            page = Page.empty(pageable);
+        }
+        return page;
+    }
+
+    @Transactional(readOnly = true)
+    public ClassOverview overview(Long userId, Role role, String semester, String subjectCode, String query) {
+        List<ClassEntity> classes = searchClasses(userId, role,
+                List.of(ClassEntity.STATUS_PENDING, ClassEntity.STATUS_REJECTED,
+                        ClassEntity.STATUS_ACTIVE, ClassEntity.STATUS_ARCHIVED),
+                semester, subjectCode, query, Pageable.unpaged()).getContent();
+        if (classes.isEmpty()) return ClassOverview.empty();
+        List<Long> ids = classes.stream().map(ClassEntity::getId).toList();
+        return new ClassOverview(classes.size(),
+                classes.stream().filter(c -> ClassEntity.STATUS_ACTIVE.equals(c.getStatus())).count(),
+                classes.stream().filter(c -> ClassEntity.STATUS_ARCHIVED.equals(c.getStatus())).count(),
+                enrollmentRepository.countDistinctStudentsInClasses(ids),
+                classRepository.countDistinctTeachingUsers(ids));
+    }
+
+    /** Lifecycle-tab badges under the same role, semester, subject and text filters as the list. */
+    @Transactional(readOnly = true)
+    public ClassStatusCounts statusCounts(Long userId, Role role,
+                                          String semester, String subjectCode, String query) {
+        List<ClassEntity> classes = searchClasses(userId, role,
+                List.of(ClassEntity.STATUS_PENDING, ClassEntity.STATUS_REJECTED,
+                        ClassEntity.STATUS_ACTIVE, ClassEntity.STATUS_ARCHIVED),
+                semester, subjectCode, query, Pageable.unpaged()).getContent();
+        if (classes.isEmpty()) return ClassStatusCounts.empty();
+        return new ClassStatusCounts(
+                countStatus(classes, ClassEntity.STATUS_ACTIVE),
+                countStatus(classes, ClassEntity.STATUS_PENDING),
+                countStatus(classes, ClassEntity.STATUS_REJECTED),
+                countStatus(classes, ClassEntity.STATUS_ARCHIVED));
+    }
+
+    private static long countStatus(List<ClassEntity> classes, String status) {
+        return classes.stream().filter(value -> status.equals(value.getStatus())).count();
+    }
+
+    /** Known persisted semester codes, newest first, for list filters. */
+    @Transactional(readOnly = true)
+    public List<String> availableSemesters() {
+        return classRepository.findDistinctSemesterCodes().stream()
+                .filter(value -> value != null && !value.isBlank())
+                .sorted((left, right) -> Integer.compare(
+                        AcademicSemester.parse(right).orderKey(),
+                        AcademicSemester.parse(left).orderKey()))
+                .toList();
+    }
+
+    private static String normalizeSemesterFilter(String value) {
+        if (value == null || value.isBlank()) return "";
+        try {
+            return AcademicSemester.parse(value).code();
+        } catch (IllegalArgumentException ignored) {
+            return "";
+        }
+    }
+
     /** Returns the role-scoped total for a lifecycle tab badge. */
     @Transactional(readOnly = true)
     public long countForUserByStatuses(Long userId, Role role, Collection<String> statuses) {
@@ -175,7 +268,10 @@ public class ClassesService {
         Map<Long, Long> lessonCounts = new HashMap<>();
         Map<Long, Long> assignmentCounts = new HashMap<>();
         Map<Long, Long> materialCounts = new HashMap<>();
+        Map<Long, String> lecturerNames = new HashMap<>();
         if (!classIds.isEmpty()) {
+            classRepository.findLecturerLabels(classIds)
+                    .forEach(row -> lecturerNames.put(row.getClassId(), row.getLecturerName()));
             enrollmentRepository.countActiveGroupedByClassIds(classIds)
                     .forEach(r -> studentCounts.put(r.getClassId(), r.getCnt()));
             lessonRepository.countLiveGroupedByClassIds(classIds)
@@ -197,7 +293,8 @@ public class ClassesService {
                     studentCounts.getOrDefault(entity.getId(), 0L),
                     lessonCounts.getOrDefault(entity.getId(), 0L),
                     assignmentCounts.getOrDefault(entity.getId(), 0L),
-                    materialCounts.getOrDefault(entity.getId(), 0L)));
+                    materialCounts.getOrDefault(entity.getId(), 0L),
+                    lecturerNames.getOrDefault(entity.getId(), "—")));
         }
         return new PageImpl<>(rows, pageable, page.getTotalElements());
     }

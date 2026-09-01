@@ -10,6 +10,7 @@ import com.ksh.features.tests.dto.LecturerTestDtos.BankOptionSnapshot;
 import com.ksh.features.tests.dto.LecturerTestDtos.ClassOption;
 import com.ksh.features.tests.dto.LecturerTestDtos.ExamForm;
 import com.ksh.features.tests.dto.LecturerTestDtos.LecturerExamRow;
+import com.ksh.features.tests.dto.LecturerTestDtos.LecturerTestMetrics;
 import com.ksh.features.tests.dto.LecturerTestDtos.ExamFilter;
 import com.ksh.features.tests.dto.LecturerTestDtos.OptionForm;
 import com.ksh.features.tests.dto.LecturerTestDtos.QuestionForm;
@@ -41,6 +42,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.ksh.common.IConstant.DEFAULT_EXAM_PAGE_SIZE;
 import static com.ksh.common.IConstant.MSG_EXAM_QUESTION_BANK_LOCKED;
@@ -90,9 +92,9 @@ public class LecturerExamService {
     }
 
     /**
-     * One page of manageable exams: LECTURER owns/created, LEADER is limited
-     * to tests attached to classes in their department, and ADMIN is global
-     * for non-Practice test management.
+     * One shared Test Bank page. Published, non-Practice entries are visible
+     * to all educators for preview/distribution; private authoring states keep
+     * the established management scope.
      */
     @Transactional(readOnly = true)
     public Page<LecturerExamRow> listOwned(Long userId, int page) {
@@ -106,10 +108,27 @@ public class LecturerExamService {
                 Sort.by(Sort.Direction.DESC, "updatedAt"));
         List<Long> classIds = manageableClassIds(userId, role);
         List<Long> subjectIds = manageableSubjectIds(userId, role);
-        Page<Test> result = testRepository.searchManageable(userId, classIds, subjectIds,
+        Page<Test> result = testRepository.searchManageable(userId,
+                privateCatalogClassIds(role, classIds), subjectIds,
                 role == Role.ADMIN, role == Role.LECTURER || role == Role.LEADER, filter.classId(),
                 filter.keyword(), filter.status(), filter.type(), pageable);
-        return toRows(result);
+        return toRows(result, userId, role, Set.copyOf(classIds), Set.copyOf(subjectIds));
+    }
+
+    /** Complete test-bank counters under the same canonical management scope. */
+    @Transactional(readOnly = true)
+    public LecturerTestMetrics metricsFor(Long userId) {
+        Role role = accessResolver.managementRole(userId);
+        List<Long> classIds = manageableClassIds(userId, role);
+        List<Long> subjectIds = manageableSubjectIds(userId, role);
+        Object[] values = testRepository.summarizeManageable(
+                userId, privateCatalogClassIds(role, classIds), subjectIds,
+                role == Role.ADMIN, role == Role.LECTURER || role == Role.LEADER)
+                .stream()
+                .findFirst()
+                .orElseGet(() -> new Object[0]);
+        return new LecturerTestMetrics(number(values, 0), number(values, 1),
+                number(values, 2), number(values, 3));
     }
 
     /**
@@ -122,15 +141,45 @@ public class LecturerExamService {
         accessResolver.requireManageableClass(classId, userId, role);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), DEFAULT_EXAM_PAGE_SIZE,
                 Sort.by(Sort.Direction.DESC, "updatedAt"));
-        return toRows(testRepository.findByClassId(classId, pageable));
+        return toRows(testRepository.findByClassId(classId, pageable),
+                userId, role, Set.of(classId), Set.of());
     }
 
     /** Maps a page of exams to list rows, resolving class names in one batch. */
-    private Page<LecturerExamRow> toRows(Page<Test> tests) {
+    private Page<LecturerExamRow> toRows(Page<Test> tests, Long userId, Role role,
+                                         Set<Long> manageableClassIds,
+                                         Set<Long> manageableSubjectIds) {
         Map<Long, String> classNames = resolveClassNames(tests.getContent());
-        return tests.map(t -> new LecturerExamRow(t.getId(), t.getTitle(), t.getType(),
-                t.getStatus(), classNames.get(t.getClassId()),
-                t.getTotalQuestions() == null ? 0 : t.getTotalQuestions(), t.getEndAt()));
+        return tests.map(t -> new LecturerExamRow(t.getId(), t.getTitle(), t.getDescription(),
+                t.getType(), t.getStatus(), classNames.get(t.getClassId()),
+                t.getTotalQuestions() == null ? 0 : t.getTotalQuestions(),
+                t.getDurationMinutes(), t.getCreatedAt(), t.getUpdatedAt(), t.getEndAt(),
+                canManageTest(t, userId, role, manageableClassIds, manageableSubjectIds)));
+    }
+
+    /** Keeps authoring controls hidden for a shared source the caller may only use. */
+    private static boolean canManageTest(Test test, Long userId, Role role,
+                                         Set<Long> manageableClassIds,
+                                         Set<Long> manageableSubjectIds) {
+        if (test.isPractice()) {
+            return userId != null && userId.equals(test.getCreatedBy());
+        }
+        if (role == Role.ADMIN) return true;
+        if (role == Role.LECTURER && userId != null && userId.equals(test.getCreatedBy())) {
+            return true;
+        }
+        if (role == Role.LEADER && test.getSubjectId() != null
+                && manageableSubjectIds.contains(test.getSubjectId())) {
+            return true;
+        }
+        return test.getClassId() != null && manageableClassIds.contains(test.getClassId());
+    }
+
+    private static long number(Object[] values, int index) {
+        if (values == null || index >= values.length || !(values[index] instanceof Number value)) {
+            return 0L;
+        }
+        return value.longValue();
     }
 
     /** Classes available to the actor under canonical role/class scope. */
@@ -183,12 +232,12 @@ public class LecturerExamService {
     }
 
     /**
-     * Builds a student-style preview of an owned exam without starting an attempt.
-     * Ownership is enforced via {@link TestAccessResolver#requireManageable}.
+     * Builds a read-only student-style preview. Published Test Bank sources are
+     * previewable by all educators; draft/archived source ownership is unchanged.
      */
     @Transactional(readOnly = true)
-    public PreviewView previewAsStudent(Long testId, Long userId) {
-        Test test = accessResolver.requireManageable(testId, userId);
+    public PreviewView previewAsStudent(Long testId, Long userId, Role role) {
+        Test test = accessResolver.requirePreviewableFromTestBank(testId, userId, role);
         return takeViewBuilder.buildPreview(test);
     }
 
@@ -403,9 +452,7 @@ public class LecturerExamService {
     }
 
     private Test requireDistributable(Long testId, Long userId, Role role, boolean lock) {
-        Test source = lock
-                ? accessResolver.requireManageableForUpdate(testId, userId, role)
-                : accessResolver.requireManageable(testId, userId, role);
+        Test source = accessResolver.requireSharedTestBankSource(testId, userId, role, lock);
         if (source.isPractice()) {
             throw new IllegalArgumentException("Practice test không thuộc luồng phân phối này");
         }
@@ -556,11 +603,29 @@ public class LecturerExamService {
     }
 
     private List<Long> manageableSubjectIds(Long userId, Role role) {
+        // A lecturer may choose any active subject when authoring a new Test
+        // Bank item, but that must not turn every other lecturer's private
+        // DRAFT/ARCHIVED test into a catalog entry. Subject-wide management
+        // scope exists only for the department leader; ADMIN is global via the
+        // repository flag and lecturers retain creator/class scope.
+        if (role != Role.LEADER) {
+            return List.of(-1L);
+        }
         List<Long> ids = new ArrayList<>(subjectOptions(userId).stream()
                 .map(SubjectOption::id)
                 .toList());
         if (ids.isEmpty()) ids.add(-1L);
         return ids;
+    }
+
+    /**
+     * Lecturer catalog privacy is creator-scoped for DRAFT/ARCHIVED rows.
+     * The actor's real class ids are still retained separately when rows are
+     * mapped so class-policy authoring actions stay accurate for published
+     * entries. Leaders keep their department/class scope and ADMIN is global.
+     */
+    private static List<Long> privateCatalogClassIds(Role role, List<Long> classIds) {
+        return role == Role.LECTURER ? List.of(-1L) : classIds;
     }
 
     private Map<Long, String> resolveClassNames(List<Test> tests) {

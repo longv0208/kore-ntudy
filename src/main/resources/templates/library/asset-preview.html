@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="'Xem tài liệu · ' + ${assetPreview.title()}">Xem tài liệu</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#15233b;background:#f5f8fc}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh}.pv-shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+    .pv-head{display:flex;align-items:center;gap:16px;padding:14px 22px;background:#fff;border-bottom:1px solid #dce5f0;box-shadow:0 3px 16px rgba(31,58,95,.05)}
+    .pv-back,.pv-download{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 15px;border:1px solid #cdd9e8;border-radius:10px;color:#29425f;background:#fff;text-decoration:none;font-weight:700;font-size:14px}
+    .pv-download{margin-left:auto;background:#1479eb;border-color:#1479eb;color:#fff}.pv-file{min-width:0}.pv-file strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pv-file span{display:block;margin-top:3px;color:#73839a;font-size:12px}
+    .pv-stage{padding:22px;min-height:0}.pv-frame,.pv-office{width:100%;height:calc(100vh - 92px);border:1px solid #d9e3ef;border-radius:14px;background:#fff;box-shadow:0 8px 28px rgba(32,60,96,.07);overflow:auto}
+    iframe.pv-frame{display:block}.pv-media{display:grid;place-items:center;padding:22px}.pv-media img{max-width:100%;max-height:calc(100vh - 142px);object-fit:contain}.pv-media video{width:min(1120px,100%);max-height:calc(100vh - 142px);background:#101827;border-radius:10px}
+    .pv-office{padding:26px}.pv-office-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.pv-office-title h1{font-size:20px;margin:0}.pv-pill{padding:6px 10px;border-radius:999px;background:#edf5ff;color:#0d6ede;font-weight:800;font-size:12px}
+    .pv-table-wrap{overflow:auto;border:1px solid #dce5ef;border-radius:10px}.pv-table{width:100%;border-collapse:collapse;font-size:13px}.pv-table td{min-width:110px;padding:10px 12px;border-right:1px solid #e5ebf3;border-bottom:1px solid #e5ebf3;white-space:pre-wrap;vertical-align:top}.pv-table tr:first-child td{font-weight:800;background:#f5f8fd}.pv-block{margin:0;padding:13px 0;border-bottom:1px solid #edf1f6;line-height:1.65;white-space:pre-wrap}.pv-message{display:grid;place-items:center;min-height:260px;padding:40px;color:#65758b;text-align:center;font-weight:600}.pv-sheet{color:#65758b;font-size:13px;margin:0 0 12px}
+    @media(max-width:700px){.pv-head{padding:10px}.pv-stage{padding:10px}.pv-file span{display:none}.pv-back{padding:0 10px}.pv-office{padding:16px}}
+  </style>
+</head>
+<body>
+<main class="pv-shell">
+  <header class="pv-head">
+    <a class="pv-back" th:href="@{/lecturer/library/assets}">← Kho tài liệu</a>
+    <div class="pv-file">
+      <strong th:text="${assetPreview.title()}">Tên tài liệu</strong>
+      <span th:text="${assetPreview.originalFilename()}">filename.pdf</span>
+    </div>
+    <a class="pv-download" th:href="${assetPreview.downloadUrl()}">Tải xuống</a>
+  </header>
+
+  <section class="pv-stage">
+    <iframe class="pv-frame" th:if="${assetPreview.previewKind() == 'PDF'}"
+            th:src="${assetPreview.contentUrl()}"
+            th:title="'Xem PDF ' + ${assetPreview.title()}"></iframe>
+
+    <div class="pv-frame pv-media" th:if="${assetPreview.previewKind() == 'IMAGE'}">
+      <img th:src="${assetPreview.contentUrl()}" th:alt="${assetPreview.title()}">
+    </div>
+
+    <div class="pv-frame pv-media" th:if="${assetPreview.previewKind() == 'VIDEO'}">
+      <video controls preload="metadata" th:src="${assetPreview.contentUrl()}">
+        Trình duyệt không hỗ trợ phát video.
+      </video>
+    </div>
+
+    <article class="pv-office"
+             th:if="${assetPreview.previewKind() == 'SPREADSHEET'
+                      or assetPreview.previewKind() == 'DOCUMENT'
+                      or assetPreview.previewKind() == 'PRESENTATION'
+                      or assetPreview.previewKind() == 'TEXT'
+                      or assetPreview.previewKind() == 'UNSUPPORTED'}">
+      <div class="pv-office-title">
+        <h1 th:text="${assetPreview.title()}">Tên tài liệu</h1>
+        <span class="pv-pill" th:text="${assetPreview.formatLabel()}">XLSX</span>
+      </div>
+      <p class="pv-sheet" th:if="${assetPreview.sheetName() != null}"
+         th:text="'Trang tính đầu tiên: ' + ${assetPreview.sheetName()}">Trang tính</p>
+      <div class="pv-table-wrap" th:if="${!#lists.isEmpty(assetPreview.tableRows())}">
+        <table class="pv-table" aria-label="Nội dung bảng tính">
+          <tbody>
+          <tr th:each="row : ${assetPreview.tableRows()}">
+            <td th:each="cell : ${row}" th:text="${cell}">Ô dữ liệu</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div th:if="${!#lists.isEmpty(assetPreview.textBlocks())}">
+        <p class="pv-block" th:each="block : ${assetPreview.textBlocks()}"
+           th:text="${block}">Nội dung tài liệu</p>
+      </div>
+      <div class="pv-message" th:if="${assetPreview.message() != null}"
+           th:text="${assetPreview.message()}">Không thể xem trước.</div>
+    </article>
+  </section>
+</main>
+</body>
+</html>

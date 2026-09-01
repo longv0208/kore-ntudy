@@ -112,6 +112,7 @@
   });
   document.querySelectorAll('.library-chapter').forEach(chapter => {
     chapter.addEventListener('dragstart', event => {
+      if (event.target.closest('.library-lesson-row')) return;
       if (!dragArmed) { event.preventDefault(); return; }
       originalOrder = order();
       draggedChapter = chapter;
@@ -127,10 +128,59 @@
     });
     chapter.addEventListener('drop', event => event.preventDefault());
     chapter.addEventListener('dragend', () => {
+      if (!draggedChapter) return;
       chapter.classList.remove('is-dragging');
       draggedChapter = null;
       dragArmed = false;
       window.setTimeout(persistOrder, 0);
+    });
+  });
+
+  let draggedLesson = null;
+  let lessonDragArmed = false;
+  document.querySelectorAll('.library-lesson-drag-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', () => { lessonDragArmed = true; });
+    handle.addEventListener('pointerup', () => { lessonDragArmed = false; });
+  });
+  document.querySelectorAll('.library-lesson-row[draggable="true"]').forEach(row => {
+    row.addEventListener('dragstart', event => {
+      event.stopPropagation();
+      if (!lessonDragArmed) { event.preventDefault(); return; }
+      draggedLesson = row;
+      row.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', row.dataset.lessonId);
+    });
+    row.addEventListener('dragend', event => {
+      event.stopPropagation();
+      row.classList.remove('is-dragging');
+      draggedLesson = null;
+      lessonDragArmed = false;
+    });
+  });
+  document.querySelectorAll('.library-chapter.is-editable').forEach(chapter => {
+    chapter.addEventListener('dragover', event => {
+      if (draggedLesson) event.preventDefault();
+    });
+    chapter.addEventListener('drop', async event => {
+      if (!draggedLesson || reorderSaving) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const row = event.target.closest('.library-lesson-row');
+      let before = row;
+      if (row && event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2) {
+        before = row.nextElementSibling;
+      }
+      const values = { chapterNumber: chapter.dataset.chapterNumber };
+      if (before?.dataset.lessonId) values.beforeId = before.dataset.lessonId;
+      reorderSaving = true;
+      try {
+        await postForm(`/lecturer/library/templates/${draggedLesson.dataset.lessonId}/move`, values);
+        window.location.reload();
+      } catch (error) {
+        reorderSaving = false;
+        window.alert(error.message);
+      }
     });
   });
 
@@ -190,7 +240,15 @@
           [{ list: 'ordered' }, { list: 'bullet' }], ['link'], ['clean']] }
       });
       editor.clipboard.dangerouslyPasteHTML(richValue?.value || '');
-      editor.on('text-change', () => { if (richValue) richValue.value = editor.root.innerHTML; });
+      const syncRichEditor = () => {
+        if (richValue) richValue.value = editor.root.innerHTML;
+        const hasContent = editor.getText().trim().length > 0
+          || Boolean(editor.root.querySelector('img, video, iframe, table'));
+        editor.root.classList.toggle('has-visible-content', hasContent);
+      };
+      editor.on('text-change', syncRichEditor);
+      editor.root.addEventListener('input', syncRichEditor);
+      syncRichEditor();
     } else if (richHost) {
       richHost.contentEditable = 'true';
       richHost.innerHTML = richValue?.value || '';

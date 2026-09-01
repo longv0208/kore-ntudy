@@ -159,4 +159,23 @@ class LecturerDashboardServiceTest {
         assertThat(page0.classes().getContent()).extracting(ClassDashboardRow::id)
                 .containsAnyOf(c1.getId(), c2.getId(), c3.getId());
     }
+
+    @Test
+    void active_classes_are_listed_before_archived_classes() {
+        User owner = fixtures.ensureUser(
+                "dash-order-owner@ksh.edu.vn", "Order Owner", Role.LECTURER);
+        ClassEntity archived = fixtures.saveClass(owner, "Archived First By Creation", "DASHO1");
+        fixtures.markStatus(archived, ClassEntity.STATUS_ARCHIVED);
+        ClassEntity active = fixtures.saveClass(owner, "Active Teaching", "DASHO2");
+        fixtures.markStatus(active, ClassEntity.STATUS_ACTIVE);
+
+        TeachingDashboardView view = service.getDashboard(owner.getId(), Role.LECTURER, "", 0, 20);
+
+        assertThat(view.classes().getContent()).extracting(ClassDashboardRow::id)
+                .startsWith(active.getId())
+                .endsWith(archived.getId());
+        ClassDashboardRow archivedRow = view.classes().getContent().stream()
+                .filter(row -> row.id().equals(archived.getId())).findFirst().orElseThrow();
+        assertThat(archivedRow.displayStatus()).isEqualTo("Đã lưu trữ");
+    }
 }

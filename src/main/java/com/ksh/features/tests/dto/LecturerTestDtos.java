@@ -86,8 +86,16 @@ public final class LecturerTestDtos {
     // ── Exam list ────────────────────────────────────────────────────
 
     /** A row on the lecturer exam list. */
-    public record LecturerExamRow(Long id, String title, String type, String status,
-                                  String className, int totalQuestions, LocalDateTime endAt) {
+    public record LecturerExamRow(Long id, String title, String description,
+                                  String type, String status, String className,
+                                  int totalQuestions, Integer durationMinutes,
+                                  LocalDateTime createdAt, LocalDateTime updatedAt,
+                                  LocalDateTime endAt, boolean canManage) {
+    }
+
+    /** Real, permission-scoped counters shown above the lecturer test catalog. */
+    public record LecturerTestMetrics(long totalTests, long publishedTests,
+                                      long draftTests, long totalQuestions) {
     }
 
     /** Validated filter state for lecturer-facing exam lists. */

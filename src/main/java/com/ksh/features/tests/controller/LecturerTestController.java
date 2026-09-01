@@ -134,6 +134,7 @@ public class LecturerTestController {
         ExamFilter filter = ExamFilter.of(q, status, type, classId, classes);
         Page<LecturerExamRow> exams = examService.listOwned(user.getId(), page, filter);
         model.addAttribute(ATTR_EXAMS_PAGE, exams);
+        model.addAttribute("testMetrics", examService.metricsFor(user.getId()));
         model.addAttribute("examFilter", filter);
         model.addAttribute(ATTR_LED_CLASSES, classes);
         model.addAttribute("examPagerParams", java.util.Map.of(
@@ -210,7 +211,7 @@ public class LecturerTestController {
     @GetMapping("/{id}/preview")
     public String preview(@PathVariable Long id,
                           @AuthenticationPrincipal KshUserDetails user, Model model) {
-        PreviewView preview = examService.previewAsStudent(id, user.getId());
+        PreviewView preview = examService.previewAsStudent(id, user.getId(), user.getRole());
         model.addAttribute(ATTR_PREVIEW, preview);
         return VIEW_TEST_LECTURER_PREVIEW;
     }

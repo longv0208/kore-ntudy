@@ -43,17 +43,17 @@
             <details class="settings-technical settings-form-advanced"><summary>Chi tiết kỹ thuật</summary><div class="settings-form-grid"><div class="form-row"><label for="keyPrefix">Key prefix bất biến</label><input id="keyPrefix" th:field="*{keyPrefix}" readonly><p class="field-hint">Object key không được thoát prefix này.</p></div><div class="form-row" th:if="${form.revision != null}"><span class="form-row-label">Revision</span><code th:text="${form.revision}">0</code><p class="field-hint">Revision bắt đầu từ 0 và chống cập nhật stale.</p></div></div></details>
             <div class="settings-form-actions">
                 <a class="btn-ghost" th:href="${globalProfile ? '/admin/settings/storage' : '/admin/settings/storage-profiles'}">Hủy</a>
-                <button th:if="${mode == 'edit' and form.backend.name() == 'R2'}"
+                <button th:if="${mode == 'edit'}"
                         type="button" class="btn-ghost js-storage-profile-test"
                         data-profile-code="GENERAL_UPLOADS"
                         th:attr="data-profile-code=${form.profileCode}"
-                        aria-controls="storageProfileTestResult">Kiểm tra R2 đã lưu</button>
+                        aria-controls="storageProfileTestResult">Kiểm tra kết nối đã lưu</button>
                 <button class="btn btn-primary" type="submit">Lưu cấu hình</button>
             </div>
-            <p th:if="${mode == 'edit' and form.backend.name() == 'R2'}"
+            <p th:if="${mode == 'edit'}"
                id="storageProfileTestResult" class="storage-connection-result"
                role="status" aria-live="polite" hidden></p>
-            <p th:if="${mode == 'edit' and form.backend.name() == 'R2'}" class="field-hint">
+            <p th:if="${mode == 'edit'}" class="field-hint">
                 Bài kiểm tra dùng cấu hình đã lưu. Hãy lưu thay đổi trước khi kiểm tra lại.
             </p>
         </form>
