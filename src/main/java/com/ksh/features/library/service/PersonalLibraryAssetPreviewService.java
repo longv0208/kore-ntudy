@@ -72,11 +72,6 @@ public class PersonalLibraryAssetPreviewService {
             return model(detail, previewKind, null, List.of(), List.of(),
                     "Định dạng này chưa hỗ trợ xem trực tiếp. Bạn vẫn có thể tải tệp xuống.");
         }
-        if (detail.sizeBytes() > MAX_PARSED_BYTES) {
-            return model(detail, previewKind, null, List.of(), List.of(),
-                    "Tệp quá lớn để tạo bản xem trước an toàn. Vui lòng tải xuống để xem đầy đủ.");
-        }
-
         var handle = libraryService.contentHandle(ownerId, assetId);
         try {
             if (!objectStorage.exists(handle.storageKey())) {

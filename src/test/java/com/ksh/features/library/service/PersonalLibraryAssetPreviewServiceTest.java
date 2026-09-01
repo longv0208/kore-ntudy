@@ -13,6 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,6 +106,29 @@ class PersonalLibraryAssetPreviewServiceTest {
     }
 
     @Test
+    void preview_checks_storage_before_rejecting_stale_oversized_database_metadata()
+            throws Exception {
+        long staleDatabaseSize = 10L * 1024L * 1024L + 1L;
+        LibraryAssetDetail detail = detail(
+                "scores.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "XLSX", "excel", staleDatabaseSize);
+        when(libraryService.detail(7L, 11L)).thenReturn(detail);
+        when(libraryService.contentHandle(7L, 11L)).thenReturn(
+                new OwnedAssetContent("library/7/scores.xlsx", "scores.xlsx",
+                        detail.mimeType(), staleDatabaseSize));
+        when(objectStorage.exists("library/7/scores.xlsx")).thenReturn(true);
+        when(objectStorage.open("library/7/scores.xlsx")).thenReturn(
+                new StoredObject(new ByteArrayInputStream(new byte[0]), 1024L,
+                        detail.mimeType()));
+
+        var preview = service.load(7L, 11L);
+
+        assertThat(preview.message()).contains("Kích thước tệp đã thay đổi");
+        verify(objectStorage).open("library/7/scores.xlsx");
+    }
+
+    @Test
     void preview_rejects_a_mismatched_stored_object_length() throws Exception {
         LibraryAssetDetail detail = detail(
                 "scores.xlsx",
@@ -120,6 +145,49 @@ class PersonalLibraryAssetPreviewServiceTest {
         var preview = service.load(7L, 11L);
 
         assertThat(preview.message()).contains("Kích thước tệp đã thay đổi");
+    }
+
+    @Test
+    void preview_caps_the_stream_when_storage_reports_a_false_safe_length() throws Exception {
+        long actualStreamSize = 10L * 1024L * 1024L + 1L;
+        LibraryAssetDetail detail = detail(
+                "scores.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "XLSX", "excel", 1024L);
+        when(libraryService.detail(7L, 11L)).thenReturn(detail);
+        when(libraryService.contentHandle(7L, 11L)).thenReturn(
+                new OwnedAssetContent("library/7/scores.xlsx", "scores.xlsx",
+                        detail.mimeType(), 1024L));
+        when(objectStorage.exists("library/7/scores.xlsx")).thenReturn(true);
+        when(objectStorage.open("library/7/scores.xlsx")).thenReturn(
+                new StoredObject(repeatingZeroStream(actualStreamSize), 1024L,
+                        detail.mimeType()));
+
+        var preview = service.load(7L, 11L);
+
+        assertThat(preview.message()).contains("quá lớn");
+    }
+
+    private static InputStream repeatingZeroStream(long length) {
+        return new InputStream() {
+            private long remaining = length;
+
+            @Override
+            public int read() {
+                if (remaining == 0) return -1;
+                remaining--;
+                return 0;
+            }
+
+            @Override
+            public int read(byte[] buffer, int offset, int requested) {
+                if (remaining == 0) return -1;
+                int read = (int) Math.min(requested, remaining);
+                Arrays.fill(buffer, offset, offset + read, (byte) 0);
+                remaining -= read;
+                return read;
+            }
+        };
     }
 
     private static LibraryAssetDetail detail(String filename, String mime,
