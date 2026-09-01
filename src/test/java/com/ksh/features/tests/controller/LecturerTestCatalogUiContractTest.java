@@ -29,9 +29,25 @@ class LecturerTestCatalogUiContractTest {
                 .contains("exam.updatedAt()")
                 .contains("exam.canManage()")
                 .contains("Đề dùng chung")
-                .contains("exam.type() != 'PRACTICE'")
+                .contains("th:if=\"${exam.type() != 'PRACTICE'}\" th:href=\"@{|/lecturer/tests/${exam.id()}/preview|}\"")
+                .contains("exam.status() == 'PUBLISHED' and exam.type() != 'PRACTICE'")
                 .contains("Mở ngân hàng câu hỏi")
                 .contains("Tạo bài test");
+    }
+
+    @Test
+    void practiceRowsDoNotOfferUnsupportedPreviewOrDistributionActions()
+            throws IOException {
+        String list = read("src/main/resources/templates/tests/lecturer-list.html");
+        String form = read("src/main/resources/templates/tests/lecturer-form.html");
+
+        assertThat(list)
+                .contains("th:if=\"${exam.type() != 'PRACTICE'}\" th:href=\"@{|/lecturer/tests/${exam.id()}/preview|}\"")
+                .contains("th:if=\"${exam.status() == 'PUBLISHED' and exam.type() != 'PRACTICE'}\" th:href=\"@{|/lecturer/tests/${exam.id()}/distribute|}\"")
+                .contains("class=\"is-wide\" th:if=\"${exam.status() == 'PUBLISHED' and exam.type() != 'PRACTICE'}\"");
+        assertThat(form)
+                .contains("th:if=\"${examForm == null or examForm.type() != 'PRACTICE'}\"")
+                .contains("'/preview'}\">Xem trước</a>");
     }
 
     @Test

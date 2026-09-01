@@ -108,7 +108,8 @@ public class LecturerExamService {
                 Sort.by(Sort.Direction.DESC, "updatedAt"));
         List<Long> classIds = manageableClassIds(userId, role);
         List<Long> subjectIds = manageableSubjectIds(userId, role);
-        Page<Test> result = testRepository.searchManageable(userId, classIds, subjectIds,
+        Page<Test> result = testRepository.searchManageable(userId,
+                privateCatalogClassIds(role, classIds), subjectIds,
                 role == Role.ADMIN, role == Role.LECTURER || role == Role.LEADER, filter.classId(),
                 filter.keyword(), filter.status(), filter.type(), pageable);
         return toRows(result, userId, role, Set.copyOf(classIds), Set.copyOf(subjectIds));
@@ -121,7 +122,7 @@ public class LecturerExamService {
         List<Long> classIds = manageableClassIds(userId, role);
         List<Long> subjectIds = manageableSubjectIds(userId, role);
         Object[] values = testRepository.summarizeManageable(
-                userId, classIds, subjectIds,
+                userId, privateCatalogClassIds(role, classIds), subjectIds,
                 role == Role.ADMIN, role == Role.LECTURER || role == Role.LEADER)
                 .stream()
                 .findFirst()
@@ -615,6 +616,16 @@ public class LecturerExamService {
                 .toList());
         if (ids.isEmpty()) ids.add(-1L);
         return ids;
+    }
+
+    /**
+     * Lecturer catalog privacy is creator-scoped for DRAFT/ARCHIVED rows.
+     * The actor's real class ids are still retained separately when rows are
+     * mapped so class-policy authoring actions stay accurate for published
+     * entries. Leaders keep their department/class scope and ADMIN is global.
+     */
+    private static List<Long> privateCatalogClassIds(Role role, List<Long> classIds) {
+        return role == Role.LECTURER ? List.of(-1L) : classIds;
     }
 
     private Map<Long, String> resolveClassNames(List<Test> tests) {

@@ -217,9 +217,39 @@ class LecturerExamDistributionIntegrationTest {
         archived.setStatus(com.ksh.features.tests.entity.Test.STATUS_ARCHIVED);
         testRepository.saveAndFlush(archived);
 
-        assertThat(examService.listOwned(sharedConsumer.getId(), 0).getContent())
+        // Even a class the consumer manages must not make another lecturer's
+        // private authoring states visible. Only PUBLISHED non-Practice rows
+        // are shared through the common Test Bank.
+        ClassEntity consumerClass = activeClass("Consumer private scope",
+                lecturer.getSubjectId(), sharedConsumer);
+        Long classLocalDraftId = persistForeignTest(consumerClass,
+                com.ksh.features.tests.entity.Test.STATUS_DRAFT,
+                "foreign class draft");
+        Long classLocalArchivedId = persistForeignTest(consumerClass,
+                com.ksh.features.tests.entity.Test.STATUS_ARCHIVED,
+                "foreign class archived");
+        Long classLocalPublishedId = persistForeignTest(consumerClass,
+                com.ksh.features.tests.entity.Test.STATUS_PUBLISHED,
+                "shared class published");
+
+        var visibleRows = examService.listOwned(sharedConsumer.getId(), 0).getContent();
+        assertThat(visibleRows)
                 .extracting(com.ksh.features.tests.dto.LecturerTestDtos.LecturerExamRow::id)
-                .doesNotContain(draftId, archivedId);
+                .contains(classLocalPublishedId)
+                .doesNotContain(draftId, archivedId, classLocalDraftId, classLocalArchivedId);
+        assertThat(visibleRows).filteredOn(row -> row.id().equals(classLocalPublishedId))
+                .singleElement()
+                .satisfies(row -> assertThat(row.canManage()).isTrue());
+    }
+
+    private Long persistForeignTest(ClassEntity clazz, String status, String suffix) {
+        com.ksh.features.tests.entity.Test test = new com.ksh.features.tests.entity.Test(
+                lecturer.getId(), com.ksh.features.tests.entity.Test.TYPE_MOCK);
+        test.setTitle(title + " " + suffix);
+        test.setSubjectId(clazz.getSubjectId());
+        test.setClassId(clazz.getId());
+        test.setStatus(status);
+        return testRepository.saveAndFlush(test).getId();
     }
 
     private ClassEntity activeClass(String name, Long subjectId) {

@@ -131,10 +131,22 @@ class TestAccessResolverLeaderScopeTest {
                 .isInstanceOf(AccessDeniedException.class);
 
         when(exam.isPractice()).thenReturn(true);
-        when(exam.getCreatedBy()).thenReturn(99L);
+        when(exam.getCreatedBy()).thenReturn(USER_ID);
         assertThatThrownBy(() -> resolver.requirePreviewableFromTestBank(
                 TEST_ID, USER_ID, Role.LECTURER))
                 .isInstanceOf(AccessDeniedException.class);
+
+        verify(classRepository, never()).findById(CLASS_ID);
+        verify(classAccessPolicy, never()).canAccess(clazz, USER_ID, Role.LECTURER);
+    }
+
+    @org.junit.jupiter.api.Test
+    void managementRoleRejectsNullActorBeforeRepositoryLookup() {
+        assertThatThrownBy(() -> resolver.managementRole(null))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage(TestAccessResolver.NF_MSG);
+
+        verify(userRepository, never()).findById(null);
     }
 
     @org.junit.jupiter.api.Test

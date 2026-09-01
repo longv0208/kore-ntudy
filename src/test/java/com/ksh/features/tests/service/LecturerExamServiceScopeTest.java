@@ -1,5 +1,6 @@
 package com.ksh.features.tests.service;
 
+import com.ksh.entities.ClassEntity;
 import com.ksh.features.admin.departments.repository.DepartmentRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.tests.dto.LecturerTestDtos.ExamForm;
@@ -14,11 +15,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -66,8 +72,11 @@ class LecturerExamServiceScopeTest {
 
     @org.junit.jupiter.api.Test
     void catalogMetricsUseTheSamePermissionScopeAndRealRepositoryTotals() {
+        ClassEntity managedClass = org.mockito.Mockito.mock(ClassEntity.class);
+        when(managedClass.getId()).thenReturn(101L);
         when(accessResolver.managementRole(7L)).thenReturn(Role.LECTURER);
-        when(accessResolver.manageableClasses(7L, Role.LECTURER)).thenReturn(List.of());
+        when(accessResolver.manageableClasses(7L, Role.LECTURER))
+                .thenReturn(List.of(managedClass));
         when(testRepository.summarizeManageable(
                 7L, List.of(-1L), List.of(-1L), false, true))
                 .thenReturn(List.<Object[]>of(new Object[]{48L, 36L, 8L, 1286L}));
@@ -75,6 +84,25 @@ class LecturerExamServiceScopeTest {
         LecturerTestMetrics metrics = service.metricsFor(7L);
 
         assertThat(metrics).isEqualTo(new LecturerTestMetrics(48, 36, 8, 1286));
+    }
+
+    @org.junit.jupiter.api.Test
+    void lecturerCatalogQueriesPrivateRowsByCreatorNotByManagedClass() {
+        ClassEntity managedClass = org.mockito.Mockito.mock(ClassEntity.class);
+        when(managedClass.getId()).thenReturn(101L);
+        when(accessResolver.managementRole(7L)).thenReturn(Role.LECTURER);
+        when(accessResolver.manageableClasses(7L, Role.LECTURER))
+                .thenReturn(List.of(managedClass));
+        when(testRepository.searchManageable(
+                eq(7L), eq(List.of(-1L)), eq(List.of(-1L)), eq(false), eq(true),
+                eq(null), eq(""), eq(null), eq(null), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        assertThat(service.listOwned(7L, 0).getContent()).isEmpty();
+
+        verify(testRepository).searchManageable(
+                eq(7L), eq(List.of(-1L)), eq(List.of(-1L)), eq(false), eq(true),
+                eq(null), eq(""), eq(null), eq(null), any(Pageable.class));
     }
 
     private ExamForm form(Long id, Long subjectId, Long classId) {

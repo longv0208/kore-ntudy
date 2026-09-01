@@ -171,8 +171,10 @@ public class TestAccessResolver {
      */
     public Test requirePreviewableFromTestBank(Long testId, Long userId, Role role) {
         Test test = loadOrNotFound(testId);
-        if (userId != null && !test.isPractice() && test.isPublished()
-                && isEducatorRole(role)) {
+        if (userId == null || !isEducatorRole(role) || test.isPractice()) {
+            throw new AccessDeniedException(NF_MSG);
+        }
+        if (test.isPublished()) {
             return test;
         }
         return requireManageable(test, userId, role);
@@ -216,6 +218,9 @@ public class TestAccessResolver {
      * Spring Security context.
      */
     public Role managementRole(Long userId) {
+        if (userId == null) {
+            throw new AccessDeniedException(NF_MSG);
+        }
         Role role = userRepository.findById(userId)
                 .map(user -> user.getRole())
                 .orElseThrow(() -> new AccessDeniedException(NF_MSG));
