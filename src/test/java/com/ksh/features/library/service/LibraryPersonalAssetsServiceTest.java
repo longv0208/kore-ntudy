@@ -81,14 +81,14 @@ class LibraryPersonalAssetsServiceTest {
         when(repository.searchOwnedByIds(eq(7L), eq(List.of(11L)), eq("needle"),
                 eq(LibraryAsset.KIND_DOCUMENT), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(asset)));
-        when(repository.findTop5ByOwnerIdOrderByUpdatedAtDesc(7L))
+        when(repository.findTop5ByOwnerIdOrderByUpdatedAtDescIdDesc(7L))
                 .thenReturn(List.of(asset));
 
         var page = service.list(7L, "needle", "DOCUMENT", "USED", 2, 12);
 
         assertThat(page.page().getContent()).extracting(row -> row.id()).containsExactly(11L);
         assertThat(page.recentlyUpdated()).extracting(row -> row.id()).containsExactly(11L);
-        verify(repository).findTop5ByOwnerIdOrderByUpdatedAtDesc(7L);
+        verify(repository).findTop5ByOwnerIdOrderByUpdatedAtDescIdDesc(7L);
     }
 
     @Test

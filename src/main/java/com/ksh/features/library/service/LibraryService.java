@@ -85,7 +85,7 @@ public class LibraryService {
                     scopedOwnerId, normalizedQuery, normalizedKind, pageable);
         }
         List<LibraryAsset> recentAssets = assetRepository
-                .findTop5ByOwnerIdOrderByUpdatedAtDesc(scopedOwnerId);
+                .findTop5ByOwnerIdOrderByUpdatedAtDescIdDesc(scopedOwnerId);
         if (recentAssets == null) recentAssets = List.of();
         return new LibraryAssetPageView(
                 assets.map(asset -> toRow(asset, referencedAssetIdSet.contains(asset.getId()))),

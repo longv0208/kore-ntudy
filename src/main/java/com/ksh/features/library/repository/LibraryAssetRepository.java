@@ -117,7 +117,7 @@ public interface LibraryAssetRepository extends JpaRepository<LibraryAsset, Long
     long countByOwnerIdAndUpdatedAtGreaterThanEqual(Long ownerId, LocalDateTime since);
 
     /** The five newest owner-private assets for the stable hero activity strip. */
-    List<LibraryAsset> findTop5ByOwnerIdOrderByUpdatedAtDesc(Long ownerId);
+    List<LibraryAsset> findTop5ByOwnerIdOrderByUpdatedAtDescIdDesc(Long ownerId);
 
     @Query(value = """
             SELECT DISTINCT live_refs.asset_id
