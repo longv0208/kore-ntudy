@@ -27,7 +27,8 @@ class StorageProfileConnectionUiContractTest {
                 "src/main/resources/templates/admin/settings-storage-profile-form.html");
 
         assertThat(template)
-                .contains("mode == 'edit' and form.backend.name() == 'R2'")
+                .contains("mode == 'edit'")
+                .contains("Kiểm tra kết nối đã lưu")
                 .contains("Bài kiểm tra dùng cấu hình đã lưu")
                 .doesNotContain("<script>\n");
     }
