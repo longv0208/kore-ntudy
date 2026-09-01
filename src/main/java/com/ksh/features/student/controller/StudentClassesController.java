@@ -3,6 +3,9 @@ package com.ksh.features.student.controller;
 import com.ksh.security.KshUserDetails;
 import com.ksh.security.Roles;
 import com.ksh.entities.ClassEntity;
+import com.ksh.entities.Enrollment;
+import com.ksh.features.classes.semester.AcademicSemester;
+import com.ksh.features.student.dto.StudentClassesDtos.CatalogClassRow;
 import com.ksh.features.classes.service.JoinClassService;
 import com.ksh.features.student.dto.StudentClassesDtos.EnrolledClassRow;
 import com.ksh.features.student.service.StudentClassesService;
@@ -56,20 +59,54 @@ public class StudentClassesController {
                        @RequestParam(name = "q", required = false) String query,
                        @RequestParam(name = "tab", defaultValue = "mine") String tab,
                        @RequestParam(name = "page", defaultValue = "0") int page,
+                       @RequestParam(name = "semester", defaultValue = "") String semester,
+                       @RequestParam(name = "subjectCode", defaultValue = "") String subjectCode,
                        Model model) {
-        List<EnrolledClassRow> rows = studentClassesService.listEnrolledClasses(user.getId());
-        List<EnrolledClassRow> pending = studentClassesService.listPendingClasses(user.getId());
-        String activeTab = "open".equalsIgnoreCase(tab) ? "open" : "mine";
+        List<EnrolledClassRow> workspaceRows = studentClassesService.listWorkspaceClasses(
+                user.getId(), query, semester, subjectCode);
+        String activeTab = "open".equalsIgnoreCase(tab) ? "open"
+                : "archived".equalsIgnoreCase(tab) ? "archived" : "mine";
+        List<EnrolledClassRow> displayedRows = workspaceRows.stream()
+                .filter(row -> row.archived() == "archived".equals(activeTab)).toList();
+        List<EnrolledClassRow> rows = displayedRows.stream()
+                .filter(row -> Enrollment.STATUS_ACTIVE.equals(row.status())
+                        || Enrollment.STATUS_COMPLETED.equals(row.status())).toList();
+        List<EnrolledClassRow> pending = displayedRows.stream()
+                .filter(row -> Enrollment.STATUS_PENDING.equals(row.status())).toList();
         model.addAttribute(ATTR_ROWS, rows);
         model.addAttribute(ATTR_PENDING_ROWS, pending);
-        var catalogPage = "open".equals(activeTab)
-                ? studentClassesService.listActiveCatalog(user.getId(), query, page, 25)
+        org.springframework.data.domain.Page<CatalogClassRow> catalogPage = "open".equals(activeTab)
+                ? studentClassesService.listActiveCatalog(
+                        user.getId(), query, semester, subjectCode, page, 25)
                 : org.springframework.data.domain.Page.empty();
         model.addAttribute("catalogPage", catalogPage);
         model.addAttribute("catalogRows", catalogPage.getContent());
+        model.addAttribute("semesterGroups", groupRows(displayedRows, EnrolledClassRow::semester));
+        model.addAttribute("catalogSemesterGroups", groupRows(catalogPage.getContent(), CatalogClassRow::semester));
+        model.addAttribute("classOverview", "open".equals(activeTab)
+                ? studentClassesService.catalogOverview(query, semester, subjectCode)
+                : studentClassesService.workspaceOverview(workspaceRows));
+        model.addAttribute("currentClassCount", workspaceRows.stream().filter(row -> !row.archived()).count());
+        model.addAttribute("archivedClassCount", workspaceRows.stream().filter(EnrolledClassRow::archived).count());
         model.addAttribute("catalogQuery", query == null ? "" : query);
         model.addAttribute("classesTab", activeTab);
+        model.addAttribute("semesterOptions", studentClassesService.semesterOptions());
+        model.addAttribute("subjectOptions", studentClassesService.subjectOptions());
+        model.addAttribute("selectedSemester", semester == null ? "" : semester.toUpperCase());
+        model.addAttribute("selectedSubjectCode", subjectCode == null ? "" : subjectCode);
         return VIEW_MY_CLASSES;
+    }
+
+    public record SemesterGroup<T>(String code, String name, List<T> rows) {}
+
+    private static <T> List<SemesterGroup<T>> groupRows(List<T> rows,
+                                                       java.util.function.Function<T, String> semester) {
+        java.util.Map<String, List<T>> groups = new java.util.TreeMap<>((a, b) ->
+                AcademicSemester.parse(b).compareTo(AcademicSemester.parse(a)));
+        rows.forEach(row -> groups.computeIfAbsent(semester.apply(row),
+                ignored -> new java.util.ArrayList<>()).add(row));
+        return groups.entrySet().stream().map(entry -> new SemesterGroup<>(entry.getKey(),
+                AcademicSemester.parse(entry.getKey()).displayName(), entry.getValue())).toList();
     }
 
     @PostMapping("/classes/{id}/leave")

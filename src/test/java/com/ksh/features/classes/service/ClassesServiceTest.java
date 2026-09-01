@@ -9,6 +9,7 @@ import com.ksh.entities.ClassEntity;
 import com.ksh.entities.Department;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
+import com.ksh.features.classes.semester.AcademicSemesterService;
 import com.ksh.features.lessons.repository.LessonRepository;
 import com.ksh.features.lessons.repository.LessonAttachmentRepository;
 import com.ksh.features.assignments.repository.AssignmentRepository;
@@ -65,6 +66,7 @@ class ClassesServiceTest {
     private LessonRepository lessonRepository;
     private AssignmentRepository assignmentRepository;
     private LessonAttachmentRepository attachmentRepository;
+    private AcademicSemesterService semesterService;
     private ClassesService service;
 
     @BeforeEach
@@ -78,6 +80,8 @@ class ClassesServiceTest {
         lessonRepository = mock(LessonRepository.class);
         assignmentRepository = mock(AssignmentRepository.class);
         attachmentRepository = mock(LessonAttachmentRepository.class);
+        semesterService = mock(AcademicSemesterService.class);
+        when(semesterService.currentCode()).thenReturn("FA26");
         when(enrollmentRepository.countActiveGroupedByClassIds(any())).thenReturn(List.of());
         when(lessonRepository.countLiveGroupedByClassIds(any())).thenReturn(List.of());
         when(assignmentRepository.countLiveGroupedByClassIds(any())).thenReturn(List.of());
@@ -103,7 +107,7 @@ class ClassesServiceTest {
         service = new ClassesService(classRepository, activityWriter,
                 subjectRepository, accessPolicy, enrollmentRepository,
                 lessonRepository, assignmentRepository, attachmentRepository,
-                eventPublisher);
+                eventPublisher, semesterService);
     }
 
     // ───────────────── List by role ─────────────────
@@ -255,10 +259,20 @@ class ClassesServiceTest {
         assertThat(saved.getSubjectId()).isEqualTo(12L);
         assertThat(saved.getLecturerId()).isEqualTo(LECTURER_ID);
         assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_PENDING);
+        assertThat(saved.getSemester()).isEqualTo("FA26");
 
         verify(activityWriter).write(eq(100L), eq(ClassActivity.TYPE_CREATED),
                 eq("Tạo lớp Java"), eq(LECTURER_ID));
 
+    }
+
+    @Test
+    void available_semesters_are_sorted_chronologically_not_lexically() {
+        when(classRepository.findDistinctSemesterCodes())
+                .thenReturn(List.of("SP24", "FA25", "SU25", "SP26"));
+
+        assertThat(service.availableSemesters())
+                .containsExactly("SP26", "FA25", "SU25", "SP24");
     }
 
     @Test

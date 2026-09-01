@@ -33,6 +33,7 @@ public final class LecturerDashboardDtos {
             Long id,
             String name,
             String code,
+            String semester,
             String status,
             long studentCount,
             int avgPercent
@@ -47,12 +48,20 @@ public final class LecturerDashboardDtos {
                 return "—";
             }
             return switch (status) {
+                case "PENDING" -> "Chờ duyệt";
+                case "REJECTED" -> "Bị từ chối";
                 case "UPCOMING" -> "Sắp khai giảng";
                 case "ACTIVE" -> "Đang hoạt động";
+                case "ARCHIVED" -> "Đã lưu trữ";
                 case "COMPLETED" -> "Đã kết thúc";
                 case "CANCELLED" -> "Đã huỷ";
                 default -> status;
             };
+        }
+
+        /** Stable term code shown beside the subject code; legacy rows fail soft. */
+        public String displaySemester() {
+            return semester == null || semester.isBlank() ? "—" : semester;
         }
     }
 

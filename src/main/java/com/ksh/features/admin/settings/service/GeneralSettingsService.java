@@ -5,6 +5,8 @@ import com.ksh.entities.SystemSetting;
 import com.ksh.features.admin.settings.SystemSettingGroups;
 import com.ksh.features.admin.settings.dto.GeneralSettingsDtos.GeneralSettingsForm;
 import com.ksh.features.admin.settings.repository.SystemSettingsRepository;
+import com.ksh.features.classes.semester.AcademicSemester;
+import com.ksh.features.classes.semester.AcademicSemesterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,10 +22,8 @@ import java.util.Map;
  * contact email) in the admin panel: loading the current configuration and
  * persisting changes.
  *
- * <p>All four keys ({@code site.name}, {@code site.description},
- * {@code site.logo_url}, {@code site.contact_email}) were seeded by
- * {@code V1__init_schema} in the {@code GENERAL} group. This service upserts
- * them in place — no lazy row creation is needed for the MVP.
+ * <p>This service only writes the four site identity keys. Semester lifecycle
+ * changes belong to SemesterCatalogService and cannot be bypassed here.
  *
  * <p>{@link #save} is {@code @Transactional} — every upsert runs inside a
  * single transaction and is rolled back atomically on failure — and evicts the
@@ -41,6 +41,7 @@ public class GeneralSettingsService {
     public static final String KEY_SITE_DESCRIPTION = "site.description";
     public static final String KEY_SITE_LOGO_URL = "site.logo_url";
     public static final String KEY_SITE_CONTACT_EMAIL = "site.contact_email";
+    public static final String KEY_CURRENT_SEMESTER = AcademicSemesterService.SETTING_KEY;
 
     private final SystemSettingsRepository repository;
 
@@ -61,7 +62,9 @@ public class GeneralSettingsService {
                 cfg.getOrDefault(KEY_SITE_NAME, ""),
                 cfg.getOrDefault(KEY_SITE_DESCRIPTION, ""),
                 cfg.getOrDefault(KEY_SITE_LOGO_URL, ""),
-                cfg.getOrDefault(KEY_SITE_CONTACT_EMAIL, "")
+                cfg.getOrDefault(KEY_SITE_CONTACT_EMAIL, ""),
+                cfg.getOrDefault(KEY_CURRENT_SEMESTER,
+                        AcademicSemester.from(java.time.LocalDate.now()).code())
         );
     }
 
@@ -84,7 +87,6 @@ public class GeneralSettingsService {
         incoming.put(KEY_SITE_DESCRIPTION, nullSafeTrim(form.siteDescription()));
         incoming.put(KEY_SITE_LOGO_URL, nullSafeTrim(form.siteLogoUrl()));
         incoming.put(KEY_SITE_CONTACT_EMAIL, nullSafeTrim(form.siteContactEmail()));
-
         upsertAll(incoming, currentUserId);
     }
 

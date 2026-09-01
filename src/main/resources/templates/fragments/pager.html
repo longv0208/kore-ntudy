@@ -24,9 +24,13 @@
      th:with="base=@{${baseUrl}}" aria-label="Phân trang">
 
   <!-- Prev -->
-  <a class="pager-item pager-nav"
+  <span class="pager-item pager-nav is-disabled" th:if="${page.first}"
+        title="Trang trước" aria-label="Trang trước" aria-disabled="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+         stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </span>
+  <a class="pager-item pager-nav" th:unless="${page.first}"
      th:with="href=${base + '?' + T(com.ksh.common.PageWindow).query(params, page.number - 1)}"
-     th:classappend="${page.first} ? 'is-disabled'"
      th:href="${href}"
      title="Trang trước" aria-label="Trang trước">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -44,9 +48,13 @@
   </th:block>
 
   <!-- Next -->
-  <a class="pager-item pager-nav"
+  <span class="pager-item pager-nav is-disabled" th:if="${page.last}"
+        title="Trang sau" aria-label="Trang sau" aria-disabled="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+         stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </span>
+  <a class="pager-item pager-nav" th:unless="${page.last}"
      th:with="href=${base + '?' + T(com.ksh.common.PageWindow).query(params, page.number + 1)}"
-     th:classappend="${page.last} ? 'is-disabled'"
      th:href="${href}"
      title="Trang sau" aria-label="Trang sau">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"

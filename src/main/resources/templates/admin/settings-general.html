@@ -79,6 +79,21 @@
             <span id="siteContactEmail-error" class="field-error" role="alert"
                   th:if="${#fields.hasErrors('siteContactEmail')}" th:errors="*{siteContactEmail}">Lỗi email liên hệ</span>
           </div>
+
+          <div class="form-row">
+            <label for="currentSemester">Học kỳ hiện hành</label>
+            <input type="text" id="currentSemester" th:field="*{currentSemester}"
+                   readonly autocomplete="off" maxlength="4"
+                   style="text-transform:uppercase"
+                   th:attr="aria-invalid=${#fields.hasErrors('currentSemester')} ? 'true' : 'false', aria-describedby=${#fields.hasErrors('currentSemester')} ? 'currentSemester-error' : 'currentSemester-hint'">
+            <p id="currentSemester-hint" class="field-hint">
+              Chỉ có một kỳ hiện hành. Kết thúc kỳ sẽ mở kỳ kế tiếp theo thứ tự
+              <code>SP → SU → FA</code>; không thể đổi mã trực tiếp tại đây.
+              <a th:href="@{/admin/semesters}">Quản lý lịch kết thúc và chuyển học kỳ →</a>
+            </p>
+            <span id="currentSemester-error" class="field-error" role="alert"
+                  th:if="${#fields.hasErrors('currentSemester')}" th:errors="*{currentSemester}">Lỗi học kỳ</span>
+          </div>
         </fieldset>
 
         <div class="settings-form-actions">

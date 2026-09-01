@@ -2,7 +2,7 @@
    KSH — Student classes behavior
    - Leave-class menu action gated by confirm modal
    - Copy subject code to clipboard
-   - Client-side search + sort over student class cards
+   - Copy the displayed subject code
    ══════════════════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -45,46 +45,5 @@
       });
     }
   });
-
-  // ── Client-side search + sort over student class rows ─────────────
-  var searchInput = document.getElementById('searchInput');
-  var listContainer = document.getElementById('active-class-list');
-  var rows = listContainer
-    ? Array.prototype.slice.call(listContainer.querySelectorAll('.student-class-row:not(.is-pending)'))
-    : [];
-
-  function applyFilter() {
-    if (!searchInput) return;
-    var q = (searchInput.value || '').toLowerCase().trim();
-    rows.forEach(function (r) {
-      var name = (r.dataset.className || '').toLowerCase();
-      var code = (r.dataset.classCode || '').toLowerCase();
-      r.style.display = (!q || name.includes(q) || code.includes(q)) ? '' : 'none';
-    });
-  }
-  if (searchInput) searchInput.addEventListener('input', applyFilter);
-
-  // Sort menu items
-  document.querySelectorAll('.sort .menu-item[data-sort-key]').forEach(function (item) {
-    item.addEventListener('click', function () {
-      var key = item.dataset.sortKey;
-      var lbl = document.getElementById('sortLabel');
-      if (lbl) lbl.textContent = item.dataset.sort || 'Sắp xếp...';
-      sortRows(key);
-    });
-  });
-
-  function sortRows(key) {
-    if (!listContainer) return;
-    var sorted = rows.slice();
-    sorted.sort(function (a, b) {
-      if (key === 'name-asc') return (a.dataset.className || '').localeCompare(b.dataset.className || '');
-      if (key === 'name-desc') return (b.dataset.className || '').localeCompare(a.dataset.className || '');
-      if (key === 'joined-asc') return (a.dataset.joinedAt || '').localeCompare(b.dataset.joinedAt || '');
-      // default joined-desc
-      return (b.dataset.joinedAt || '').localeCompare(a.dataset.joinedAt || '');
-    });
-    sorted.forEach(function (r) { listContainer.appendChild(r); });
-  }
 
 })();

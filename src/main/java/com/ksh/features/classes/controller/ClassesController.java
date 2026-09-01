@@ -8,6 +8,8 @@ import com.ksh.features.classes.service.ClassesService;
 import com.ksh.features.classes.service.ClassJoinRequestQuickViewService;
 import com.ksh.features.classes.service.JoinClassService;
 import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.classes.semester.AcademicSemesterService;
+import com.ksh.features.classes.semester.AcademicSemester;
 import com.ksh.security.Roles;
 import com.ksh.security.KshUserDetails;
 import jakarta.validation.Valid;
@@ -63,26 +65,26 @@ import static com.ksh.features.classes.controller.support.ClassDetailModelSuppor
 public class ClassesController {
 
     private static final String TAB_CURRENT = "current";
+    private static final String TAB_PENDING = "pending";
+    private static final String TAB_REJECTED = "rejected";
     private static final String TAB_ARCHIVED = "archived";
-    private static final List<String> CURRENT_STATUSES = List.of(
-            ClassEntity.STATUS_PENDING,
-            ClassEntity.STATUS_REJECTED,
-            ClassEntity.STATUS_ACTIVE);
-    private static final List<String> ARCHIVED_STATUSES = List.of(ClassEntity.STATUS_ARCHIVED);
 
     private final ClassesService classesService;
     private final DepartmentRepository subjectRepository;
     private final ClassJoinRequestQuickViewService quickJoinRequests;
     private final JoinClassService joinClassService;
+    private final AcademicSemesterService semesterService;
 
     public ClassesController(ClassesService classesService,
                              DepartmentRepository subjectRepository,
                              ClassJoinRequestQuickViewService quickJoinRequests,
-                             JoinClassService joinClassService) {
+                             JoinClassService joinClassService,
+                             AcademicSemesterService semesterService) {
         this.classesService = classesService;
         this.subjectRepository = subjectRepository;
         this.quickJoinRequests = quickJoinRequests;
         this.joinClassService = joinClassService;
+        this.semesterService = semesterService;
     }
 
     /**
@@ -96,35 +98,77 @@ public class ClassesController {
                        @PageableDefault(size = DEFAULT_PAGE_SIZE, sort = "createdAt",
                                direction = Sort.Direction.DESC) Pageable pageable,
                        @RequestParam(defaultValue = TAB_CURRENT) String tab,
+                       @RequestParam(defaultValue = "") String semester,
+                       @RequestParam(defaultValue = "") String subjectCode,
+                       @RequestParam(name = "q", defaultValue = "") String query,
                        Model model) {
-        String selectedTab = TAB_ARCHIVED.equalsIgnoreCase(tab) ? TAB_ARCHIVED : TAB_CURRENT;
-        List<String> selectedStatuses = TAB_ARCHIVED.equals(selectedTab)
-                ? ARCHIVED_STATUSES : CURRENT_STATUSES;
-        Page<ClassRow> page = classesService.listForUserByStatuses(
-                user.getId(), user.getRole(), selectedStatuses, pageable);
+        String selectedTab = normalizeTab(tab);
+        List<String> selectedStatuses = statusesForTab(selectedTab);
+        Page<ClassRow> page = classesService.listForUserByStatusesAndFilters(
+                user.getId(), user.getRole(), selectedStatuses,
+                semester, subjectCode, query, pageable);
         if (page.getTotalPages() > 0 && pageable.getPageNumber() >= page.getTotalPages()) {
             Pageable lastPage = PageRequest.of(
                     page.getTotalPages() - 1, pageable.getPageSize(), pageable.getSort());
-            page = classesService.listForUserByStatuses(
-                    user.getId(), user.getRole(), selectedStatuses, lastPage);
+            page = classesService.listForUserByStatusesAndFilters(
+                    user.getId(), user.getRole(), selectedStatuses,
+                    semester, subjectCode, query, lastPage);
         }
         // Keep the existing template loop driven by ${classes} (a List). The Page
         // object is exposed separately as ${classesPage} for the pagination block.
         model.addAttribute(ATTR_CLASSES, page.getContent());
+        java.util.Map<String, List<ClassRow>> groups = new java.util.TreeMap<>((a,b) ->
+                AcademicSemester.parse(b).compareTo(AcademicSemester.parse(a)));
+        page.getContent().forEach(row -> groups.computeIfAbsent(row.semester(),
+                ignored -> new java.util.ArrayList<>()).add(row));
+        model.addAttribute("semesterGroups", groups.entrySet().stream().map(entry ->
+                new SemesterGroup(entry.getKey(), AcademicSemester.parse(entry.getKey()).displayName(),
+                        entry.getValue(), entry.getValue().stream().mapToInt(ClassRow::studentCount).sum(),
+                        entry.getValue().stream().mapToInt(ClassRow::lectureCount).sum(),
+                        entry.getValue().stream().mapToInt(ClassRow::assignmentCount).sum(),
+                        entry.getValue().stream().mapToInt(ClassRow::materialCount).sum())).toList());
         model.addAttribute(ATTR_CLASSES_PAGE, page);
         model.addAttribute("selectedTab", selectedTab);
-        model.addAttribute("currentClassCount", TAB_CURRENT.equals(selectedTab)
-                ? page.getTotalElements()
-                : classesService.countForUserByStatuses(user.getId(), user.getRole(), CURRENT_STATUSES));
-        model.addAttribute("archivedClassCount", TAB_ARCHIVED.equals(selectedTab)
-                ? page.getTotalElements()
-                : classesService.countForUserByStatuses(user.getId(), user.getRole(), ARCHIVED_STATUSES));
+        var overview = classesService.overview(user.getId(), user.getRole(), semester, subjectCode, query);
+        var statusCounts = classesService.statusCounts(
+                user.getId(), user.getRole(), semester, subjectCode, query);
+        model.addAttribute("classOverview", overview);
+        model.addAttribute("currentClassCount", statusCounts.active());
+        model.addAttribute("pendingClassCount", statusCounts.pending());
+        model.addAttribute("rejectedClassCount", statusCounts.rejected());
+        model.addAttribute("archivedClassCount", statusCounts.archived());
         model.addAttribute("pendingJoinRequests", quickJoinRequests.forOwnedClasses(
                 page.getContent().stream().map(ClassRow::id).toList(), user.getId()));
+        model.addAttribute("semesterOptions", java.util.stream.Stream.concat(
+                classesService.availableSemesters().stream(), semesterService.registeredCodes().stream())
+                .distinct().sorted((a,b) -> AcademicSemester.parse(b).compareTo(AcademicSemester.parse(a))).toList());
+        model.addAttribute("subjectOptions", subjectRepository.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("selectedSemester", semester == null ? "" : semester.toUpperCase());
+        model.addAttribute("selectedSubjectCode", subjectCode == null ? "" : subjectCode);
+        model.addAttribute("classQuery", query == null ? "" : query);
         return VIEW_CLASS_MANAGE;
     }
 
+    private static String normalizeTab(String tab) {
+        if (TAB_PENDING.equalsIgnoreCase(tab)) return TAB_PENDING;
+        if (TAB_REJECTED.equalsIgnoreCase(tab)) return TAB_REJECTED;
+        if (TAB_ARCHIVED.equalsIgnoreCase(tab)) return TAB_ARCHIVED;
+        return TAB_CURRENT;
+    }
+
+    private static List<String> statusesForTab(String tab) {
+        return switch (tab) {
+            case TAB_PENDING -> List.of(ClassEntity.STATUS_PENDING);
+            case TAB_REJECTED -> List.of(ClassEntity.STATUS_REJECTED);
+            case TAB_ARCHIVED -> List.of(ClassEntity.STATUS_ARCHIVED);
+            default -> List.of(ClassEntity.STATUS_ACTIVE);
+        };
+    }
+
     /** Approves a pending student without forcing the owner into the Members tab. */
+    public record SemesterGroup(String code, String name, List<ClassRow> rows,
+                                int students, int lessons, int assignments, int materials) {}
+
     @PostMapping("/classes/{id}/join-requests/{studentId}/approve")
     public String approveJoinRequest(@PathVariable Long id,
                                      @PathVariable Long studentId,
@@ -156,6 +200,7 @@ public class ClassesController {
         model.addAttribute(ATTR_MODE, MODE_CREATE);
         model.addAttribute(ATTR_FORM_ACTION, URL_CLASSES_LIST);
         addSubjectOptions(model);
+        addCurrentSemester(model, semesterService.current());
         return VIEW_CLASS_FORM;
     }
 
@@ -176,6 +221,7 @@ public class ClassesController {
             model.addAttribute(ATTR_MODE, MODE_CREATE);
             model.addAttribute(ATTR_FORM_ACTION, URL_CLASSES_LIST);
             addSubjectOptions(model);
+            addCurrentSemester(model, semesterService.current());
             return VIEW_CLASS_FORM;
         }
         try {
@@ -185,10 +231,13 @@ public class ClassesController {
             model.addAttribute(ATTR_MODE, MODE_CREATE);
             model.addAttribute(ATTR_FORM_ACTION, URL_CLASSES_LIST);
             addSubjectOptions(model);
+            addCurrentSemester(model, semesterService.current());
             return VIEW_CLASS_FORM;
         }
         ra.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_CLASS_CREATED);
-        return "redirect:" + URL_CLASSES_LIST;
+        // New classes are never active immediately; keep the creator on the
+        // lifecycle tab where the just-created row actually exists.
+        return "redirect:" + URL_CLASSES_LIST + "?tab=" + TAB_PENDING;
     }
 
     /**
@@ -209,6 +258,7 @@ public class ClassesController {
         model.addAttribute(ATTR_FORM_ACTION, classUrl(id));
         model.addAttribute(ATTR_CLASS_ID, id);
         addSubjectOptions(model);
+        addCurrentSemester(model, AcademicSemester.parse(entity.getSemester()));
         return VIEW_CLASS_FORM;
     }
 
@@ -231,6 +281,8 @@ public class ClassesController {
             model.addAttribute(ATTR_FORM_ACTION, classUrl(id));
             model.addAttribute(ATTR_CLASS_ID, id);
             addSubjectOptions(model);
+            addCurrentSemester(model, AcademicSemester.parse(classesService
+                    .getOwnerManaged(id, user.getId(), user.getRole()).getSemester()));
             return VIEW_CLASS_FORM;
         }
         classesService.update(id, form, user.getId(), user.getRole());
@@ -249,7 +301,7 @@ public class ClassesController {
         } catch (IllegalStateException exception) {
             ra.addFlashAttribute(ATTR_FLASH_ERROR, exception.getMessage());
         }
-        return "redirect:" + URL_CLASSES_LIST;
+        return "redirect:" + URL_CLASSES_LIST + "?tab=" + TAB_PENDING;
     }
 
     /** Soft-deletes a class after the user confirms the action via the confirm modal. */
@@ -283,5 +335,10 @@ public class ClassesController {
 
     private void addSubjectOptions(Model model) {
         model.addAttribute("subjectOptions", subjectRepository.findByActiveTrueOrderByNameAsc());
+    }
+
+    private static void addCurrentSemester(Model model, AcademicSemester semester) {
+        model.addAttribute("currentSemesterCode", semester.code());
+        model.addAttribute("currentSemesterLabel", semester.displayName());
     }
 }

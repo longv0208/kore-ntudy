@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="overview(overview)">
+  <svg class="cw-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="cw-class" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8v7H8zM9 18h6M10 9h4"/></symbol>
+    <symbol id="cw-users" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v2"/></symbol>
+    <symbol id="cw-teacher" viewBox="0 0 24 24"><path d="m2 8 10-5 10 5-10 5zM6 10v7c4 3 8 3 12 0v-7M22 8v7"/></symbol>
+    <symbol id="cw-book" viewBox="0 0 24 24"><path d="M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1v15"/></symbol>
+    <symbol id="cw-task" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M9 3h6v4H9zM8 12h8M8 16h6"/></symbol>
+    <symbol id="cw-folder" viewBox="0 0 24 24"><path d="M3 7V4h6l3 3h9v13H3zM3 10h18"/></symbol>
+    <symbol id="cw-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="cw-filter" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></symbol>
+    <symbol id="cw-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+    <symbol id="cw-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  </svg>
+  <div class="cw-overview" aria-label="Thống kê lớp học trong học kỳ đã chọn">
+    <div class="cw-metric"><span class="cw-metric-icon is-blue"><svg><use href="#cw-class"/></svg></span><div><span>Tổng lớp học</span><strong th:text="${overview != null ? overview.total : 0}">0</strong></div></div>
+    <div class="cw-metric"><span class="cw-metric-icon is-green"><i class="cw-status-dot"></i></span><div><span>Đang hoạt động</span><strong th:text="${overview != null ? overview.active : 0}">0</strong></div></div>
+    <div class="cw-metric"><span class="cw-metric-icon is-orange"><svg><use href="#cw-folder"/></svg></span><div><span>Đã lưu trữ</span><strong th:text="${overview != null ? overview.archived : 0}">0</strong></div></div>
+    <div class="cw-metric"><span class="cw-metric-icon is-purple"><svg><use href="#cw-users"/></svg></span><div><span>Tổng sinh viên</span><strong th:text="${overview != null ? overview.students : 0}">0</strong></div></div>
+    <div class="cw-metric"><span class="cw-metric-icon is-purple"><svg><use href="#cw-teacher"/></svg></span><div><span>Tổng giảng viên</span><strong th:text="${overview != null ? overview.teachers : 0}">0</strong></div></div>
+  </div>
+</th:block>
+</body>
+</html>

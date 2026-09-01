@@ -19,12 +19,11 @@ import static com.ksh.common.IConstant.*;
  * Access is restricted to the {@code ADMIN} role only — may be relaxed to include
  * {@code LEADER} in a future sprint once per-department dashboards are available.
  *
- * <p>URL pattern: {@code /admin/{tab}} — five sidebar tabs:
+ * <p>URL pattern: {@code /admin/{tab}}:
  * <ul>
  *   <li>{@code /dashboard} — platform statistics, role breakdown chart, and recent
  *       classes (Sprint 2 wireframe).</li>
  *   <li>{@code /settings}  — settings index page (links to Email, General, etc.).</li>
- *   <li>{@code /classes} — placeholder view; real data wired later.</li>
  *   <li>{@code /departments} — handled by
  *       {@link com.ksh.features.admin.departments.controller.AdminDepartmentsController}.</li>
  * </ul>
@@ -43,18 +42,11 @@ public class AdminController {
     // ── View names ────────────────────────────────────────────────
     private static final String VIEW_DASHBOARD   = "admin/dashboard";
     private static final String VIEW_SETTINGS    = "admin/settings";
-    private static final String VIEW_PLACEHOLDER = "admin/placeholder";
 
     // ── Local model attribute keys ────────────────────────────────
     private static final String ATTR_STATS           = "stats";
     private static final String ATTR_ROLES_BREAKDOWN = "rolesBreakdown";
     private static final String ATTR_RECENT_CLASSES  = "recentClasses";
-
-    // ── Placeholder tab keys ──────────────────────────────────────
-    private static final String TAB_CLASSES = "classes";
-
-    // ── Placeholder labels (Vietnamese sidebar text) ──────────────
-    private static final String LABEL_CLASSES = "Lớp học";
 
     /** Recent-classes panel size on the dashboard. */
     private static final int RECENT_CLASSES_LIMIT = 5;
@@ -90,15 +82,6 @@ public class AdminController {
     public String settingsIndex(Model model) {
         populateSidebar(model, TAB_SETTINGS);
         return VIEW_SETTINGS;
-    }
-
-    /** Renders a placeholder view for tabs not yet implemented. */
-    @GetMapping("/classes")
-    public String placeholder(Model model) {
-        populateSidebar(model, TAB_CLASSES);
-        model.addAttribute(ATTR_PLACEHOLDER_TAB, TAB_CLASSES);
-        model.addAttribute(ATTR_PLACEHOLDER_LABEL, LABEL_CLASSES);
-        return VIEW_PLACEHOLDER;
     }
 
     private void populateSidebar(Model model, String activeTab) {

@@ -140,6 +140,11 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.classId = :classId AND e.status = 'ACTIVE'")
     long countActiveByClassId(@Param("classId") Long classId);
 
+    /** Count people once, including completed enrollments in historical classes. */
+    @Query("SELECT COUNT(DISTINCT e.user.id) FROM Enrollment e "
+            + "WHERE e.classId IN :classIds AND e.status IN ('ACTIVE', 'COMPLETED')")
+    long countDistinctStudentsInClasses(@Param("classIds") Collection<Long> classIds);
+
     /**
      * Capacity-check count that bypasses MySQL's REPEATABLE READ snapshot.
      * The class row is locked first by the caller; this locking read then sees

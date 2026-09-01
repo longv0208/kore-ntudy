@@ -73,11 +73,11 @@ class GeneralSettingsServiceTest {
     // ───────────────────── save() ─────────────────────
 
     @Test
-    void save_writes_all_four_keys_with_trimmed_values() {
+    void save_writes_all_general_keys_with_trimmed_values() {
         when(repository.findBySettingGroup(SystemSettingGroups.GENERAL)).thenReturn(List.of());
 
         GeneralSettingsForm form = new GeneralSettingsForm(
-                "  KSH  ", "  desc  ", "  /logo.png  ", "  a@b.com  ");
+                "  KSH  ", "  desc  ", "  /logo.png  ", "  a@b.com  ", "FA99");
         service.save(form, 7L);
 
         ArgumentCaptor<SystemSetting> captor = ArgumentCaptor.forClass(SystemSetting.class);
@@ -92,6 +92,7 @@ class GeneralSettingsServiceTest {
         assertThat(written.get("site.description")).isEqualTo("desc");
         assertThat(written.get("site.logo_url")).isEqualTo("/logo.png");
         assertThat(written.get("site.contact_email")).isEqualTo("a@b.com");
+        assertThat(written).doesNotContainKey("academic.current_semester");
     }
 
     @Test

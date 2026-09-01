@@ -21,8 +21,17 @@ public class StudentClassesDtos {
             String classCode,
             String lecturerName,
             LocalDateTime joinedAt,
-            String avatarGradient
+            String avatarGradient,
+            String semester,
+            String status,
+            boolean archived
     ) {
+        public EnrolledClassRow(Long classId, String className, String classCode,
+                                String lecturerName, LocalDateTime joinedAt,
+                                String avatarGradient, String semester) {
+            this(classId, className, classCode, lecturerName, joinedAt, avatarGradient,
+                    semester, "ACTIVE", false);
+        }
         /** Two-letter capitalized abbreviation of the class name. */
         public String thumbLabel() {
             if (className == null || className.isBlank()) return "?";
@@ -40,7 +49,8 @@ public class StudentClassesDtos {
             String lecturerName,
             String lecturerEmail,
             boolean alreadyRequested,
-            boolean alreadyEnrolled
+            boolean alreadyEnrolled,
+            String semester
     ) {
     }
 }

@@ -31,6 +31,11 @@ public interface SystemSettingsRepository extends JpaRepository<SystemSetting, L
      */
     List<SystemSetting> findBySettingGroup(String settingGroup);
 
+    /** Current read for lifecycle metadata after taking the current-semester mutex. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM SystemSetting s WHERE s.settingGroup = :settingGroup")
+    List<SystemSetting> findBySettingGroupForUpdate(@Param("settingGroup") String settingGroup);
+
     /**
      * Looks up a single setting by its unique key.
      *

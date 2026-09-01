@@ -3,11 +3,20 @@ package com.ksh.entities;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ClassEntityApprovalTest {
+    @Test
+    void directHistoricalFixtureDerivesSemesterFromItsOwnStartDate() {
+        ClassEntity clazz = new ClassEntity("Lớp cũ", 7L, 7L,
+                null, LocalDate.of(2022, 6, 15), null, 30);
+
+        assertThat(clazz.getSemester()).isEqualTo("SU22");
+    }
+
     @Test
     void newClassWaitsForApprovalAndCanBeApprovedOnce() {
         ClassEntity clazz = new ClassEntity("Lớp mới", 7L, 7L,
