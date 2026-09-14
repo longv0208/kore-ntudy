@@ -94,7 +94,7 @@ public class User {
     @Column(name = "google_id", length = 100)
     private String googleId;
 
-    /** Owning department; optional for students / admins without a department. */
+    /** Owning subject; optional for students / admins without a subject. */
     @Setter
     @Column(name = "subject_id")
     private Long subjectId;
@@ -260,7 +260,7 @@ public class User {
     }
 
     /**
-     * Bulk-updates admin-editable fields including optional department assignment.
+     * Bulk-updates admin-editable fields including optional subject assignment.
      *
      * @param email          canonical, already-normalised email address
      * @param fullName       display name
@@ -268,7 +268,7 @@ public class User {
      * @param emailVerified  whether the admin marks the email as verified
      * @param phone          optional phone number; blank strings stored as null
      * @param bio            optional short biography; blank strings stored as null
-     * @param subjectId   optional department ownership
+     * @param subjectId   optional subject ownership
      */
     public void updateAdminFields(String email, String fullName, Role role,
                                   boolean emailVerified, String phone, String bio,
@@ -284,8 +284,8 @@ public class User {
     }
 
     /**
-     * Promotes this user to LEADER of the given department.
-     * Used by admin department leader assignment.
+     * Promotes this user to LEADER of the given subject.
+     * Used by admin subject leader assignment.
      */
     public void promoteToLeader(Long subjectId) {
         if (this.role != Role.LEADER || !Objects.equals(this.subjectId, subjectId)) {
@@ -296,8 +296,8 @@ public class User {
     }
 
     /**
-     * Demotes a former department leader back to LECTURER.
-     * Keeps {@code subjectId} so the user remains in their department.
+     * Demotes a former subject leader back to LECTURER.
+     * Keeps {@code subjectId} so the user remains in their subject.
      * Never demotes ADMIN.
      */
     public void demoteFromLeaderToLecturer() {

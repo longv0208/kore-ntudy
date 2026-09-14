@@ -5,14 +5,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * DTOs for LEADER department product screens.
+ * DTOs for LEADER subject product screens.
  */
 public final class LeaderDtos {
 
     private LeaderDtos() {
     }
 
-    public record DepartmentSummary(Long id, String code, String name) {
+    public record SubjectSummary(Long id, String code, String name) {
     }
 
     public record DashboardKpis(
@@ -34,10 +34,10 @@ public final class LeaderDtos {
     }
 
     public record DashboardView(
-            DepartmentSummary department,
+            SubjectSummary subject,
             DashboardKpis kpis,
             List<RecentClassRow> recentClasses,
-            boolean emptyDepartment
+            boolean emptySubject
     ) {
     }
 
@@ -46,9 +46,9 @@ public final class LeaderDtos {
                                   LocalDateTime requestedAt) {
     }
 
-    public record ApprovalQueueView(DepartmentSummary department,
+    public record ApprovalQueueView(SubjectSummary subject,
                                     List<PendingClassRow> pendingClasses,
-                                    boolean emptyDepartment) {
+                                    boolean emptySubject) {
     }
 
     public record LecturerOption(Long id, String fullName, String email) {
@@ -67,10 +67,10 @@ public final class LeaderDtos {
     }
 
     public record AssignView(
-            DepartmentSummary department,
+            SubjectSummary subject,
             List<AssignClassRow> classRows,
             List<LecturerOption> lecturers,
-            boolean emptyDepartment
+            boolean emptySubject
     ) {
     }
 
@@ -85,9 +85,9 @@ public final class LeaderDtos {
     }
 
     public record ReportView(
-            DepartmentSummary department,
+            SubjectSummary subject,
             List<ReportClassRow> rows,
-            boolean emptyDepartment
+            boolean emptySubject
     ) {
     }
 
@@ -101,9 +101,9 @@ public final class LeaderDtos {
     }
 
     public record QuestionBankTestsView(
-            DepartmentSummary department,
+            SubjectSummary subject,
             List<QuestionBankTestRow> tests,
-            boolean emptyDepartment
+            boolean emptySubject
     ) {
     }
 }

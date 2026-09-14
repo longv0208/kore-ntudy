@@ -15,20 +15,20 @@ import static com.ksh.common.IConstant.URL_LECTURER_QUESTION_BANK;
  * no longer attached to a test; the {@code testId} path segment is dropped.
  *
  * <p>NOTE: This controller became a thin compatibility shim after the shared
- * department question bank refactor and is a manual-delete candidate once no
+ * subject question bank refactor and is a manual-delete candidate once no
  * legacy links remain.
  */
 @Controller
 @PreAuthorize(Roles.PREAUTH_LECTURER_OR_ABOVE)
 public class LegacyQuestionBankRedirectController {
 
-    /** Sends legacy lecturer test-scoped links to the department contribution screen. */
+    /** Sends legacy lecturer test-scoped links to the subject contribution screen. */
     @GetMapping("/lecturer/tests/{testId}/question-bank")
     public String lecturerTestQuestionBankRedirect(@PathVariable Long testId) {
         return "redirect:" + URL_LECTURER_QUESTION_BANK;
     }
 
-    /** Sends legacy LEADER test-scoped review links to the department management screen. */
+    /** Sends legacy LEADER test-scoped review links to the subject management screen. */
     @GetMapping("/leader/tests/{testId}/question-bank/review")
     public String leaderTestQuestionBankRedirect(@PathVariable Long testId) {
         return "redirect:" + URL_LEADER_QUESTION_BANK_MANAGE;

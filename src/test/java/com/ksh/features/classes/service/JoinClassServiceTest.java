@@ -144,7 +144,7 @@ class JoinClassServiceTest {
         ClassEntity clazz = new ClassEntity("Demo", OWNER_ID, OWNER_ID,
                 null, null, null, 100);
         ReflectionTestUtils.setField(clazz, "id", CLASS_ID);
-        clazz.approve(OWNER_ID, LocalDateTime.now());
+
         return clazz;
     }
 

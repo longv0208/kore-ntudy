@@ -3,7 +3,7 @@ package com.ksh.features.student.service;
 import com.ksh.entities.ClassEntity;
 import com.ksh.entities.Enrollment;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassCoLecturerRepository;
 import com.ksh.features.classes.repository.ClassRepository;
@@ -25,13 +25,13 @@ public class StudentClassDetailService {
     private final EnrollmentRepository enrollmentRepository;
     private final ClassCoLecturerRepository coLecturerRepository;
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public StudentClassDetailService(ClassRepository classRepository,
                                      EnrollmentRepository enrollmentRepository,
                                      ClassCoLecturerRepository coLecturerRepository,
                                      UserRepository userRepository,
-                                     DepartmentRepository subjectRepository) {
+                                     SubjectRepository subjectRepository) {
         this.classRepository = classRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.coLecturerRepository = coLecturerRepository;

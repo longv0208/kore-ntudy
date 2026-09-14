@@ -148,14 +148,14 @@ class NonPracticeLearningFlowMigrationContractTest {
     @Test
     void subject_catalog_routes_render_subject_vocabulary() throws IOException {
         String list = Files.readString(Path.of(
-                "src/main/resources/templates/admin/departments.html"));
+                "src/main/resources/templates/admin/subjects.html"));
         String form = Files.readString(Path.of(
-                "src/main/resources/templates/admin/departments-form.html"));
+                "src/main/resources/templates/admin/subjects-form.html"));
         String users = Files.readString(Path.of(
                 "src/main/resources/templates/admin/users-form.html"));
 
         assertThat(list).contains(
-                "Danh mục môn học", "Thêm mã môn", "Trưởng bộ môn phụ trách");
+                "Danh mục môn học", "Thêm mã môn", "Trưởng môn phụ trách");
         assertThat(form).contains(
                 "Tên môn học", "Mã môn", "Lịch sử cập nhật môn học",
                 "<select id=\"leaderSelect\"");
@@ -182,7 +182,7 @@ class NonPracticeLearningFlowMigrationContractTest {
                 "DROP COLUMN category_id",
                 "DROP TABLE question_bank_categories");
         assertThat(questionBankCreation + questionBank)
-                .doesNotContain("department_id", "departments");
+                .doesNotContain("subject_id", "subjects");
         assertThat(courseCatalog + questionBank).doesNotContain("practice_");
     }
 
@@ -219,7 +219,7 @@ class NonPracticeLearningFlowMigrationContractTest {
 
         assertThat(invites).contains("DROP COLUMN invite_code_id", "DROP TABLE class_invite_codes");
         assertThat(activities).contains("DROP TABLE activity_subjects");
-        assertThat(activities).doesNotContain("DROP TABLE subjects_activities", "department");
+        assertThat(activities).doesNotContain("DROP TABLE subjects_activities", "subject");
     }
 
     @Test
@@ -240,7 +240,7 @@ class NonPracticeLearningFlowMigrationContractTest {
                     .filter(path -> path.getFileName().toString().endsWith(".sql"))
                     .map(this::readPathUnchecked)
                     .reduce("", String::concat);
-            assertThat(allMigrations.toLowerCase()).doesNotContain("department");
+            assertThat(allMigrations.toLowerCase()).doesNotContain("subject");
         }
     }
 

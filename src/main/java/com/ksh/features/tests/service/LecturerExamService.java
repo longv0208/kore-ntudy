@@ -1,9 +1,9 @@
 package com.ksh.features.tests.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.TestActivity;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.tests.dto.LecturerTestDtos.BankItemSnapshot;
 import com.ksh.features.tests.dto.LecturerTestDtos.BankOptionSnapshot;
@@ -61,7 +61,7 @@ public class LecturerExamService {
     private final TestRepository testRepository;
     private final QuestionRepository questionRepository;
     private final ClassRepository classRepository;
-    private final DepartmentRepository departmentRepository;
+    private final SubjectRepository subjectRepository;
     private final TestAccessResolver accessResolver;
     private final TestActivityWriter activityWriter;
     private final TakeViewBuilder takeViewBuilder;
@@ -72,7 +72,7 @@ public class LecturerExamService {
     public LecturerExamService(TestRepository testRepository,
                                QuestionRepository questionRepository,
                                ClassRepository classRepository,
-                               DepartmentRepository departmentRepository,
+                               SubjectRepository subjectRepository,
                                TestAccessResolver accessResolver,
                                TestActivityWriter activityWriter,
                                TakeViewBuilder takeViewBuilder,
@@ -82,7 +82,7 @@ public class LecturerExamService {
         this.testRepository = testRepository;
         this.questionRepository = questionRepository;
         this.classRepository = classRepository;
-        this.departmentRepository = departmentRepository;
+        this.subjectRepository = subjectRepository;
         this.accessResolver = accessResolver;
         this.activityWriter = activityWriter;
         this.takeViewBuilder = takeViewBuilder;
@@ -134,7 +134,7 @@ public class LecturerExamService {
     /**
      * One page of exams belonging to a single class. The service repeats the
      * class authorization boundary so non-controller callers cannot turn this
-     * list method into a cross-department enumeration path.
+     * list method into a cross-subject enumeration path.
      */
     @Transactional(readOnly = true)
     public Page<LecturerExamRow> listForClass(Long classId, Long userId, Role role, int page) {
@@ -197,7 +197,7 @@ public class LecturerExamService {
     @Transactional(readOnly = true)
     public List<SubjectOption> subjectOptions(Long userId) {
         Role role = accessResolver.managementRole(userId);
-        return departmentRepository.findByActiveTrueOrderByNameAsc().stream()
+        return subjectRepository.findByActiveTrueOrderByNameAsc().stream()
                 .filter(subject -> accessResolver.canManageSubject(userId, role, subject.getId()))
                 .map(subject -> new SubjectOption(subject.getId(), subject.getCode(), subject.getName()))
                 .toList();
@@ -370,7 +370,7 @@ public class LecturerExamService {
     public TestDistributionView distributionView(Long userId, Role role, Long testId) {
         Test source = requireDistributable(testId, userId, role, false);
         Long sourceSubjectId = requireSourceSubjectId(source);
-        Department subject = departmentRepository.findById(sourceSubjectId)
+        Subject subject = subjectRepository.findById(sourceSubjectId)
                 .orElseThrow(() -> new IllegalArgumentException("Mã môn của bài test không còn tồn tại"));
 
         List<TestDistributionTarget> targets = accessResolver.manageableClasses(userId, role).stream()
@@ -558,8 +558,8 @@ public class LecturerExamService {
 
     private void requireAuthoringScope(Long userId, Long subjectId, Long classId) {
         Role role = accessResolver.managementRole(userId);
-        Department subject = departmentRepository.findById(subjectId)
-                .filter(Department::isActive)
+        Subject subject = subjectRepository.findById(subjectId)
+                .filter(Subject::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại hoặc đã bị ẩn"));
         if (!accessResolver.canManageSubject(userId, role, subject.getId())) {
             throw new org.springframework.security.access.AccessDeniedException(
@@ -606,7 +606,7 @@ public class LecturerExamService {
         // A lecturer may choose any active subject when authoring a new Test
         // Bank item, but that must not turn every other lecturer's private
         // DRAFT/ARCHIVED test into a catalog entry. Subject-wide management
-        // scope exists only for the department leader; ADMIN is global via the
+        // scope exists only for the subject leader; ADMIN is global via the
         // repository flag and lecturers retain creator/class scope.
         if (role != Role.LEADER) {
             return List.of(-1L);
@@ -622,7 +622,7 @@ public class LecturerExamService {
      * Lecturer catalog privacy is creator-scoped for DRAFT/ARCHIVED rows.
      * The actor's real class ids are still retained separately when rows are
      * mapped so class-policy authoring actions stay accurate for published
-     * entries. Leaders keep their department/class scope and ADMIN is global.
+     * entries. Leaders keep their subject/class scope and ADMIN is global.
      */
     private static List<Long> privateCatalogClassIds(Role role, List<Long> classIds) {
         return role == Role.LECTURER ? List.of(-1L) : classIds;

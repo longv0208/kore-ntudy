@@ -1,4 +1,4 @@
-/* Shared visual polish for learning, testing, and department workspaces.
+/* Shared visual polish for learning, testing, and subject workspaces.
    Keep one clear surface per task; nested content is separated with spacing,
    dividers, and restrained tints instead of another stack of bordered cards. */
 
@@ -414,7 +414,7 @@
   margin: 0;
 }
 
-/* Department leader ----------------------------------------------------- */
+/* Subject leader ----------------------------------------------------- */
 .ux-leader-dashboard .leader-kpi-grid {
   overflow: hidden;
   gap: 0;

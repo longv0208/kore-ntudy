@@ -44,11 +44,11 @@
     </div>
   </div>
 
-  <div th:if="${emptyDepartment}" class="admin-list-empty" role="status">
+  <div th:if="${emptySubject}" class="admin-list-empty" role="status">
     Chưa có mã môn đang hoạt động. Vui lòng liên hệ quản trị viên để mở mã môn.
   </div>
 
-  <section class="qb-catalog-metrics" th:if="${!emptyDepartment and catalogMode}"
+  <section class="qb-catalog-metrics" th:if="${!emptySubject and catalogMode}"
            aria-label="Thống kê ngân hàng câu hỏi">
     <article>
       <span class="qb-metric-icon" aria-hidden="true">
@@ -76,7 +76,7 @@
     </article>
   </section>
 
-  <section class="qb-subject-catalog" th:if="${!emptyDepartment and catalogMode}"
+  <section class="qb-subject-catalog" th:if="${!emptySubject and catalogMode}"
            aria-labelledby="qbCatalogTitle">
     <h2 id="qbCatalogTitle" class="sr-only">Danh sách ngân hàng theo mã môn</h2>
     <form class="qb-catalog-filters" method="get" th:action="@{/lecturer/question-bank}" role="search">
@@ -141,7 +141,7 @@
     </div>
   </section>
 
-  <th:block th:if="${!emptyDepartment and !catalogMode}">
+  <th:block th:if="${!emptySubject and !catalogMode}">
     <span data-qb-workspace-meta hidden
           th:attr="data-chapter-count=${#lists.size(chapterOptions)},data-question-count=${#lists.size(items)}"></span>
 

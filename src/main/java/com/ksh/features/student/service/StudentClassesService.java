@@ -8,8 +8,8 @@ import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.student.dto.StudentClassesDtos.EnrolledClassRow;
 import com.ksh.features.student.dto.StudentClassesDtos.CatalogClassRow;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
-import com.ksh.entities.Department;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
+import com.ksh.entities.Subject;
 import com.ksh.features.classes.semester.AcademicSemester;
 import com.ksh.features.classes.dto.ClassOverview;
 import org.springframework.stereotype.Service;
@@ -43,12 +43,12 @@ public class StudentClassesService {
     private final EnrollmentRepository enrollmentRepository;
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public StudentClassesService(EnrollmentRepository enrollmentRepository,
                                  ClassRepository classRepository,
                                  UserRepository userRepository,
-                                 DepartmentRepository subjectRepository) {
+                                 SubjectRepository subjectRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.classRepository = classRepository;
         this.userRepository = userRepository;
@@ -128,8 +128,8 @@ public class StudentClassesService {
                 normalizeSemester(semester), normalizeSubjectCode(subjectCode),
                 PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 50))));
         List<ClassEntity> classes = classPage.getContent();
-        Map<Long, Department> subjects = new HashMap<>();
-        for (Department subject : subjectRepository.findAllById(classes.stream()
+        Map<Long, Subject> subjects = new HashMap<>();
+        for (Subject subject : subjectRepository.findAllById(classes.stream()
                 .map(ClassEntity::getSubjectId).filter(java.util.Objects::nonNull).distinct().toList())) {
             subjects.put(subject.getId(), subject);
         }
@@ -145,7 +145,7 @@ public class StudentClassesService {
         }
         List<CatalogClassRow> rows = new ArrayList<>();
         for (ClassEntity clazz : classes) {
-            Department subject = subjects.get(clazz.getSubjectId());
+            Subject subject = subjects.get(clazz.getSubjectId());
             String code = subject == null ? "—" : subject.getCode();
             String subjectName = subject == null ? "—" : subject.getName();
             String status = enrollmentStatuses.get(clazz.getId());
@@ -185,7 +185,7 @@ public class StudentClassesService {
             lecturerNames.put(u.getId(), u.getFullName());
         }
         Map<Long, String> subjectCodes = new HashMap<>();
-        for (Department subject : subjectRepository.findAllById(classById.values().stream()
+        for (Subject subject : subjectRepository.findAllById(classById.values().stream()
                 .map(ClassEntity::getSubjectId).filter(java.util.Objects::nonNull)
                 .distinct().toList())) {
             subjectCodes.put(subject.getId(), subject.getCode());
@@ -245,7 +245,7 @@ public class StudentClassesService {
     }
 
     @Transactional(readOnly = true)
-    public List<Department> subjectOptions() {
+    public List<Subject> subjectOptions() {
         return subjectRepository.findByActiveTrueOrderByNameAsc();
     }
 

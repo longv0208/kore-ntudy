@@ -45,7 +45,7 @@
       <a sec:authorize="hasRole('LECTURER')" th:href="@{/lecturer/classes}"
          class="error-primary">Về khu vực giảng viên</a>
       <a sec:authorize="hasRole('LEADER')" th:href="@{/leader}"
-         class="error-primary">Về khu vực trưởng bộ môn</a>
+         class="error-primary">Về khu vực trưởng môn</a>
       <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/dashboard}"
          class="error-primary">Về trang quản trị</a>
       <a sec:authorize="isAnonymous()" th:href="@{/login}"

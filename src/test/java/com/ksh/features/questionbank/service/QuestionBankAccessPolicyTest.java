@@ -1,8 +1,8 @@
 package com.ksh.features.questionbank.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.leader.service.LeaderDepartmentResolver;
+import com.ksh.features.leader.service.LeaderSubjectResolver;
 import com.ksh.security.Role;
 import org.junit.jupiter.api.Test;
 
@@ -20,8 +20,8 @@ import static org.mockito.Mockito.when;
  */
 class QuestionBankAccessPolicyTest {
 
-    private final LeaderDepartmentResolver leaderDepartmentResolver = mock(LeaderDepartmentResolver.class);
-    private final QuestionBankAccessPolicy policy = new QuestionBankAccessPolicy(leaderDepartmentResolver);
+    private final LeaderSubjectResolver leaderSubjectResolver = mock(LeaderSubjectResolver.class);
+    private final QuestionBankAccessPolicy policy = new QuestionBankAccessPolicy(leaderSubjectResolver);
 
     @Test
     void lecturer_can_contribute_to_any_subject_but_cannot_curate() {
@@ -34,11 +34,11 @@ class QuestionBankAccessPolicyTest {
     }
 
     @Test
-    void leader_uses_resolved_working_department_for_access_and_curation() {
+    void leader_uses_resolved_working_subject_for_access_and_curation() {
         User leader = user(Role.LEADER, 11L, 99L);
-        Department department = department(5L, leader.getId());
-        when(leaderDepartmentResolver.resolve(leader.getId())).thenReturn(Optional.of(department));
-        when(leaderDepartmentResolver.resolveAll(leader.getId())).thenReturn(List.of(department));
+        Subject subject = subject(5L, leader.getId());
+        when(leaderSubjectResolver.resolve(leader.getId())).thenReturn(Optional.of(subject));
+        when(leaderSubjectResolver.resolveAll(leader.getId())).thenReturn(List.of(subject));
 
         assertThat(policy.resolveSubjectId(leader)).isEqualTo(5L);
         assertThat(policy.canAccessSubject(leader, 5L)).isTrue();
@@ -75,14 +75,14 @@ class QuestionBankAccessPolicyTest {
         }
     }
 
-    private static Department department(Long id, Long leaderUserId) {
+    private static Subject subject(Long id, Long leaderUserId) {
         try {
-            Department department = new Department("CNTT", "CNTT", null, true);
-            department.assignLeader(leaderUserId);
-            Field idField = Department.class.getDeclaredField("id");
+            Subject subject = new Subject("CNTT", "CNTT", null, true);
+            subject.assignLeader(leaderUserId);
+            Field idField = Subject.class.getDeclaredField("id");
             idField.setAccessible(true);
-            idField.set(department, id);
-            return department;
+            idField.set(subject, id);
+            return subject;
         } catch (ReflectiveOperationException ex) {
             throw new IllegalStateException(ex);
         }

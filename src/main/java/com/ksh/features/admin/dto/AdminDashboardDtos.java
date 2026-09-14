@@ -11,7 +11,7 @@ public class AdminDashboardDtos {
     public record DashboardStats(
             Long userCount,
             Long classCount,
-            Long departmentCount,
+            Long subjectCount,
             Long activeClassCount
     ) {}
 
@@ -41,7 +41,7 @@ public class AdminDashboardDtos {
             return switch (role) {
                 case "STUDENT" -> "Sinh viên";
                 case "LECTURER" -> "Giảng viên";
-                case "LEADER" -> "Trưởng bộ môn";
+                case "LEADER" -> "Trưởng môn";
                 case "ADMIN" -> "Quản trị viên";
                 default -> role;
             };

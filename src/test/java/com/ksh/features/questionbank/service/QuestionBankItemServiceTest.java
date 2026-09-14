@@ -1,10 +1,10 @@
 package com.ksh.features.questionbank.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Lesson;
 import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.questionbank.dto.QuestionBankItemForm;
 import com.ksh.features.questionbank.dto.QuestionBankViews.ChapterOption;
@@ -45,7 +45,7 @@ class QuestionBankItemServiceTest {
     private static final long SUBJECT_ID = 12L;
 
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final DepartmentRepository subjectRepository = mock(DepartmentRepository.class);
+    private final SubjectRepository subjectRepository = mock(SubjectRepository.class);
     private final QuestionBankAccessPolicy accessPolicy = mock(QuestionBankAccessPolicy.class);
     private final QuestionBankItemRepository itemRepository = mock(QuestionBankItemRepository.class);
     private final QuestionBankOptionRepository optionRepository = mock(QuestionBankOptionRepository.class);
@@ -54,7 +54,7 @@ class QuestionBankItemServiceTest {
             userRepository, subjectRepository, accessPolicy, itemRepository, optionRepository, lessonRepository);
 
     private User lecturer;
-    private Department subject;
+    private Subject subject;
 
     @BeforeEach
     void setUp() {
@@ -163,8 +163,8 @@ class QuestionBankItemServiceTest {
 
     @Test
     void subject_options_are_catalog_wide_for_lecturers_and_sorted_by_code() {
-        Department later = subject("Korean advanced", "KOR401", 13L, true);
-        Department first = subject("Korean foundation", "KOR101", 11L, true);
+        Subject later = subject("Korean advanced", "KOR401", 13L, true);
+        Subject first = subject("Korean foundation", "KOR101", 11L, true);
         when(subjectRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(later, first));
 
         List<SubjectOption> options = service.subjectOptions(ACTOR_ID, Role.LECTURER);
@@ -174,7 +174,7 @@ class QuestionBankItemServiceTest {
 
     @Test
     void subject_catalog_aggregates_content_and_question_counts_and_filters_by_name() {
-        Department other = subject("Japanese foundation", "JPN101", 13L, true);
+        Subject other = subject("Japanese foundation", "JPN101", 13L, true);
         when(subjectRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(other, subject));
         LessonTemplateRepository.SubjectContentCount content =
                 mock(LessonTemplateRepository.SubjectContentCount.class);
@@ -370,8 +370,8 @@ class QuestionBankItemServiceTest {
         return item;
     }
 
-    private static Department subject(String name, String code, long id, boolean active) {
-        Department subject = new Department(name, code, null, active);
+    private static Subject subject(String name, String code, long id, boolean active) {
+        Subject subject = new Subject(name, code, null, active);
         ReflectionTestUtils.setField(subject, "id", id);
         return subject;
     }

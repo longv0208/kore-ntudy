@@ -1,11 +1,11 @@
 package com.ksh.features.questionbank.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.TestActivity;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.library.repository.LessonTemplateRepository;
 import com.ksh.features.questionbank.entity.QuestionBankItem;
@@ -47,7 +47,7 @@ class QuestionBankTestGenerationServiceTest {
     private static final long TEST_ID = 920L;
 
     private UserRepository userRepository;
-    private DepartmentRepository subjectRepository;
+    private SubjectRepository subjectRepository;
     private LessonTemplateRepository lessonRepository;
     private QuestionBankAccessPolicy accessPolicy;
     private QuestionBankItemRepository itemRepository;
@@ -62,7 +62,7 @@ class QuestionBankTestGenerationServiceTest {
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
-        subjectRepository = mock(DepartmentRepository.class);
+        subjectRepository = mock(SubjectRepository.class);
         lessonRepository = mock(LessonTemplateRepository.class);
         accessPolicy = mock(QuestionBankAccessPolicy.class);
         itemRepository = mock(QuestionBankItemRepository.class);
@@ -256,8 +256,8 @@ class QuestionBankTestGenerationServiceTest {
         return user;
     }
 
-    private static Department activeSubject() {
-        Department subject = new Department("Korean", "KOR", null, true);
+    private static Subject activeSubject() {
+        Subject subject = new Subject("Korean", "KOR", null, true);
         ReflectionTestUtils.setField(subject, "id", SUBJECT_ID);
         return subject;
     }

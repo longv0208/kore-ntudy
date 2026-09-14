@@ -1,8 +1,8 @@
 package com.ksh.features.questionbank.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.leader.service.LeaderDepartmentResolver;
+import com.ksh.features.leader.service.LeaderSubjectResolver;
 import com.ksh.security.Role;
 import org.springframework.stereotype.Component;
 
@@ -13,10 +13,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class QuestionBankAccessPolicy {
 
-    private final LeaderDepartmentResolver leaderDepartmentResolver;
+    private final LeaderSubjectResolver leaderSubjectResolver;
 
-    public QuestionBankAccessPolicy(LeaderDepartmentResolver leaderDepartmentResolver) {
-        this.leaderDepartmentResolver = leaderDepartmentResolver;
+    public QuestionBankAccessPolicy(LeaderSubjectResolver leaderSubjectResolver) {
+        this.leaderSubjectResolver = leaderSubjectResolver;
     }
 
     /** Resolves the caller's working subject for question bank access. */
@@ -25,8 +25,8 @@ public class QuestionBankAccessPolicy {
             return null;
         }
         if (user.getRole() == Role.LEADER) {
-            Department department = leaderDepartmentResolver.resolve(user.getId()).orElse(null);
-            return department != null ? department.getId() : null;
+            Subject subject = leaderSubjectResolver.resolve(user.getId()).orElse(null);
+            return subject != null ? subject.getId() : null;
         }
         // subject_id is a landing-page default only. Access is catalog-wide in
         // canAccessSubject, so this value is never an authorization gate.
@@ -48,7 +48,7 @@ public class QuestionBankAccessPolicy {
         if (role == Role.LECTURER || role == Role.ADMIN) {
             return true;
         }
-        return leaderDepartmentResolver.resolveAll(user.getId()).stream()
+        return leaderSubjectResolver.resolveAll(user.getId()).stream()
                 .anyMatch(subject -> subjectId.equals(subject.getId()));
     }
 
@@ -64,7 +64,7 @@ public class QuestionBankAccessPolicy {
         if (role == Role.ADMIN) {
             return true;
         }
-        return leaderDepartmentResolver.resolveAll(user.getId()).stream()
+        return leaderSubjectResolver.resolveAll(user.getId()).stream()
                 .anyMatch(subject -> subjectId.equals(subject.getId()));
     }
 }

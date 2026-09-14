@@ -111,7 +111,7 @@ class StudentLessonsServiceTest {
     }
 
     @Test
-    void same_department_leader_not_enrolled_can_list() {
+    void same_subject_leader_not_enrolled_can_list() {
         Lesson pub = persistLesson(section1.getId(), "Bài 1", (short) 0, true);
 
         ClassLessonsView view = studentLessonsService
@@ -235,7 +235,7 @@ class StudentLessonsServiceTest {
         ClassEntity entity = new ClassEntity(name, lecturer.getId(), lecturer.getId(),
                 null, null, null, 100);
         entity.setSubjectId(lecturer.getSubjectId());
-        entity.approve(leader.getId(), java.time.LocalDateTime.now());
+
         entity.setCode(code);
         try {
             return classRepository.saveAndFlush(entity);

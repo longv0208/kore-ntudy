@@ -1,9 +1,9 @@
 package com.ksh.features.questionbank.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.questionbank.dto.QuestionBankImportDtos.ConfirmResult;
 import com.ksh.features.questionbank.dto.QuestionBankImportDtos.PreviewRow;
@@ -52,7 +52,7 @@ public class QuestionBankImportService {
     private static final int MAX_PREVIEW_LENGTH = 80;
 
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final QuestionBankAccessPolicy accessPolicy;
     private final QuestionBankItemRepository itemRepository;
     private final QuestionBankOptionRepository optionRepository;
@@ -61,7 +61,7 @@ public class QuestionBankImportService {
     private final QuestionBankImportSessionStore sessionStore;
 
     public QuestionBankImportService(UserRepository userRepository,
-                                     DepartmentRepository subjectRepository,
+                                     SubjectRepository subjectRepository,
                                      QuestionBankAccessPolicy accessPolicy,
                                      QuestionBankItemRepository itemRepository,
                                      QuestionBankOptionRepository optionRepository,
@@ -102,7 +102,7 @@ public class QuestionBankImportService {
     public QuestionBankImportSession previewUpload(Long userId, Role role, Long subjectId,
                                                    MultipartFile file) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         Long firstLessonId = lessonRepository
                 .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId())
                 .stream().findFirst()
@@ -116,7 +116,7 @@ public class QuestionBankImportService {
     public QuestionBankImportSession previewUpload(Long userId, Role role, Long subjectId,
                                                    Long lessonTemplateId, MultipartFile file) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         Long lessonId = lessonRepository.findByIdAndSubjectId(lessonTemplateId, subject.getId())
                 .map(com.ksh.entities.LessonTemplate::getId)
                 .orElseThrow(() -> new QuestionBankValidationException(
@@ -153,7 +153,7 @@ public class QuestionBankImportService {
         User actor = requireActor(userId, role);
         QuestionBankImportSession session = sessionStore.claim(sessionId, actor.getId())
                 .orElseThrow(() -> new QuestionBankValidationException(MSG_SESSION_EXPIRED));
-        Department subject;
+        Subject subject;
         try {
             subject = requireSubject(actor, session.getSubjectId());
         } catch (QuestionBankValidationException | AccessDeniedException ex) {
@@ -297,11 +297,11 @@ public class QuestionBankImportService {
         return actor;
     }
 
-    private Department requireSubject(User actor) {
+    private Subject requireSubject(User actor) {
         return requireSubject(actor, null);
     }
 
-    private Department requireSubject(User actor, Long requestedSubjectId) {
+    private Subject requireSubject(User actor, Long requestedSubjectId) {
         Long subjectId = requestedSubjectId != null
                 ? requestedSubjectId : accessPolicy.resolveSubjectId(actor);
         if (subjectId == null && (actor.getRole() == Role.LECTURER
@@ -314,7 +314,7 @@ public class QuestionBankImportService {
             throw new QuestionBankValidationException(MSG_EMPTY_SUBJECT);
         }
         return subjectRepository.findById(subjectId)
-                .filter(Department::isActive)
+                .filter(Subject::isActive)
                 .orElseThrow(() -> new QuestionBankValidationException(MSG_EMPTY_SUBJECT));
     }
 

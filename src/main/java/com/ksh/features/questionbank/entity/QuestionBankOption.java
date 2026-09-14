@@ -8,7 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Answer option belonging to a department question bank item.
+ * Answer option belonging to a subject question bank item.
  */
 @Entity
 @Table(name = "question_bank_options")

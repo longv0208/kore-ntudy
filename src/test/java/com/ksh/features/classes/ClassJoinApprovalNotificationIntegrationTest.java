@@ -52,7 +52,7 @@ class ClassJoinApprovalNotificationIntegrationTest {
                 "IT-CJNA-" + System.nanoTime(), owner.getId(), owner.getId(),
                 "Transactional integration fixture", null, null, 20);
         activeClass.setSubjectId(owner.getSubjectId());
-        activeClass.approve(owner.getId(), LocalDateTime.now());
+
         activeClass = classRepository.saveAndFlush(activeClass);
     }
 

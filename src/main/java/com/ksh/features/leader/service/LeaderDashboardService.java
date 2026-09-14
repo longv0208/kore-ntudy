@@ -1,11 +1,11 @@
 package com.ksh.features.leader.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.leader.dto.LeaderDtos.DashboardKpis;
 import com.ksh.features.leader.dto.LeaderDtos.DashboardView;
-import com.ksh.features.leader.dto.LeaderDtos.DepartmentSummary;
+import com.ksh.features.leader.dto.LeaderDtos.SubjectSummary;
 import com.ksh.features.leader.dto.LeaderDtos.RecentClassRow;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -20,18 +20,18 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Aggregates department-scoped KPIs and recent classes for the LEADER dashboard.
+ * Aggregates subject-scoped KPIs and recent classes for the LEADER dashboard.
  */
 @Service
 public class LeaderDashboardService {
 
     private static final int RECENT_LIMIT = 5;
 
-    private final LeaderDepartmentResolver resolver;
+    private final LeaderSubjectResolver resolver;
     private final ClassRepository classRepository;
     private final JdbcTemplate jdbc;
 
-    public LeaderDashboardService(LeaderDepartmentResolver resolver,
+    public LeaderDashboardService(LeaderSubjectResolver resolver,
                                 ClassRepository classRepository,
                                 JdbcTemplate jdbc) {
         this.resolver = resolver;
@@ -41,7 +41,7 @@ public class LeaderDashboardService {
 
     @Transactional(readOnly = true)
     public DashboardView load(Long leaderUserId) {
-        List<Department> subjects = resolver.resolveAll(leaderUserId);
+        List<Subject> subjects = resolver.resolveAll(leaderUserId);
         if (subjects.isEmpty()) {
             return new DashboardView(null, new DashboardKpis(0, 0, 0, 0), List.of(), true);
         }
@@ -51,7 +51,7 @@ public class LeaderDashboardService {
         long approvedQuestionCount = 0;
         List<ClassEntity> recent = new ArrayList<>();
         Map<Long, String> subjectCodes = new HashMap<>();
-        for (Department subject : subjects) {
+        for (Subject subject : subjects) {
             Long subjectId = subject.getId();
             subjectCodes.put(subjectId, subject.getCode());
             classCount += classRepository.countBySubjectId(subjectId);
@@ -71,7 +71,8 @@ public class LeaderDashboardService {
                     PageRequest.of(0, RECENT_LIMIT,
                             Sort.by(Sort.Direction.DESC, "createdAt"))).getContent());
         }
-        recent.sort((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()));
+        recent.sort(java.util.Comparator.comparing(ClassEntity::getCreatedAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
         if (recent.size() > RECENT_LIMIT) recent = new ArrayList<>(recent.subList(0, RECENT_LIMIT));
         Map<Long, String> lecturerNames = loadLecturerNames(recent);
         List<RecentClassRow> rows = new ArrayList<>(recent.size());
@@ -89,12 +90,12 @@ public class LeaderDashboardService {
                 false);
     }
 
-    private static DepartmentSummary summary(List<Department> subjects) {
-        Department first = subjects.get(0);
+    private static SubjectSummary summary(List<Subject> subjects) {
+        Subject first = subjects.get(0);
         return subjects.size() == 1
-                ? new DepartmentSummary(first.getId(), first.getCode(), first.getName())
-                : new DepartmentSummary(first.getId(), subjects.size() + " mã môn",
-                        "Bộ môn tiếng Hàn");
+                ? new SubjectSummary(first.getId(), first.getCode(), first.getName())
+                : new SubjectSummary(first.getId(), subjects.size() + " mã môn",
+                        "Môn học tiếng Hàn");
     }
 
     private Map<Long, String> loadLecturerNames(List<ClassEntity> classes) {

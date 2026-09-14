@@ -2,7 +2,7 @@ package com.ksh.features.classes.service;
 
 import com.ksh.entities.ClassEntity;
 import com.ksh.features.classes.repository.ClassCoLecturerRepository;
-import com.ksh.features.leader.service.LeaderDepartmentResolver;
+import com.ksh.features.leader.service.LeaderSubjectResolver;
 import com.ksh.security.Role;
 import org.springframework.stereotype.Component;
 
@@ -13,12 +13,12 @@ import java.util.List;
 @Component
 public class ClassRoleAccessPolicy {
 
-    private final LeaderDepartmentResolver leaderDepartmentResolver;
+    private final LeaderSubjectResolver leaderSubjectResolver;
     private final ClassCoLecturerRepository coLecturerRepository;
 
-    public ClassRoleAccessPolicy(LeaderDepartmentResolver leaderDepartmentResolver,
+    public ClassRoleAccessPolicy(LeaderSubjectResolver leaderSubjectResolver,
                                  ClassCoLecturerRepository coLecturerRepository) {
-        this.leaderDepartmentResolver = leaderDepartmentResolver;
+        this.leaderSubjectResolver = leaderSubjectResolver;
         this.coLecturerRepository = coLecturerRepository;
     }
 
@@ -34,7 +34,7 @@ public class ClassRoleAccessPolicy {
                     || coLecturerRepository.existsByClassIdAndLecturerId(clazz.getId(), userId);
         }
         if (role == Role.LEADER) {
-            return leaderDepartmentResolver.resolveAll(userId).stream()
+            return leaderSubjectResolver.resolveAll(userId).stream()
                     .anyMatch(subject -> subject.getId().equals(clazz.getSubjectId()));
         }
         return false;
@@ -55,7 +55,7 @@ public class ClassRoleAccessPolicy {
         if (userId == null) {
             return Optional.empty();
         }
-        return leaderDepartmentResolver.resolve(userId).map(department -> department.getId());
+        return leaderSubjectResolver.resolve(userId).map(subject -> subject.getId());
     }
 
     /** All active subject ids curated by this leader. */
@@ -63,7 +63,7 @@ public class ClassRoleAccessPolicy {
         if (userId == null) {
             return List.of();
         }
-        return leaderDepartmentResolver.resolveAll(userId).stream()
+        return leaderSubjectResolver.resolveAll(userId).stream()
                 .map(subject -> subject.getId())
                 .toList();
     }

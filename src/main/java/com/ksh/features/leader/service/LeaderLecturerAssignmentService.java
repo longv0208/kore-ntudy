@@ -2,14 +2,14 @@ package com.ksh.features.leader.service;
 
 import com.ksh.entities.ClassEntity;
 import com.ksh.entities.ClassCoLecturer;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.ClassCoLecturerRepository;
 import com.ksh.features.leader.dto.LeaderDtos.AssignClassRow;
 import com.ksh.features.leader.dto.LeaderDtos.AssignView;
-import com.ksh.features.leader.dto.LeaderDtos.DepartmentSummary;
+import com.ksh.features.leader.dto.LeaderDtos.SubjectSummary;
 import com.ksh.features.leader.dto.LeaderDtos.LecturerOption;
 import com.ksh.security.Role;
 import jakarta.persistence.EntityNotFoundException;
@@ -32,12 +32,12 @@ public class LeaderLecturerAssignmentService {
 
     private static final Set<Role> ELIGIBLE = Set.of(Role.LECTURER, Role.LEADER);
 
-    private final LeaderDepartmentResolver resolver;
+    private final LeaderSubjectResolver resolver;
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
     private final ClassCoLecturerRepository coLecturerRepository;
 
-    public LeaderLecturerAssignmentService(LeaderDepartmentResolver resolver,
+    public LeaderLecturerAssignmentService(LeaderSubjectResolver resolver,
                                          ClassRepository classRepository,
                                          UserRepository userRepository,
                                          ClassCoLecturerRepository coLecturerRepository) {
@@ -49,17 +49,18 @@ public class LeaderLecturerAssignmentService {
 
     @Transactional(readOnly = true)
     public AssignView load(Long leaderUserId) {
-        List<Department> subjects = resolver.resolveAll(leaderUserId);
+        List<Subject> subjects = resolver.resolveAll(leaderUserId);
         if (subjects.isEmpty()) {
             return new AssignView(null, List.of(), List.of(), true);
         }
         Map<Long, String> subjectCodes = new HashMap<>();
         List<ClassEntity> classes = new ArrayList<>();
-        for (Department subject : subjects) {
+        for (Subject subject : subjects) {
             subjectCodes.put(subject.getId(), subject.getCode());
             classes.addAll(classRepository.findAllBySubjectIdOrderByCreatedAtDesc(subject.getId()));
         }
-        classes.sort((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()));
+        classes.sort(java.util.Comparator.comparing(ClassEntity::getCreatedAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
         Map<Long, String> names = loadNames(classes);
         Map<Long, List<Long>> coLecturerIds = loadCoLecturerIds(classes);
         Map<Long, List<String>> coLecturerNames = loadCoLecturerNames(classes);
@@ -73,12 +74,12 @@ public class LeaderLecturerAssignmentService {
                     coLecturerNames.getOrDefault(c.getId(), List.of())));
         }
         List<LecturerOption> lecturers = activeLecturers();
-        Department first = subjects.get(0);
+        Subject first = subjects.get(0);
         return new AssignView(
                 subjects.size() == 1
-                        ? new DepartmentSummary(first.getId(), first.getCode(), first.getName())
-                        : new DepartmentSummary(first.getId(), subjects.size() + " mã môn",
-                                "Bộ môn tiếng Hàn"),
+                        ? new SubjectSummary(first.getId(), first.getCode(), first.getName())
+                        : new SubjectSummary(first.getId(), subjects.size() + " mã môn",
+                                "Môn học tiếng Hàn"),
                 rows, lecturers, false);
     }
 
@@ -100,17 +101,17 @@ public class LeaderLecturerAssignmentService {
     @Transactional
     public String updateCoLecturers(Long leaderUserId, Long classId,
                                     List<Long> selectedLecturerIds) {
-        List<Department> subjects = resolver.resolveAll(leaderUserId);
-        if (subjects.isEmpty()) throw new AccessDeniedException("Không có bộ môn");
+        List<Subject> subjects = resolver.resolveAll(leaderUserId);
+        if (subjects.isEmpty()) throw new AccessDeniedException("Không có môn học");
         ClassEntity clazz = classRepository.findById(classId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lớp"));
-        Department subject = subjects.stream()
+        Subject subject = subjects.stream()
                 .filter(item -> item.getId().equals(clazz.getSubjectId()))
                 .findFirst()
                 .orElseThrow(() -> new AccessDeniedException(
-                        "Lớp không thuộc bộ môn của bạn"));
+                        "Lớp không thuộc môn học của bạn"));
         if (clazz.getSubjectId() == null) {
-            throw new AccessDeniedException("Lớp không thuộc bộ môn của bạn");
+            throw new AccessDeniedException("Lớp không thuộc môn học của bạn");
         }
         Set<Long> selected = selectedLecturerIds == null ? Set.of()
                 : new java.util.LinkedHashSet<>(selectedLecturerIds);

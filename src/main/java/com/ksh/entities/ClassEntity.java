@@ -33,9 +33,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ClassEntity {
 
-    /** A newly created class or a corrected rejected class awaiting leader review. */
+    /** Legacy status retained for historical classes; new classes are ACTIVE. */
     public static final String STATUS_PENDING = "PENDING";
-    /** A class returned by its leader; the owner must edit it before re-submitting. */
+    /** Legacy rejected class retained as history; review/resubmission is retired. */
     public static final String STATUS_REJECTED = "REJECTED";
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final String STATUS_ARCHIVED = "ARCHIVED";
@@ -101,7 +101,7 @@ public class ClassEntity {
 
     /**
      * Creates a new class for the create flow.
-     * The status is set to {@link #STATUS_PENDING} by default.
+     * The class is immediately {@link #STATUS_ACTIVE}; no leader review is required.
      * If {@code maxStudents} is {@code null}, it defaults to {@code 100}.
      *
      * @param name        display name of the class
@@ -122,7 +122,7 @@ public class ClassEntity {
         this.startDate = startDate;
         this.endDate = endDate;
         this.maxStudents = maxStudents != null ? maxStudents : 100;
-        this.status = STATUS_PENDING;
+        this.status = STATUS_ACTIVE;
         // Directly constructed fixtures and legacy seed paths still receive a
         // historically accurate semester. The normal create flow replaces it
         // with the configured current semester before the entity is persisted.

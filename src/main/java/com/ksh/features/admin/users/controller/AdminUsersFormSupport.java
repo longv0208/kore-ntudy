@@ -1,7 +1,7 @@
 package com.ksh.features.admin.users.controller;
 
-import com.ksh.features.admin.departments.dto.DepartmentDtos.DepartmentOption;
-import com.ksh.features.admin.departments.service.DepartmentQueryService;
+import com.ksh.features.admin.subjects.dto.SubjectDtos.SubjectOption;
+import com.ksh.features.admin.subjects.service.SubjectQueryService;
 import com.ksh.security.Role;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
@@ -12,7 +12,7 @@ import static com.ksh.common.IConstant.*;
 
 /**
  * Shared form-rendering helpers for the {@code /admin/users} CRUD and Edit
- * controllers. Loads live department options from {@link DepartmentQueryService}.
+ * controllers. Loads live subject options from {@link SubjectQueryService}.
  */
 @Component
 class AdminUsersFormSupport {
@@ -26,10 +26,10 @@ class AdminUsersFormSupport {
     // Model attribute keys shared by the create + edit form templates.
     private static final String ATTR_ROLES = "roles";
 
-    private final DepartmentQueryService departmentQueryService;
+    private final SubjectQueryService subjectQueryService;
 
-    AdminUsersFormSupport(DepartmentQueryService departmentQueryService) {
-        this.departmentQueryService = departmentQueryService;
+    AdminUsersFormSupport(SubjectQueryService subjectQueryService) {
+        this.subjectQueryService = subjectQueryService;
     }
 
     /** Builds the canonical URL for a single admin user. */
@@ -39,7 +39,7 @@ class AdminUsersFormSupport {
 
     /**
      * Populates the common form-page model attributes (mode, action URL,
-     * roles dropdown, departments dropdown, active sidebar tab). Used by
+     * roles dropdown, subjects dropdown, active sidebar tab). Used by
      * both the Create and Edit flows.
      */
     void populateFormModel(Model model, String mode, Long userId) {
@@ -51,8 +51,8 @@ class AdminUsersFormSupport {
         model.addAttribute(ATTR_FORM_ACTION,
                 MODE_CREATE.equals(mode) ? URL_BASE : userUrl(userId));
         model.addAttribute(ATTR_ROLES, editableRoles(mode, currentRole));
-        List<DepartmentOption> departments = departmentQueryService.options();
-        model.addAttribute(ATTR_DEPARTMENTS, departments);
+        List<SubjectOption> subjects = subjectQueryService.options();
+        model.addAttribute(ATTR_SUBJECTS, subjects);
         model.addAttribute(ATTR_ACTIVE_TAB, TAB_USERS);
     }
 

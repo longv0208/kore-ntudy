@@ -1,6 +1,6 @@
 package com.ksh.features.library.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Lesson;
 import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.LessonTemplateAttachment;
@@ -69,7 +69,7 @@ class LessonTemplateStorageVideoEditTest {
         when(templateRepository.findById(99L))
                 .thenReturn(Optional.of(template));
         when(subjectResolver.require(7L, Role.LEADER, 55L))
-                .thenReturn(mock(Department.class));
+                .thenReturn(mock(Subject.class));
         when(templateAttachmentRepository.findByTemplateIdOrderByDisplayOrderAsc(99L))
                 .thenReturn(List.of(supplementary));
 

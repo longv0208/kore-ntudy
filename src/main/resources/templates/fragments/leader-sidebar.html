@@ -7,14 +7,14 @@
 <aside th:fragment="leaderSidebar(activeTab)" class="col">
   <div class="side">
     <div class="class-head">
-      <div class="class-name">Trưởng bộ môn</div>
-      <div class="class-ma" th:if="${leaderDepartment != null}"
-           th:text="${leaderDepartment.code() + ' — ' + leaderDepartment.name()}">BM</div>
-      <div class="class-ma" th:if="${leaderDepartment == null}">Chưa gán bộ môn</div>
+      <div class="class-name">Trưởng môn</div>
+      <div class="class-ma" th:if="${leaderSubject != null}"
+           th:text="${leaderSubject.code() + ' — ' + leaderSubject.name()}">BM</div>
+      <div class="class-ma" th:if="${leaderSubject == null}">Chưa gán môn học</div>
     </div>
 
     <div class="side-sep"></div>
-    <p class="menu-title">Bộ môn</p>
+    <p class="menu-title">Môn học</p>
 
     <ul class="side-nav">
       <li>
@@ -22,13 +22,6 @@
            th:classappend="${activeTab == 'dashboard'} ? 'active' : ''">
           <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           Dashboard
-        </a>
-      </li>
-      <li>
-        <a th:href="@{/leader/approvals}"
-           th:classappend="${activeTab == 'approvals'} ? 'active' : ''">
-          <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Duyệt lớp
         </a>
       </li>
       <li>

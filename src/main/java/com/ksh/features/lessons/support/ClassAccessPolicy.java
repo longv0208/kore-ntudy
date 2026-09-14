@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * Shared class-access policy for student-facing lesson list and detail views.
  *
  * <p>The rule: ADMIN bypasses enrollment globally, a LEADER bypasses enrollment
- * only inside their resolved department, the owning lecturer passes, and
+ * only inside their resolved subject, the owning lecturer passes, and
  * otherwise an ACTIVE enrollment is required. Any other caller collapses to a
  * single {@link EntityNotFoundException} with the canonical message so class
  * existence is never leaked.
@@ -44,14 +44,14 @@ public class ClassAccessPolicy {
 
     /**
      * Admits the caller to the given live class or throws a no-leak 404.
-     * ADMIN and department-scoped LEADER callers bypass enrollment so they can
+     * ADMIN and subject-scoped LEADER callers bypass enrollment so they can
      * inspect the lesson; the owning lecturer passes, otherwise an ACTIVE
      * enrollment is required.
      *
      * @throws EntityNotFoundException when no rule admits the caller
      */
     public void requireViewAccess(ClassEntity clazz, Long userId, Role role) {
-        // ADMIN is global; LEADER may open a live class only in their department.
+        // ADMIN is global; LEADER may open a live class only in their subject.
         if (isPrivileged(clazz, userId, role)) {
             return;
         }

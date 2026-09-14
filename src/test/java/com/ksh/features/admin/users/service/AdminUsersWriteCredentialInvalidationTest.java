@@ -3,8 +3,8 @@ package com.ksh.features.admin.users.service;
 import com.ksh.entities.SystemSetting;
 import com.ksh.entities.User;
 import com.ksh.entities.UserFactory;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
-import com.ksh.features.admin.departments.service.DepartmentService;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
+import com.ksh.features.admin.subjects.service.SubjectService;
 import com.ksh.features.admin.permissions.service.PermissionResolver;
 import com.ksh.features.admin.users.imports.service.ActivationMailComposer;
 import com.ksh.features.admin.settings.repository.SystemSettingsRepository;
@@ -42,16 +42,16 @@ class AdminUsersWriteCredentialInvalidationTest {
         settings = mock(SystemSettingsRepository.class);
         permissions = mock(PermissionResolver.class);
         when(settings.findBySettingKeyForUpdate(
-                DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY))
+                SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY))
                 .thenReturn(Optional.of(new SystemSetting(
-                        DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY,
+                        SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY,
                         "", "AUTH")));
         service = new AdminUsersWriteService(
                 users,
                 mock(PasswordEncoder.class),
                 mock(AdminUsersGuard.class),
                 mock(AdminUsersAuditWriter.class),
-                mock(DepartmentRepository.class),
+                mock(SubjectRepository.class),
                 settings,
                 sessions,
                 credentials,

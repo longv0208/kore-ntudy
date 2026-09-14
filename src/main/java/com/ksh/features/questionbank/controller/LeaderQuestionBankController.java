@@ -1,8 +1,8 @@
 package com.ksh.features.questionbank.controller;
 
-import com.ksh.entities.Department;
-import com.ksh.features.leader.dto.LeaderDtos.DepartmentSummary;
-import com.ksh.features.leader.service.LeaderDepartmentResolver;
+import com.ksh.entities.Subject;
+import com.ksh.features.leader.dto.LeaderDtos.SubjectSummary;
+import com.ksh.features.leader.service.LeaderSubjectResolver;
 import com.ksh.features.questionbank.service.QuestionBankItemService;
 import com.ksh.features.questionbank.service.QuestionBankReviewService;
 import com.ksh.security.KshUserDetails;
@@ -30,11 +30,11 @@ public class LeaderQuestionBankController {
 
     private final QuestionBankItemService itemService;
     private final QuestionBankReviewService reviewService;
-    private final LeaderDepartmentResolver subjectResolver;
+    private final LeaderSubjectResolver subjectResolver;
 
     public LeaderQuestionBankController(QuestionBankItemService itemService,
                                         QuestionBankReviewService reviewService,
-                                        LeaderDepartmentResolver subjectResolver) {
+                                        LeaderSubjectResolver subjectResolver) {
         this.itemService = itemService;
         this.reviewService = reviewService;
         this.subjectResolver = subjectResolver;
@@ -50,7 +50,7 @@ public class LeaderQuestionBankController {
         model.addAttribute(ATTR_ACTIVE_TAB, TAB_QUESTION_BANK);
         addSubjectChrome(user, model);
         boolean empty = !itemService.hasSubject(user.getId(), user.getRole());
-        model.addAttribute(ATTR_QB_EMPTY_DEPARTMENT, empty);
+        model.addAttribute(ATTR_QB_EMPTY_SUBJECT, empty);
         if (!empty) {
             var subjects = itemService.subjectOptions(user.getId(), user.getRole());
             Long selectedSubjectId = subjectId != null ? subjectId
@@ -110,9 +110,9 @@ public class LeaderQuestionBankController {
     }
 
     private void addSubjectChrome(KshUserDetails user, Model model) {
-        Department subject = subjectResolver.resolve(user.getId()).orElse(null);
-        model.addAttribute(ATTR_LEADER_DEPARTMENT, subject == null ? null
-                : new DepartmentSummary(subject.getId(), subject.getCode(), subject.getName()));
+        Subject subject = subjectResolver.resolve(user.getId()).orElse(null);
+        model.addAttribute(ATTR_LEADER_SUBJECT, subject == null ? null
+                : new SubjectSummary(subject.getId(), subject.getCode(), subject.getName()));
     }
 
     public record ReviewFilters(Long subjectId, String status, Long contributorId, String q) {

@@ -339,7 +339,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByActiveTrueAndLockedFalseAndRoleInAndIdNotOrderByFullNameAsc(
             Collection<Role> roles, Long excludedId);
 
-    /** Active users in the given department and roles, ordered by name. */
+    /** Active users in the given subject and roles, ordered by name. */
     List<User> findBySubjectIdAndRoleInAndActiveTrueOrderByFullNameAsc(Long subjectId,
                                                                           Collection<Role> roles);
 }

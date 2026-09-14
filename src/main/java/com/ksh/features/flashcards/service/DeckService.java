@@ -2,8 +2,8 @@ package com.ksh.features.flashcards.service;
 
 import com.ksh.entities.ClassEntity;
 import com.ksh.entities.Enrollment;
-import com.ksh.entities.Department;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.entities.Subject;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.flashcards.dto.FlashcardDtos.ClassOption;
@@ -45,7 +45,7 @@ public class DeckService {
     private final EnrollmentRepository enrollmentRepository;
     private final ClassRepository classRepository;
     private final CardService cardService;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public DeckService(FlashcardDeckRepository deckRepository,
                        FlashcardRepository cardRepository,
@@ -54,7 +54,7 @@ public class DeckService {
                        EnrollmentRepository enrollmentRepository,
                        ClassRepository classRepository,
                        CardService cardService,
-                       DepartmentRepository subjectRepository) {
+                       SubjectRepository subjectRepository) {
         this.deckRepository = deckRepository;
         this.cardRepository = cardRepository;
         this.accessResolver = accessResolver;
@@ -325,8 +325,8 @@ public class DeckService {
     private Long requireActiveSubject(Long subjectId) {
         if (subjectId == null) return null;
         return subjectRepository.findById(subjectId)
-                .filter(Department::isActive)
-                .map(Department::getId)
+                .filter(Subject::isActive)
+                .map(Subject::getId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Mã môn không tồn tại hoặc đang bị ẩn"));
     }

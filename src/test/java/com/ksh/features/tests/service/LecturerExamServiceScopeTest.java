@@ -1,7 +1,7 @@
 package com.ksh.features.tests.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.tests.dto.LecturerTestDtos.ExamForm;
 import com.ksh.features.tests.dto.LecturerTestDtos.LecturerTestMetrics;
@@ -34,7 +34,7 @@ class LecturerExamServiceScopeTest {
     @Mock private TestRepository testRepository;
     @Mock private QuestionRepository questionRepository;
     @Mock private ClassRepository classRepository;
-    @Mock private DepartmentRepository departmentRepository;
+    @Mock private SubjectRepository subjectRepository;
     @Mock private TestAccessResolver accessResolver;
     @Mock private TestActivityWriter activityWriter;
     @Mock private TakeViewBuilder takeViewBuilder;
@@ -54,7 +54,7 @@ class LecturerExamServiceScopeTest {
         ExamForm forged = form(55L, 10L, 101L);
 
         assertThrows(IllegalArgumentException.class, () -> service.save(7L, forged));
-        verifyNoInteractions(testRepository, departmentRepository, examImageStorage);
+        verifyNoInteractions(testRepository, subjectRepository, examImageStorage);
     }
 
     @org.junit.jupiter.api.Test
@@ -67,7 +67,7 @@ class LecturerExamServiceScopeTest {
         ExamForm forged = form(55L, 10L, 202L);
 
         assertThrows(IllegalArgumentException.class, () -> service.save(7L, forged));
-        verifyNoInteractions(testRepository, departmentRepository, examImageStorage);
+        verifyNoInteractions(testRepository, subjectRepository, examImageStorage);
     }
 
     @org.junit.jupiter.api.Test

@@ -1,8 +1,8 @@
 package com.ksh.features.lecturer.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.entities.Subject;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.semester.AcademicSemester;
 import com.ksh.features.lecturer.dto.LecturerDashboardDtos.ClassDashboardRow;
 import com.ksh.features.lecturer.dto.LecturerDashboardDtos.TeachingDashboardView;
@@ -34,10 +34,10 @@ public class LecturerDashboardService {
     private static final String CLASS_STATUS_ACTIVE = "ACTIVE";
 
     private final LecturerDashboardQuerySupport querySupport;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public LecturerDashboardService(LecturerDashboardQuerySupport querySupport,
-                                     DepartmentRepository subjectRepository) {
+                                     SubjectRepository subjectRepository) {
         this.querySupport = querySupport;
         this.subjectRepository = subjectRepository;
     }
@@ -72,7 +72,7 @@ public class LecturerDashboardService {
         Map<Long, Integer> completionByClass = querySupport.loadAverageCompletionPercents(
                 classIds, studentIdsByClass, lessonIdsByClass, completedByUser);
         Map<Long, String> subjectCodes = new HashMap<>();
-        for (Department subject : subjectRepository.findAllById(classes.stream()
+        for (Subject subject : subjectRepository.findAllById(classes.stream()
                 .map(ClassEntity::getSubjectId).filter(java.util.Objects::nonNull)
                 .distinct().toList())) {
             subjectCodes.put(subject.getId(), subject.getCode());

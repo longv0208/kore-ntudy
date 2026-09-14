@@ -24,7 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import static com.ksh.common.IConstant.ATTR_FORM;
 import static com.ksh.common.IConstant.ATTR_MODE;
 import static com.ksh.common.IConstant.ATTR_QB_DETAIL;
-import static com.ksh.common.IConstant.ATTR_QB_EMPTY_DEPARTMENT;
+import static com.ksh.common.IConstant.ATTR_QB_EMPTY_SUBJECT;
 import static com.ksh.common.IConstant.ATTR_QB_ITEMS;
 import static com.ksh.common.IConstant.ATTR_QB_QUERY;
 import static com.ksh.common.IConstant.ATTR_QB_SELECTED_STATUS;
@@ -66,12 +66,12 @@ public class LecturerQuestionBankController {
                        @AuthenticationPrincipal KshUserDetails user,
                        Model model) {
         String effectiveStatus = normalizeStatus(status);
-        boolean emptyDepartment = !itemService.hasSubject(user.getId(), user.getRole());
-        model.addAttribute(ATTR_QB_EMPTY_DEPARTMENT, emptyDepartment);
+        boolean emptySubject = !itemService.hasSubject(user.getId(), user.getRole());
+        model.addAttribute(ATTR_QB_EMPTY_SUBJECT, emptySubject);
         model.addAttribute("subjectOptions", itemService.subjectOptions(user.getId(), user.getRole()));
         model.addAttribute(ATTR_QB_SELECTED_STATUS, effectiveStatus);
         model.addAttribute(ATTR_QB_QUERY, q);
-        if (emptyDepartment) {
+        if (emptySubject) {
             model.addAttribute("catalogMode", true);
             model.addAttribute("subjectCatalog", java.util.List.of());
             model.addAttribute("catalogMetrics",
@@ -264,8 +264,8 @@ public class LecturerQuestionBankController {
 
     private void populateForm(Model model, KshUserDetails user, String mode) {
         model.addAttribute(ATTR_MODE, mode);
-        boolean emptyDepartment = !itemService.hasSubject(user.getId(), user.getRole());
-        model.addAttribute(ATTR_QB_EMPTY_DEPARTMENT, emptyDepartment);
+        boolean emptySubject = !itemService.hasSubject(user.getId(), user.getRole());
+        model.addAttribute(ATTR_QB_EMPTY_SUBJECT, emptySubject);
         model.addAttribute("subjectOptions", itemService.subjectOptions(user.getId(), user.getRole()));
         model.addAttribute("lessonOptions", itemService.lessonOptions(user.getId(), user.getRole()));
     }

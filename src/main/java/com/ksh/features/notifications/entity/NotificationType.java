@@ -41,7 +41,7 @@ public final class NotificationType {
     public static final String CLASS_APPROVED = "CLASS_APPROVED";
     public static final String CLASS_REJECTED = "CLASS_REJECTED";
 
-    /** Department Leader notified after a lecturer submits a new class. */
+    /** Subject Leader notified after a lecturer submits a new class. */
     public static final String CLASS_PENDING_APPROVAL = "CLASS_PENDING_APPROVAL";
 
     /**

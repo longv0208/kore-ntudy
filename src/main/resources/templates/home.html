@@ -19,7 +19,7 @@
       <div class="home-account-line">
         <span th:text="${#authentication.principal.username}">email@ksh.edu.vn</span>
         <span class="home-role-chip" sec:authorize="hasRole('ADMIN')">Quản trị viên</span>
-        <span class="home-role-chip" sec:authorize="hasRole('LEADER')">Trưởng bộ môn</span>
+        <span class="home-role-chip" sec:authorize="hasRole('LEADER')">Trưởng môn</span>
         <span class="home-role-chip" sec:authorize="hasRole('LECTURER')">Giảng viên</span>
         <span class="home-role-chip" sec:authorize="hasRole('STUDENT')">Học viên</span>
       </div>

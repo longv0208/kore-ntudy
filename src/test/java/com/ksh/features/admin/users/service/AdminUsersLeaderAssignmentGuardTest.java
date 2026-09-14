@@ -1,12 +1,12 @@
 package com.ksh.features.admin.users.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.SystemSetting;
 import com.ksh.entities.User;
 import com.ksh.entities.UserFactory;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
-import com.ksh.features.admin.departments.service.DepartmentService;
-import com.ksh.features.admin.departments.service.DepartmentValidationException;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
+import com.ksh.features.admin.subjects.service.SubjectService;
+import com.ksh.features.admin.subjects.service.SubjectValidationException;
 import com.ksh.features.admin.settings.repository.SystemSettingsRepository;
 import com.ksh.features.admin.permissions.service.PermissionResolver;
 import com.ksh.features.admin.users.imports.service.ActivationMailComposer;
@@ -37,7 +37,7 @@ class AdminUsersLeaderAssignmentGuardTest {
     private final AdminUsersGuard guard = mock(AdminUsersGuard.class);
     private final AdminUsersAuditWriter auditWriter = mock(AdminUsersAuditWriter.class);
     private final ClassRepository classes = mock(ClassRepository.class);
-    private final DepartmentRepository departments = mock(DepartmentRepository.class);
+    private final SubjectRepository subjects = mock(SubjectRepository.class);
     private final SystemSettingsRepository settings = mock(SystemSettingsRepository.class);
     private final SessionRevocationService sessionRevocation = mock(SessionRevocationService.class);
     private final CredentialRotationService credentialRotation = mock(CredentialRotationService.class);
@@ -46,29 +46,29 @@ class AdminUsersLeaderAssignmentGuardTest {
     @Test
     void editLocksSharedAnchorBeforeUserAndRejectsBreakingLeaderPointer() {
         User leader = user(20L, Role.LEADER, 10L);
-        Department department = department(10L, 20L);
+        Subject subject = subject(10L, 20L);
         when(settings.findBySettingKeyForUpdate(
-                DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY))
+                SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY))
                 .thenReturn(Optional.of(new SystemSetting(
-                        DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY,
+                        SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY,
                         "", "AI")));
         when(users.findByIdForUpdate(20L)).thenReturn(Optional.of(leader));
-        when(departments.findFirstByLeaderUserId(20L))
-                .thenReturn(Optional.of(department));
+        when(subjects.findFirstByLeaderUserId(20L))
+                .thenReturn(Optional.of(subject));
 
         EditUserForm demotion = new EditUserForm(
                 leader.getEmail(), leader.getFullName(), Role.LECTURER,
                 10L, null, null, true);
 
         assertThatThrownBy(() -> service().update(20L, demotion, 99L))
-                .isInstanceOf(DepartmentValidationException.class)
-                .hasMessageContaining("màn hình Bộ môn");
+                .isInstanceOf(SubjectValidationException.class)
+                .hasMessageContaining("màn hình Môn học");
 
-        var order = inOrder(settings, users, departments);
+        var order = inOrder(settings, users, subjects);
         order.verify(settings).findBySettingKeyForUpdate(
-                DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY);
+                SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY);
         order.verify(users).findByIdForUpdate(20L);
-        order.verify(departments).findFirstByLeaderUserId(20L);
+        order.verify(subjects).findFirstByLeaderUserId(20L);
         verify(users, never()).save(leader);
         verifyNoInteractions(auditWriter);
     }
@@ -76,7 +76,7 @@ class AdminUsersLeaderAssignmentGuardTest {
     private AdminUsersWriteService service() {
         return new AdminUsersWriteService(
                 users, passwordEncoder, guard, auditWriter,
-                departments, settings, sessionRevocation, credentialRotation,
+                subjects, settings, sessionRevocation, credentialRotation,
                 permissionResolver, mock(ActivationMailComposer.class));
     }
 
@@ -94,10 +94,10 @@ class AdminUsersLeaderAssignmentGuardTest {
         return user;
     }
 
-    private static Department department(Long id, Long leaderUserId) {
-        Department department = new Department("Tiếng Hàn", "KR", null, true);
-        ReflectionTestUtils.setField(department, "id", id);
-        department.assignLeader(leaderUserId);
-        return department;
+    private static Subject subject(Long id, Long leaderUserId) {
+        Subject subject = new Subject("Tiếng Hàn", "KR", null, true);
+        ReflectionTestUtils.setField(subject, "id", id);
+        subject.assignLeader(leaderUserId);
+        return subject;
     }
 }

@@ -6,7 +6,7 @@ import com.ksh.entities.Enrollment;
 import com.ksh.entities.Message;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.messaging.dto.MessagingDtos.ClassMessagesView;
@@ -66,7 +66,7 @@ public class MessagingService {
     private final SimpMessagingTemplate messagingTemplate;
     private final ClassRepository classRepository;
     private final EnrollmentRepository enrollmentRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public MessagingService(ConversationRepository conversationRepository,
                             MessageRepository messageRepository,
@@ -75,7 +75,7 @@ public class MessagingService {
                             SimpMessagingTemplate messagingTemplate,
                             ClassRepository classRepository,
                             EnrollmentRepository enrollmentRepository,
-                            DepartmentRepository subjectRepository) {
+                            SubjectRepository subjectRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
@@ -218,7 +218,7 @@ public class MessagingService {
                 .map(User::getFullName).orElse(null);
         String subjectCode = clazz.getSubjectId() == null ? "—"
                 : subjectRepository.findById(clazz.getSubjectId())
-                        .map(com.ksh.entities.Department::getCode).orElse("—");
+                        .map(com.ksh.entities.Subject::getCode).orElse("—");
         return new ClassMessagesView(clazz.getId(), clazz.getName(), subjectCode,
                 lecturerName, conversation);
     }

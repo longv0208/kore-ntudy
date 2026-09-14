@@ -2,7 +2,7 @@ package com.ksh.features.library.service;
 
 import com.ksh.common.HtmlSanitizer;
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Lesson;
 import com.ksh.entities.LessonActivity;
 import com.ksh.entities.LessonAttachment;
@@ -169,7 +169,7 @@ public class LessonTemplateService {
     @Transactional(readOnly = true)
     public LessonTemplatePageView list(Long ownerId, Role role, Long subjectId,
                                        String q, int page, int size) {
-        Department subject = subjectResolver.require(ownerId, role, subjectId);
+        Subject subject = subjectResolver.require(ownerId, role, subjectId);
         PageRequest pr = pageRequest(page, size);
         String qNorm = normalizeQ(q);
         Page<LessonTemplate> result = templateRepository.searchSubject(
@@ -225,7 +225,7 @@ public class LessonTemplateService {
                                        Integer requestedChapterNumber) {
         LessonTemplateForm form = new LessonTemplateForm();
         if (templateId == null) {
-            Department subject = requireLeaderSubject(ownerId, role, requestedSubjectId);
+            Subject subject = requireLeaderSubject(ownerId, role, requestedSubjectId);
             form.setSubjectId(subject.getId());
             List<LessonTemplate> existing = templateRepository
                     .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId());
@@ -263,7 +263,7 @@ public class LessonTemplateService {
         }
         LessonTemplate template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new EntityNotFoundException(MSG_TEMPLATE_NOT_FOUND));
-        Department subject = subjectResolver.require(ownerId, role, template.getSubjectId());
+        Subject subject = subjectResolver.require(ownerId, role, template.getSubjectId());
         boolean leaderEditor = role == Role.LEADER;
         if (!leaderEditor) {
             requireLecturerResourceOpen(role, subject);
@@ -300,7 +300,7 @@ public class LessonTemplateService {
     @Transactional
     public void renameChapter(Long ownerId, Role role, Long subjectId,
                               int chapterNumber, String title) {
-        Department subject = requireLeaderSubject(ownerId, role, subjectId);
+        Subject subject = requireLeaderSubject(ownerId, role, subjectId);
         String chapterTitle = canonicalChapter(chapterNumber,
                 requireText(stripChapterPrefix(title), "Tên chương không được để trống"));
         List<LessonTemplate> rows = structureRows(ownerId, role, subject.getId());
@@ -326,7 +326,7 @@ public class LessonTemplateService {
     @Transactional
     public void reorderChapters(Long ownerId, Role role, Long subjectId,
                                 List<Integer> chapterNumbers) {
-        Department subject = requireLeaderSubject(ownerId, role, subjectId);
+        Subject subject = requireLeaderSubject(ownerId, role, subjectId);
         List<LessonTemplate> rows = new ArrayList<>(structureRows(
                 ownerId, role, subject.getId()));
         List<Integer> existing = rows.stream().map(LessonTemplate::getChapterOrder)
@@ -424,7 +424,7 @@ public class LessonTemplateService {
 
     @Transactional(readOnly = true)
     public SubjectContext subjectContext(Long ownerId, Role role, Long subjectId) {
-        Department subject = subjectResolver.require(ownerId, role, subjectId);
+        Subject subject = subjectResolver.require(ownerId, role, subjectId);
         return new SubjectContext(subject.getId(), subject.getCode(), subject.getName(),
                 subject.getDescription());
     }
@@ -468,7 +468,7 @@ public class LessonTemplateService {
         if (role == Role.LECTURER) {
             return appendLecturerResources(ownerId, form);
         }
-        Department subject = requireLeaderSubject(ownerId, role, form.getSubjectId());
+        Subject subject = requireLeaderSubject(ownerId, role, form.getSubjectId());
         int chapterNumber = requirePositive(form.getChapterNumber(), "Số chương phải từ 1 trở lên");
         String chapterDescription = requireText(form.getChapterTitle(),
                 "Nội dung tên chương không được để trống");
@@ -560,11 +560,11 @@ public class LessonTemplateService {
                                                        LessonTemplateForm form) {
         if (form.getId() == null) {
             throw new AccessDeniedException(
-                    "Chỉ trưởng bộ môn được tạo chương và bài học");
+                    "Chỉ trưởng môn được tạo chương và bài học");
         }
         LessonTemplate template = templateRepository.findById(form.getId())
                 .orElseThrow(() -> new EntityNotFoundException(MSG_TEMPLATE_NOT_FOUND));
-        Department subject = subjectResolver.require(
+        Subject subject = subjectResolver.require(
                 lecturerId, Role.LECTURER, template.getSubjectId());
         requireTemplateSubject(template, form.getSubjectId());
         requireLecturerResourceOpen(Role.LECTURER, subject);
@@ -754,7 +754,7 @@ public class LessonTemplateService {
 
         LessonTemplate template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new EntityNotFoundException(MSG_TEMPLATE_NOT_FOUND));
-        Department subject = subjectResolver.require(userId, role, template.getSubjectId());
+        Subject subject = subjectResolver.require(userId, role, template.getSubjectId());
         List<LessonCloneResult> results = new ArrayList<>();
         for (Long classId : distinctClassIds) {
             ClassEntity clazz = lockedClasses.get(classId);
@@ -813,7 +813,7 @@ public class LessonTemplateService {
     @Transactional
     public List<LessonCloneResult> distributeSubject(Long subjectId, List<Long> classIds,
                                                       Long userId, Role role) {
-        Department subject = subjectResolver.require(userId, role, subjectId);
+        Subject subject = subjectResolver.require(userId, role, subjectId);
         List<LessonTemplate> templates = templateRepository
                 .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId());
         if (templates.isEmpty()) {
@@ -843,7 +843,7 @@ public class LessonTemplateService {
     /** Removes a complete owned chapter and closes both chapter and lesson numbering gaps. */
     @Transactional
     public void softDeleteChapter(Long ownerId, Role role, Long subjectId, int chapterNumber) {
-        Department subject = requireLeaderSubject(ownerId, role, subjectId);
+        Subject subject = requireLeaderSubject(ownerId, role, subjectId);
         List<LessonTemplate> rows = new ArrayList<>(templateRepository
                 .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId()));
         List<LessonTemplate> target = rows.stream()
@@ -1087,7 +1087,7 @@ public class LessonTemplateService {
     @Transactional
     public boolean setSubjectLibraryLocked(Long userId, Role role, Long subjectId,
                                            boolean locked) {
-        Department subject = subjectResolver.require(userId, role, subjectId);
+        Subject subject = subjectResolver.require(userId, role, subjectId);
         requireScopedLeader(role);
         subject.setLibraryLocked(locked);
         // The legacy structure flag is retired. This single lock now governs
@@ -1100,7 +1100,7 @@ public class LessonTemplateService {
     @Transactional
     public int importSyllabus(Long userId, Role role, Long subjectId,
                               org.springframework.web.multipart.MultipartFile file) {
-        Department subject = requireLeaderSubject(userId, role, subjectId);
+        Subject subject = requireLeaderSubject(userId, role, subjectId);
         List<SyllabusImportParser.SyllabusRow> imported = syllabusImportParser.parse(file);
         List<LessonTemplate> existing = new ArrayList<>(templateRepository
                 .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subjectId));
@@ -1124,27 +1124,27 @@ public class LessonTemplateService {
         return imported.size();
     }
 
-    private Department requireLeaderSubject(Long userId, Role role, Long subjectId) {
-        Department subject = subjectResolver.require(userId, role, subjectId);
+    private Subject requireLeaderSubject(Long userId, Role role, Long subjectId) {
+        Subject subject = subjectResolver.require(userId, role, subjectId);
         requireScopedLeader(role);
         return subject;
     }
 
-    private static void requireLecturerResourceOpen(Role role, Department subject) {
+    private static void requireLecturerResourceOpen(Role role, Subject subject) {
         if (role != Role.LECTURER) {
             throw new AccessDeniedException(
                     "Chỉ giảng viên được thêm tài nguyên vào bài học");
         }
         if (subject.isLibraryLocked()) {
             throw new AccessDeniedException(
-                    "Trưởng bộ môn đang không cho phép giảng viên thêm tài nguyên");
+                    "Trưởng môn đang không cho phép giảng viên thêm tài nguyên");
         }
     }
 
     private static void requireScopedLeader(Role role) {
         if (role != Role.LEADER) {
             throw new AccessDeniedException(
-                    "Chỉ trưởng bộ môn phụ trách mã môn mới được thực hiện thao tác này");
+                    "Chỉ trưởng môn phụ trách mã môn mới được thực hiện thao tác này");
         }
     }
 

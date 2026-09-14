@@ -40,7 +40,7 @@ public interface FlashcardDeckRepository extends JpaRepository<FlashcardDeck, Lo
             WHERE d.ownerId = :ownerId
               AND (:keyword = ''
                    OR LOWER(d.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR EXISTS (SELECT s.id FROM Department s
+                   OR EXISTS (SELECT s.id FROM Subject s
                               WHERE s.id = d.subjectId
                                 AND (LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
                                      OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')))))
@@ -63,7 +63,7 @@ public interface FlashcardDeckRepository extends JpaRepository<FlashcardDeck, Lo
               AND d.ownerId <> :ownerId
               AND (:keyword = ''
                    OR LOWER(d.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR EXISTS (SELECT s.id FROM Department s
+                   OR EXISTS (SELECT s.id FROM Subject s
                               WHERE s.id = d.subjectId
                                 AND (LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
                                      OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')))))

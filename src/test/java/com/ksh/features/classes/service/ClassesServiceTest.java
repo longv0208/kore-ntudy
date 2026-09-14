@@ -1,12 +1,12 @@
 package com.ksh.features.classes.service;
 
 import com.ksh.security.Role;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.dto.ClassesDtos.ClassForm;
 import com.ksh.features.classes.dto.ClassesDtos.ClassRow;
 import com.ksh.entities.ClassActivity;
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.classes.semester.AcademicSemesterService;
@@ -59,7 +59,7 @@ class ClassesServiceTest {
 
     private ClassRepository classRepository;
     private ClassActivityWriter activityWriter;
-    private DepartmentRepository subjectRepository;
+    private SubjectRepository subjectRepository;
     private ClassRoleAccessPolicy accessPolicy;
     private ApplicationEventPublisher eventPublisher;
     private EnrollmentRepository enrollmentRepository;
@@ -73,7 +73,7 @@ class ClassesServiceTest {
     void setUp() {
         classRepository = mock(ClassRepository.class);
         activityWriter = mock(ClassActivityWriter.class);
-        subjectRepository = mock(DepartmentRepository.class);
+        subjectRepository = mock(SubjectRepository.class);
         accessPolicy = mock(ClassRoleAccessPolicy.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
         enrollmentRepository = mock(EnrollmentRepository.class);
@@ -86,7 +86,7 @@ class ClassesServiceTest {
         when(lessonRepository.countLiveGroupedByClassIds(any())).thenReturn(List.of());
         when(assignmentRepository.countLiveGroupedByClassIds(any())).thenReturn(List.of());
         when(attachmentRepository.countGroupedByClassIds(any())).thenReturn(List.of());
-        Department subject = new Department("Tiếng Hàn 3.1.1", "KOR311", null, true);
+        Subject subject = new Subject("Tiếng Hàn 3.1.1", "KOR311", null, true);
         ReflectionTestUtils.setField(subject, "id", 12L);
         when(subjectRepository.findById(12L)).thenReturn(Optional.of(subject));
         when(subjectRepository.findAllById(any())).thenReturn(List.of(subject));
@@ -177,7 +177,7 @@ class ClassesServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         List<String> archivedOnly = List.of(ClassEntity.STATUS_ARCHIVED);
         ClassEntity archived = buildClass(2L, "Archived", LECTURER_ID);
-        archived.approve(LEADER_ID, java.time.LocalDateTime.now());
+
         archived.archive();
         when(classRepository.findAllAccessibleToLecturerByStatuses(
                 eq(LECTURER_ID), eq(archivedOnly), any(Pageable.class)))
@@ -258,11 +258,12 @@ class ClassesServiceTest {
 
         assertThat(saved.getSubjectId()).isEqualTo(12L);
         assertThat(saved.getLecturerId()).isEqualTo(LECTURER_ID);
-        assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_PENDING);
+        assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_ACTIVE);
         assertThat(saved.getSemester()).isEqualTo("FA26");
 
         verify(activityWriter).write(eq(100L), eq(ClassActivity.TYPE_CREATED),
                 eq("Tạo lớp Java"), eq(LECTURER_ID));
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
 
     }
 
@@ -385,31 +386,19 @@ class ClassesServiceTest {
     // ───────────────── Soft-delete ─────────────────
 
     @Test
-    void rejected_class_is_resubmitted_only_by_an_explicit_owner_action() {
-        ClassEntity entity = buildClass(9L, "Needs correction", LECTURER_ID);
-        ReflectionTestUtils.setField(entity, "subjectId", 12L);
-        entity.reject(LEADER_ID, "Thiếu lịch học", java.time.LocalDateTime.now());
-        when(classRepository.findById(9L)).thenReturn(Optional.of(entity));
-        when(classRepository.save(any(ClassEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        ClassEntity saved = service.resubmitForReview(9L, LECTURER_ID, Role.LECTURER);
-
-        assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_PENDING);
-        assertThat(saved.getRejectionNote()).isNull();
-        verify(activityWriter).write(eq(9L), eq(ClassActivity.TYPE_UPDATED),
-                eq("Gửi duyệt lại lớp Needs correction"), eq(LECTURER_ID));
-        verify(eventPublisher).publishEvent(any(Object.class));
+    void retired_review_flow_never_saves_or_notifies() {
+        assertThatThrownBy(() -> service.resubmitForReview(9L, LECTURER_ID, Role.LECTURER))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ngừng sử dụng");
+        verify(classRepository, never()).save(any(ClassEntity.class));
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
     void active_class_cannot_be_resubmitted_for_review() {
-        ClassEntity entity = buildClass(9L, "Active", LECTURER_ID);
-        entity.approve(LEADER_ID, java.time.LocalDateTime.now());
-        when(classRepository.findById(9L)).thenReturn(Optional.of(entity));
-
         assertThatThrownBy(() -> service.resubmitForReview(9L, LECTURER_ID, Role.LECTURER))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("bị từ chối");
+                .hasMessageContaining("ngừng sử dụng");
         verify(classRepository, never()).save(any(ClassEntity.class));
     }
 

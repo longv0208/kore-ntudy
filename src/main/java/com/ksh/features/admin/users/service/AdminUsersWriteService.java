@@ -4,9 +4,9 @@ import com.ksh.common.TransactionLifecycle;
 import com.ksh.entities.User;
 import com.ksh.entities.UserActivity;
 import com.ksh.entities.UserFactory;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
-import com.ksh.features.admin.departments.service.DepartmentService;
-import com.ksh.features.admin.departments.service.DepartmentValidationException;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
+import com.ksh.features.admin.subjects.service.SubjectService;
+import com.ksh.features.admin.subjects.service.SubjectValidationException;
 import com.ksh.features.admin.permissions.service.PermissionResolver;
 import com.ksh.features.admin.settings.repository.SystemSettingsRepository;
 import com.ksh.features.admin.users.dto.CreateUserForm;
@@ -50,7 +50,7 @@ public class AdminUsersWriteService {
     private final PasswordEncoder passwordEncoder;
     private final AdminUsersGuard guard;
     private final AdminUsersAuditWriter auditWriter;
-    private final DepartmentRepository departmentRepository;
+    private final SubjectRepository subjectRepository;
     private final SystemSettingsRepository systemSettingsRepository;
     private final SessionRevocationService sessionRevocationService;
     private final CredentialRotationService credentialRotationService;
@@ -61,7 +61,7 @@ public class AdminUsersWriteService {
                                   PasswordEncoder passwordEncoder,
                                   AdminUsersGuard guard,
                                   AdminUsersAuditWriter auditWriter,
-                                  DepartmentRepository departmentRepository,
+                                  SubjectRepository subjectRepository,
                                   SystemSettingsRepository systemSettingsRepository,
                                   SessionRevocationService sessionRevocationService,
                                   CredentialRotationService credentialRotationService,
@@ -71,7 +71,7 @@ public class AdminUsersWriteService {
         this.passwordEncoder = passwordEncoder;
         this.guard = guard;
         this.auditWriter = auditWriter;
-        this.departmentRepository = departmentRepository;
+        this.subjectRepository = subjectRepository;
         this.systemSettingsRepository = systemSettingsRepository;
         this.sessionRevocationService = sessionRevocationService;
         this.credentialRotationService = credentialRotationService;
@@ -214,31 +214,31 @@ public class AdminUsersWriteService {
     }
 
     /**
-     * A user referenced by {@code departments.leader_user_id} must be reassigned
-     * or cleared from the Department screen before their role/department can be
+     * A user referenced by {@code subjects.leader_user_id} must be reassigned
+     * or cleared from the Subject screen before their role/subject can be
      * changed here. The shared anchor is acquired before the user row so this
-     * check cannot race the department assignment workflow or invert lock order.
+     * check cannot race the subject assignment workflow or invert lock order.
      */
     private void requireLeaderAssignmentPreserved(User target, EditUserForm form) {
-        departmentRepository.findFirstByLeaderUserId(target.getId())
-                .ifPresent(department -> {
+        subjectRepository.findFirstByLeaderUserId(target.getId())
+                .ifPresent(subject -> {
                     boolean preserved = form.role() == Role.LEADER
-                            && Objects.equals(form.subjectId(), department.getId());
+                            && Objects.equals(form.subjectId(), subject.getId());
                     if (!preserved) {
-                        throw new DepartmentValidationException(
-                                "Người dùng đang là trưởng bộ môn "
-                                        + department.getName()
-                                        + ". Hãy đổi hoặc gỡ trưởng bộ môn tại màn hình Bộ môn trước.");
+                        throw new SubjectValidationException(
+                                "Người dùng đang là trưởng môn "
+                                        + subject.getName()
+                                        + ". Hãy đổi hoặc gỡ trưởng môn tại màn hình Môn học trước.");
                     }
                 });
     }
 
     private void lockLeaderAssignmentAnchor() {
         systemSettingsRepository.findBySettingKeyForUpdate(
-                        DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY)
+                        SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY)
                 .orElseThrow(() -> new IllegalStateException(
-                        "Missing department leader assignment lock row: "
-                                + DepartmentService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY));
+                        "Missing subject leader assignment lock row: "
+                                + SubjectService.LEADER_ASSIGNMENT_LOCK_SETTING_KEY));
     }
 
     private static Map<String, Object> snapshot(User u) {

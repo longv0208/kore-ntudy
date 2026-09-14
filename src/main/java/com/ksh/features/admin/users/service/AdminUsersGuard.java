@@ -34,7 +34,7 @@ public class AdminUsersGuard {
 
     private static final String INVALID_ROLE_TRANSITION_MESSAGE =
             "Không thể chuyển đổi giữa tài khoản học viên, giảng viên và quản trị viên. "
-                    + "Chỉ được đổi vai trò Giảng viên ↔ Trưởng bộ môn; trường hợp đổi loại tài khoản phải tạo tài khoản mới.";
+                    + "Chỉ được đổi vai trò Giảng viên ↔ Trưởng môn; trường hợp đổi loại tài khoản phải tạo tài khoản mới.";
 
     private final UserRepository userRepository;
 

@@ -29,7 +29,7 @@ import static com.ksh.features.lessons.dto.SectionDtos.AjaxResult;
 /**
  * JSON endpoints that expose approved shared-bank questions for one test and
  * insert chosen ones as exam-owned snapshots. The bank itself is
- * department-scoped; the {@code testId} only resolves the working department.
+ * subject-scoped; the {@code testId} only resolves the working subject.
  */
 @RestController
 @RequestMapping(BASE_LECTURER_TESTS + "/{testId}/question-bank")

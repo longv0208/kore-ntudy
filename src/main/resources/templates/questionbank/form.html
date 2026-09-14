@@ -27,11 +27,11 @@
       th:text="${mode == 'create' ? 'Thêm câu hỏi' : 'Chỉnh sửa câu hỏi'}">Thêm câu hỏi</h1>
   <p class="detail-sub">Soạn câu hỏi cho ngân hàng của mã môn, lưu nháp hoặc gửi LEADER duyệt trước khi có thể chèn vào bài test.</p>
 
-  <div th:if="${emptyDepartment}" class="admin-list-empty" role="status">
+  <div th:if="${emptySubject}" class="admin-list-empty" role="status">
     Chưa có mã môn đang hoạt động để tạo câu hỏi.
   </div>
 
-  <form th:if="${!emptyDepartment}" class="qb-form qb-form-surface"
+  <form th:if="${!emptySubject}" class="qb-form qb-form-surface"
         th:action="${mode == 'create'} ? @{/lecturer/question-bank} : @{'/lecturer/question-bank/' + ${form.id} + '/edit'}"
         method="post" th:object="${form}">
     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">

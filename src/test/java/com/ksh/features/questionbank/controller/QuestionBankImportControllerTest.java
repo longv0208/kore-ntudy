@@ -3,7 +3,7 @@ package com.ksh.features.questionbank.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.questionbank.entity.QuestionBankItem;
 import com.ksh.features.questionbank.repository.QuestionBankItemRepository;
@@ -51,7 +51,7 @@ class QuestionBankImportControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private UserRepository userRepository;
-    @Autowired private DepartmentRepository subjectRepository;
+    @Autowired private SubjectRepository subjectRepository;
     @Autowired private QuestionBankItemRepository itemRepository;
     @Autowired private QuestionBankOptionRepository optionRepository;
     @Autowired private LessonTemplateRepository lessonRepository;

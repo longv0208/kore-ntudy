@@ -1,13 +1,13 @@
 package com.ksh.features.flashcards.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Enrollment;
 import com.ksh.entities.User;
 import com.ksh.entities.UserFactory;
 import com.ksh.security.Role;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.flashcards.dto.FlashcardDtos.DeckDetailView;
@@ -40,7 +40,7 @@ class DeckServiceTest {
     @Autowired private ClassRepository classRepository;
     @Autowired private EnrollmentRepository enrollmentRepository;
     @Autowired private UserRepository userRepository;
-    @Autowired private DepartmentRepository subjectRepository;
+    @Autowired private SubjectRepository subjectRepository;
     @Autowired private FlashcardDeckRepository deckRepository;
 
     private User owner;   // student@
@@ -78,9 +78,9 @@ class DeckServiceTest {
 
     @Test
     void create_and_update_assign_active_subject() {
-        Department first = subjectRepository.saveAndFlush(new Department(
+        Subject first = subjectRepository.saveAndFlush(new Subject(
                 "Korean Flashcard Subject", "FC" + System.nanoTime(), null, true));
-        Department second = subjectRepository.saveAndFlush(new Department(
+        Subject second = subjectRepository.saveAndFlush(new Subject(
                 "Korean Flashcard Subject 2", "FS" + System.nanoTime(), null, true));
 
         Long id = deckService.createDeck(owner.getId(),
@@ -96,7 +96,7 @@ class DeckServiceTest {
 
     @Test
     void inactive_subject_is_rejected() {
-        Department inactive = subjectRepository.saveAndFlush(new Department(
+        Subject inactive = subjectRepository.saveAndFlush(new Subject(
                 "Hidden Flashcard Subject", "FH" + System.nanoTime(), null, false));
 
         assertThatThrownBy(() -> deckService.createDeck(owner.getId(),
@@ -108,7 +108,7 @@ class DeckServiceTest {
     @Test
     void list_search_matches_title_subject_code_and_subject_name() {
         String suffix = String.valueOf(System.nanoTime());
-        Department subject = subjectRepository.saveAndFlush(new Department(
+        Subject subject = subjectRepository.saveAndFlush(new Subject(
                 "Ngữ pháp tìm kiếm " + suffix, "KFS" + suffix, null, true));
         Long id = deckService.createDeck(owner.getId(),
                 new DeckForm("Bộ thẻ chuyên đề", null, subject.getId()));

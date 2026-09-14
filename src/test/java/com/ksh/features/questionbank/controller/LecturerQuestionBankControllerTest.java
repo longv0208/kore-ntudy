@@ -32,7 +32,7 @@ class LecturerQuestionBankControllerTest {
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertThat(controller.createForm(user, model)).isEqualTo("questionbank/form");
-        assertThat(model.get("emptyDepartment")).isEqualTo(false);
+        assertThat(model.get("emptySubject")).isEqualTo(false);
         assertThat(model).doesNotContainKeys("categories", "emptyCategories");
     }
 
@@ -45,7 +45,7 @@ class LecturerQuestionBankControllerTest {
 
         controller.createForm(user, model);
 
-        assertThat(model.get("emptyDepartment")).isEqualTo(true);
+        assertThat(model.get("emptySubject")).isEqualTo(true);
     }
 
     @Test

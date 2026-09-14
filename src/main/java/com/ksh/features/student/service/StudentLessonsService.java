@@ -5,7 +5,7 @@ import com.ksh.entities.Lesson;
 import com.ksh.entities.Section;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.service.support.ProgressMath;
 import com.ksh.features.lessons.repository.LessonRepository;
@@ -36,7 +36,7 @@ import static com.ksh.common.IConstant.CONTENT_TYPE_RICHTEXT;
  *       {@code @SQLRestriction} filters soft-deleted rows
  *       transparently — a missing row maps to 404.</li>
  *   <li>The caller must be admitted: an ACTIVE-enrolled student, OR the
- *       owning lecturer, OR an ADMIN / in-department LEADER
+ *       owning lecturer, OR an ADMIN / in-subject LEADER
  *       (bypasses enrollment for in-scope inspection). Any other
  *       caller (REMOVED / COMPLETED / non-enrolled non-privileged) → 404
  *       to avoid leaking class existence (see design D5, D6).</li>
@@ -55,7 +55,7 @@ public class StudentLessonsService {
     private final UserRepository userRepository;
     private final LearningProgressRepository progressRepository;
     private final ClassAccessPolicy accessPolicy;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public StudentLessonsService(ClassRepository classRepository,
                                  SectionRepository sectionRepository,
@@ -63,7 +63,7 @@ public class StudentLessonsService {
                                  UserRepository userRepository,
                                  LearningProgressRepository progressRepository,
                                  ClassAccessPolicy accessPolicy,
-                                 DepartmentRepository subjectRepository) {
+                                 SubjectRepository subjectRepository) {
         this.classRepository = classRepository;
         this.sectionRepository = sectionRepository;
         this.lessonRepository = lessonRepository;
@@ -76,12 +76,12 @@ public class StudentLessonsService {
     /**
      * Returns the lesson view for the given class, admitting an
      * ACTIVE-enrolled student, the owning lecturer, or an ADMIN /
-     * in-department LEADER
+     * in-subject LEADER
      * privileged viewer.
      *
      * @param classId target class id
      * @param userId  authenticated user id
-     * @param role    the caller's role; ADMIN and in-department LEADER bypass enrollment
+     * @param role    the caller's role; ADMIN and in-subject LEADER bypass enrollment
      * @return populated {@link ClassLessonsView}; sections list is empty
      *         when the class has none, individual section lesson lists
      *         may be empty when nothing is PUBLISHED yet
@@ -99,7 +99,7 @@ public class StudentLessonsService {
             throw new EntityNotFoundException("Class not found or not accessible");
         }
 
-        // Gate 2: admit the caller. ADMIN and in-department LEADER bypass enrollment for
+        // Gate 2: admit the caller. ADMIN and in-subject LEADER bypass enrollment for
         // in-scope inspection; the owning lecturer passes
         // too; otherwise an ACTIVE enrollment is required. Any other caller
         // (REMOVED/COMPLETED/non-enrolled non-privileged) → no-leak 404.
@@ -147,7 +147,7 @@ public class StudentLessonsService {
                 .orElse(null);
         String subjectCode = clazz.getSubjectId() == null ? "—"
                 : subjectRepository.findById(clazz.getSubjectId())
-                        .map(com.ksh.entities.Department::getCode).orElse("—");
+                        .map(com.ksh.entities.Subject::getCode).orElse("—");
 
         return new ClassLessonsView(clazz.getId(), clazz.getName(),
                 subjectCode, lecturerName, sectionRows,

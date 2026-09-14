@@ -1,8 +1,8 @@
 package com.ksh.features.classes.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.entities.Subject;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.assignments.repository.AssignmentRepository;
 import com.ksh.features.classes.dto.ClassOverview;
 import com.ksh.features.classes.dto.ClassStatusCounts;
@@ -43,7 +43,7 @@ class ClassWorkspaceOverviewTest {
 
     private final ClassRepository classes = mock(ClassRepository.class);
     private final EnrollmentRepository enrollments = mock(EnrollmentRepository.class);
-    private final DepartmentRepository subjects = mock(DepartmentRepository.class);
+    private final SubjectRepository subjects = mock(SubjectRepository.class);
     private final ClassRoleAccessPolicy access = mock(ClassRoleAccessPolicy.class);
     private ClassesService service;
 
@@ -159,7 +159,7 @@ class ClassWorkspaceOverviewTest {
     void row_projects_bulk_lecturer_label_and_updated_date() {
         ClassEntity clazz = clazz(10L, ClassEntity.STATUS_ACTIVE);
         ReflectionTestUtils.setField(clazz, "updatedAt", LocalDateTime.of(2026, 8, 31, 8, 15));
-        Department subject = new Department("Korean", "KOR311", null, true);
+        Subject subject = new Subject("Korean", "KOR311", null, true);
         ReflectionTestUtils.setField(subject, "id", 6L);
         when(subjects.findAllById(List.of(6L))).thenReturn(List.of(subject));
         ClassRepository.LecturerLabel label = mock(ClassRepository.LecturerLabel.class);

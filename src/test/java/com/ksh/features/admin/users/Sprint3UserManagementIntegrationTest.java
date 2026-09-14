@@ -47,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * list filter/search/sort/paginate, create + collision, edit + role change,
  * each lifecycle action, self-protection guards, last-admin guard, audit-row
  * assertions, case-insensitive login regression, and the
- * {@code /admin/departments} routing regression.
+ * {@code /admin/subjects} routing regression.
  *
  * <p>Seed users from {@code V5__seed_test_users.sql}:
  * {@code admin@ksh.edu.vn}, {@code lecturer@ksh.edu.vn}, {@code leader@ksh.edu.vn},
@@ -668,10 +668,10 @@ class Sprint3UserManagementIntegrationTest {
 
     @Test
     @WithUserDetails("admin@ksh.edu.vn")
-    void admin_departments_renders_management_page() throws Exception {
-        mockMvc.perform(get("/admin/departments"))
+    void admin_subjects_renders_management_page() throws Exception {
+        mockMvc.perform(get("/admin/subjects"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("admin/departments"));
+                .andExpect(view().name("admin/subjects"));
     }
 
     @Test

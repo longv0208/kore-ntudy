@@ -73,7 +73,7 @@ class LessonTemplatePrivateShareRefreshTest {
                 "Lớp provenance tài liệu", lecturer.getId(), lecturer.getId(),
                 null, null, null, 100);
         clazz.setSubjectId(lecturer.getSubjectId());
-        clazz.approve(lecturer.getId(), LocalDateTime.now());
+
         clazz = classRepository.saveAndFlush(clazz);
 
         var clone = templateService.distribute(template.id(), List.of(clazz.getId()),

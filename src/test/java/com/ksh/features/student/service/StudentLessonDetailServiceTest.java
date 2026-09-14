@@ -154,7 +154,7 @@ class StudentLessonDetailServiceTest {
     }
 
     @Test
-    void same_department_leader_not_enrolled_can_view_detail() {
+    void same_subject_leader_not_enrolled_can_view_detail() {
         Lesson lesson = persistLesson(section.getId(), "Bài 1", "<p>X</p>", true);
 
         LessonDetailView view = studentLessonDetailService.getLessonDetail(
@@ -412,7 +412,7 @@ class StudentLessonDetailServiceTest {
         ClassEntity entity = new ClassEntity(name, lecturer.getId(), lecturer.getId(),
                 null, null, null, 100);
         entity.setSubjectId(lecturer.getSubjectId());
-        entity.approve(lecturer.getId(), LocalDateTime.now());
+
         entity.setCode(code);
         try {
             return classRepository.saveAndFlush(entity);

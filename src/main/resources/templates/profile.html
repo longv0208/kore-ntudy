@@ -46,7 +46,7 @@
         <h2 id="profileIdentityTitle" th:text="${user.fullName}">Họ và tên</h2>
         <p th:text="${user.email}">email@ksh.edu.vn</p>
         <span class="profile-role-chip" sec:authorize="hasRole('ADMIN')">Quản trị viên</span>
-        <span class="profile-role-chip" sec:authorize="hasRole('LEADER')">Trưởng bộ môn</span>
+        <span class="profile-role-chip" sec:authorize="hasRole('LEADER')">Trưởng môn</span>
         <span class="profile-role-chip" sec:authorize="hasRole('LECTURER')">Giảng viên</span>
         <span class="profile-role-chip" sec:authorize="hasRole('STUDENT')">Học viên</span>
       </div>

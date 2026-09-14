@@ -1,10 +1,10 @@
 package com.ksh.features.library.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Lesson;
 import com.ksh.entities.LibraryAsset;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.library.dto.LessonTemplateForm;
 import com.ksh.features.library.repository.LessonTemplateAttachmentRepository;
@@ -33,22 +33,22 @@ class LessonTemplateAuthoringLockTest {
     @Autowired private LessonTemplateRepository templateRepository;
     @Autowired private LessonTemplateAttachmentRepository attachmentRepository;
     @Autowired private LibraryAssetRepository assetRepository;
-    @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private SubjectRepository subjectRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EntityManager entityManager;
 
     private User lecturer;
     private User leader;
-    private Department subject;
+    private Subject subject;
 
     @BeforeEach
     void setUp() {
         lecturer = userRepository.findByEmailIgnoreCase("lecturer@ksh.edu.vn").orElseThrow();
-        subject = departmentRepository.findById(lecturer.getSubjectId()).orElseThrow();
+        subject = subjectRepository.findById(lecturer.getSubjectId()).orElseThrow();
         leader = userRepository.findById(subject.getLeaderUserId()).orElseThrow();
         subject.setLibraryLocked(false);
         subject.setCurriculumStructureLocked(false);
-        departmentRepository.saveAndFlush(subject);
+        subjectRepository.saveAndFlush(subject);
     }
 
     @Test
@@ -59,7 +59,7 @@ class LessonTemplateAuthoringLockTest {
         assertThatThrownBy(() -> templateService.saveForm(
                 lecturer.getId(), Role.LECTURER, uniqueLessonForm()))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("trưởng bộ môn");
+                .hasMessageContaining("trưởng môn");
         assertThatThrownBy(() -> templateService.renameLesson(
                 lecturer.getId(), Role.LECTURER, created.id(), "Không được đổi"))
                 .isInstanceOf(AccessDeniedException.class);

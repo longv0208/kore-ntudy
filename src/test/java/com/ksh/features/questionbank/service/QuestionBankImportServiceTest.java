@@ -1,8 +1,8 @@
 package com.ksh.features.questionbank.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.questionbank.imports.QuestionBankImportParser;
 import com.ksh.features.questionbank.imports.QuestionBankImportParser.ParsedFile;
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 class QuestionBankImportServiceTest {
 
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final DepartmentRepository subjectRepository = mock(DepartmentRepository.class);
+    private final SubjectRepository subjectRepository = mock(SubjectRepository.class);
     private final QuestionBankAccessPolicy accessPolicy = mock(QuestionBankAccessPolicy.class);
     private final QuestionBankItemRepository itemRepository = mock(QuestionBankItemRepository.class);
     private final QuestionBankOptionRepository optionRepository = mock(QuestionBankOptionRepository.class);
@@ -47,7 +47,7 @@ class QuestionBankImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        Department subject = new Department("Tiếng Hàn 3.1.1", "KOR311", null, true);
+        Subject subject = new Subject("Tiếng Hàn 3.1.1", "KOR311", null, true);
         ReflectionTestUtils.setField(subject, "id", 5L);
         when(lecturer.getId()).thenReturn(7L);
         when(lecturer.getRole()).thenReturn(Role.LECTURER);

@@ -2,7 +2,7 @@ package com.ksh.features.classes.service;
 
 import com.ksh.entities.ClassActivity;
 import com.ksh.entities.ClassEntity;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.dto.ClassesDtos.ClassForm;
 import com.ksh.features.classes.dto.ClassesDtos.ClassRow;
 import com.ksh.features.classes.dto.ClassOverview;
@@ -61,7 +61,7 @@ public class ClassesService {
 
     private final ClassRepository classRepository;
     private final ClassActivityWriter activityWriter;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final ClassCreator creator;
     private final ClassRoleAccessPolicy accessPolicy;
     private final EnrollmentRepository enrollmentRepository;
@@ -71,7 +71,7 @@ public class ClassesService {
 
     public ClassesService(ClassRepository classRepository,
                           ClassActivityWriter activityWriter,
-                          DepartmentRepository subjectRepository,
+                          SubjectRepository subjectRepository,
                           ClassRoleAccessPolicy accessPolicy,
                           EnrollmentRepository enrollmentRepository,
                           LessonRepository lessonRepository,
@@ -325,7 +325,7 @@ public class ClassesService {
     /**
      * Loads a class for the detail view (members, board, ...). Applies the
      * same authorization as {@link #getEditable}: LECTURER may only access
-     * their own classes; LEADER may access classes in their resolved department,
+     * their own classes; LEADER may access classes in their resolved subject,
      * while ADMIN may access any class. The viewable
      * and editable code paths are kept separate so a future sprint can
      * relax the read-side rule (for example, allowing students enrolled in
@@ -371,23 +371,11 @@ public class ClassesService {
     }
 
     /**
-     * Explicitly returns a rejected class to the leader approval queue. Editing
-     * it does not silently change its lifecycle state; the owner chooses this
-     * action only after the rejection has been addressed.
+     * Retired review action. Historical rejected classes remain unchanged.
      */
     @Transactional
     public ClassEntity resubmitForReview(Long id, Long userId, Role role) {
-        ClassEntity entity = loadOwnerManaged(id, userId, role);
-        if (!entity.resubmitForReview()) {
-            throw new IllegalStateException("Chỉ lớp bị từ chối mới có thể gửi duyệt lại");
-        }
-        ClassEntity saved = classRepository.save(entity);
-        activityWriter.write(saved.getId(), ClassActivity.TYPE_UPDATED,
-                "Gửi duyệt lại lớp " + saved.getName(), userId);
-        subjectRepository.findById(saved.getSubjectId())
-                .map(subject -> subject.getCode())
-                .ifPresent(code -> creator.publishPendingReview(saved, code));
-        return saved;
+        throw new IllegalStateException("Quy trình duyệt lớp đã ngừng sử dụng");
     }
 
     /** Soft-deletes a class. Authorization is enforced; writes a DELETED activity row. */
@@ -409,7 +397,7 @@ public class ClassesService {
 
     /**
      * Returns whether the caller is authorised to edit the given class.
-     * LEADER may edit classes in their resolved department; ADMIN may edit any
+     * LEADER may edit classes in their resolved subject; ADMIN may edit any
      * class; LECTURER may only edit classes they own.
      */
     public boolean isEditableBy(ClassEntity clazz, Long userId, Role role) {

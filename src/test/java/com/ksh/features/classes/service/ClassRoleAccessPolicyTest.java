@@ -1,8 +1,8 @@
 package com.ksh.features.classes.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
-import com.ksh.features.leader.service.LeaderDepartmentResolver;
+import com.ksh.entities.Subject;
+import com.ksh.features.leader.service.LeaderSubjectResolver;
 import com.ksh.features.classes.repository.ClassCoLecturerRepository;
 import com.ksh.security.Role;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ import static org.mockito.Mockito.when;
 
 class ClassRoleAccessPolicyTest {
 
-    private final LeaderDepartmentResolver resolver = mock(LeaderDepartmentResolver.class);
+    private final LeaderSubjectResolver resolver = mock(LeaderSubjectResolver.class);
     private final ClassCoLecturerRepository coLecturerRepository =
             mock(ClassCoLecturerRepository.class);
     private final ClassRoleAccessPolicy policy =
@@ -24,11 +24,11 @@ class ClassRoleAccessPolicyTest {
 
     @Test
     void leaderIsLimitedToAllAssignedSubjects() {
-        Department department = mock(Department.class);
-        Department secondDepartment = mock(Department.class);
-        when(department.getId()).thenReturn(10L);
-        when(secondDepartment.getId()).thenReturn(12L);
-        when(resolver.resolveAll(7L)).thenReturn(List.of(department, secondDepartment));
+        Subject subject = mock(Subject.class);
+        Subject secondSubject = mock(Subject.class);
+        when(subject.getId()).thenReturn(10L);
+        when(secondSubject.getId()).thenReturn(12L);
+        when(resolver.resolveAll(7L)).thenReturn(List.of(subject, secondSubject));
         ClassEntity same = classEntity(42L, 10L);
         ClassEntity second = classEntity(42L, 12L);
         ClassEntity foreign = classEntity(42L, 11L);
@@ -61,7 +61,7 @@ class ClassRoleAccessPolicyTest {
 
     @Test
     void leaderSubjectScopeDoesNotTransferClassOwnership() {
-        Department subject = mock(Department.class);
+        Subject subject = mock(Subject.class);
         when(subject.getId()).thenReturn(10L);
         when(resolver.resolveAll(7L)).thenReturn(List.of(subject));
         ClassEntity clazz = classEntity(42L, 10L);

@@ -1,9 +1,9 @@
 package com.ksh.features.tests;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.tests.dto.LecturerTestDtos.ExamForm;
@@ -50,7 +50,7 @@ class LecturerExamDistributionIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository userRepository;
-    @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private SubjectRepository subjectRepository;
     @Autowired private ClassRepository classRepository;
     @Autowired private TestRepository testRepository;
     @Autowired private QuestionRepository questionRepository;
@@ -119,7 +119,7 @@ class LecturerExamDistributionIntegrationTest {
 
     @Test
     void distributionIsAtomicAndRejectsDifferentSubject() {
-        Department otherSubject = departmentRepository.saveAndFlush(new Department(
+        Subject otherSubject = subjectRepository.saveAndFlush(new Subject(
                 "Môn khác " + UUID.randomUUID().toString().substring(0, 6),
                 "OTH" + UUID.randomUUID().toString().substring(0, 5).toUpperCase(),
                 null, true));
@@ -260,7 +260,7 @@ class LecturerExamDistributionIntegrationTest {
         ClassEntity clazz = new ClassEntity(name, owner.getId(), owner.getId(),
                 null, null, null, 100);
         clazz.setSubjectId(subjectId);
-        clazz.approve(lecturer.getId(), LocalDateTime.now());
+
         return classRepository.saveAndFlush(clazz);
     }
 

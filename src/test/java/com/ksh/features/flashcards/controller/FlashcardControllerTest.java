@@ -1,13 +1,13 @@
 package com.ksh.features.flashcards.controller;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Enrollment;
 import com.ksh.entities.User;
 import com.ksh.features.ai.client.AiClient;
 import com.ksh.features.ai.client.AiClientException;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.flashcards.dto.FlashcardDtos.CardItem;
@@ -80,7 +80,7 @@ class FlashcardControllerTest {
     @Autowired private UserRepository userRepository;
     @Autowired private FlashcardRepository flashcardRepository;
     @Autowired private FlashcardDeckRepository deckRepository;
-    @Autowired private DepartmentRepository subjectRepository;
+    @Autowired private SubjectRepository subjectRepository;
     @MockitoBean private AiClient aiClient;
 
     private Long deckId;
@@ -117,7 +117,7 @@ class FlashcardControllerTest {
     void list_search_keeps_query_and_filters_by_subject_code() throws Exception {
         User owner = userRepository.findByEmailIgnoreCase(OWNER).orElseThrow();
         String code = "FCT" + System.nanoTime();
-        Department subject = subjectRepository.saveAndFlush(new Department(
+        Subject subject = subjectRepository.saveAndFlush(new Subject(
                 "Flashcards tìm kiếm", code, null, true));
         deckService.createDeck(owner.getId(), new DeckForm("Bộ theo môn", null, subject.getId()));
 
@@ -133,9 +133,9 @@ class FlashcardControllerTest {
     void create_form_lists_only_active_subjects_and_submission_persists_subject() throws Exception {
         String activeCode = "FCA" + System.nanoTime();
         String hiddenCode = "FCH" + System.nanoTime();
-        Department active = subjectRepository.saveAndFlush(new Department(
+        Subject active = subjectRepository.saveAndFlush(new Subject(
                 "Môn flashcard active", activeCode, null, true));
-        subjectRepository.saveAndFlush(new Department(
+        subjectRepository.saveAndFlush(new Subject(
                 "Môn flashcard hidden", hiddenCode, null, false));
 
         mockMvc.perform(get("/my/flashcards/new"))

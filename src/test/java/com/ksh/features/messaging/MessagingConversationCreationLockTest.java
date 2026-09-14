@@ -3,7 +3,7 @@ package com.ksh.features.messaging;
 import com.ksh.entities.Conversation;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.messaging.repository.ConversationRepository;
@@ -91,7 +91,7 @@ class MessagingConversationCreationLockTest {
                 mock(SimpMessagingTemplate.class),
                 mock(ClassRepository.class),
                 mock(EnrollmentRepository.class),
-                mock(DepartmentRepository.class));
+                mock(SubjectRepository.class));
     }
 
     private static int occurrences(String text, String needle) {
