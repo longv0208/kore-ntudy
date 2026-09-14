@@ -52,8 +52,8 @@
 
   <nav class="cw-view-tabs" aria-label="Trạng thái lớp học">
     <a th:classappend="${selectedTab == 'current'} ? 'active'" th:href="@{/lecturer/classes(tab='current',size=${classesPage.size},semester=${selectedSemester},subjectCode=${selectedSubjectCode},q=${classQuery})}">Lớp của bạn <span th:text="${currentClassCount}">0</span></a>
-    <a th:classappend="${selectedTab == 'pending'} ? 'active'" th:href="@{/lecturer/classes(tab='pending',size=${classesPage.size},semester=${selectedSemester},subjectCode=${selectedSubjectCode},q=${classQuery})}">Chờ phê duyệt <span th:text="${pendingClassCount}">0</span></a>
-    <a th:classappend="${selectedTab == 'rejected'} ? 'active'" th:href="@{/lecturer/classes(tab='rejected',size=${classesPage.size},semester=${selectedSemester},subjectCode=${selectedSubjectCode},q=${classQuery})}">Bị từ chối <span th:text="${rejectedClassCount}">0</span></a>
+    <a th:if="${pendingClassCount > 0}" th:classappend="${selectedTab == 'pending'} ? 'active'" th:href="@{/lecturer/classes(tab='pending',size=${classesPage.size},semester=${selectedSemester},subjectCode=${selectedSubjectCode},q=${classQuery})}">Lịch sử chờ duyệt <span th:text="${pendingClassCount}">0</span></a>
+    <a th:if="${rejectedClassCount > 0}" th:classappend="${selectedTab == 'rejected'} ? 'active'" th:href="@{/lecturer/classes(tab='rejected',size=${classesPage.size},semester=${selectedSemester},subjectCode=${selectedSubjectCode},q=${classQuery})}">Lịch sử từ chối <span th:text="${rejectedClassCount}">0</span></a>
     <a th:classappend="${selectedTab == 'archived'} ? 'active'" th:href="@{/lecturer/classes(tab='archived',size=${classesPage.size},semester=${selectedSemester},subjectCode=${selectedSubjectCode},q=${classQuery})}">Đã lưu trữ <span th:text="${archivedClassCount}">0</span></a>
   </nav>
 
@@ -63,8 +63,8 @@
       <h2 th:text="${selectedTab == 'pending' ? 'Không có lớp chờ phê duyệt'
                     : (selectedTab == 'rejected' ? 'Không có lớp bị từ chối'
                     : (selectedTab == 'archived' ? 'Chưa có lớp đã lưu trữ' : 'Chưa có lớp học phù hợp'))}"></h2>
-      <p th:text="${selectedTab == 'pending' ? 'Lớp mới tạo đang chờ trưởng bộ môn duyệt sẽ xuất hiện tại đây.'
-                   : (selectedTab == 'rejected' ? 'Lớp cần chỉnh sửa và gửi duyệt lại sẽ xuất hiện tại đây.'
+      <p th:text="${selectedTab == 'pending' ? 'Không có bản ghi chờ duyệt cũ. Lớp mới hoạt động ngay sau khi tạo.'
+                   : (selectedTab == 'rejected' ? 'Không có bản ghi từ chối cũ. Quy trình duyệt lớp đã ngừng sử dụng.'
                    : (selectedTab == 'archived' ? 'Các lớp được lưu trữ sẽ xuất hiện tại đây.' : 'Thử thay đổi bộ lọc hoặc tạo lớp học mới.'))}"></p>
     </div>
     <details class="cw-group class-semester-group" th:each="group, groupStat : ${semesterGroups}" th:open="${groupStat.first or selectedSemester == group.code}" th:attr="data-semester=${group.code}">
@@ -97,7 +97,6 @@
               <div class="menu right">
                 <a class="menu-item" th:href="@{'/lecturer/classes/' + ${cls.id} + '/lessons'}">Vào lớp học</a>
                 <a class="menu-item" th:href="@{'/lecturer/classes/' + ${cls.id} + '/members'}">Quản lý thành viên</a>
-                <form th:if="${cls.status == 'REJECTED'}" th:action="@{'/lecturer/classes/' + ${cls.id} + '/resubmit'}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><button class="menu-item" type="submit">Gửi duyệt lại</button></form>
                 <div class="menu-sep"></div>
                 <button class="menu-item danger" type="button" data-action="delete-class" th:attr="data-class-id=${cls.id},data-class-name=${cls.name}">Xóa lớp</button>
               </div>

@@ -1,7 +1,7 @@
 package com.ksh.features.leader.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassRepository;
@@ -23,14 +23,25 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LeaderClassApprovalServiceTest {
 
-    @Mock private LeaderDepartmentResolver resolver;
+    @Mock private LeaderSubjectResolver resolver;
     @Mock private ClassRepository classRepository;
     @Mock private UserRepository userRepository;
     @Mock private NotificationService notificationService;
 
     @Test
+    void retired_review_actions_cannot_modify_classes_or_send_notifications() {
+        var service = new LeaderClassApprovalService(
+                resolver, classRepository, userRepository, notificationService);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.approve(13L, 58L))
+                .isInstanceOf(IllegalStateException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.reject(13L, 58L, "reason"))
+                .isInstanceOf(IllegalStateException.class);
+        org.mockito.Mockito.verifyNoInteractions(resolver, classRepository, userRepository, notificationService);
+    }
+
+    @Test
     void queue_uses_latest_review_request_and_includes_lecturer_contact() {
-        Department subject = mock(Department.class);
+        Subject subject = mock(Subject.class);
         ClassEntity clazz = mock(ClassEntity.class);
         User lecturer = mock(User.class);
         LocalDateTime resubmittedAt = LocalDateTime.of(2026, 8, 26, 22, 30);

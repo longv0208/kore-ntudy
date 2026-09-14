@@ -44,7 +44,7 @@ import static com.ksh.common.IConstant.VIDEO_PROVIDER_YOUTUBE;
  *       lesson MUST be {@link Lesson#STATUS_PUBLISHED} and not
  *       soft-deleted — all resolved by {@link LessonAccessResolver}.</li>
  *   <li>The caller MUST be admitted: an ACTIVE-enrolled student, OR the
- *       owning lecturer, OR an ADMIN / in-department LEADER
+ *       owning lecturer, OR an ADMIN / in-subject LEADER
  *       (bypasses enrollment for in-scope inspection). The lesson gates run
  *       first, so a privileged user gains nothing on
  *       a deleted / unpublished lesson.</li>
@@ -114,7 +114,7 @@ public class StudentLessonDetailService {
             throw new EntityNotFoundException("Class not found or not accessible");
         }
 
-        // Access gate: ADMIN and in-department LEADER bypass enrollment so they can inspect the
+        // Access gate: ADMIN and in-subject LEADER bypass enrollment so they can inspect the
         // lesson; the owning lecturer
         // passes too; otherwise an ACTIVE enrollment is required. Any other
         // caller (REMOVED/COMPLETED/non-enrolled non-privileged) → no-leak 404.

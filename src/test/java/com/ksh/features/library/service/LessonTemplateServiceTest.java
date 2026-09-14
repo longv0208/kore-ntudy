@@ -112,12 +112,14 @@ class LessonTemplateServiceTest {
     }
 
     @Test
-    void distribute_rejects_class_that_is_still_awaiting_approval() {
+    void distribute_rejects_historical_pending_class() {
         LessonTemplateRow template = templateService.saveForm(
                 lecturer.getId(), Role.LEADER, richtextForm("Chương 1", "Bài chờ duyệt"));
         ClassEntity pending = new ClassEntity("Library pending", lecturer.getId(), lecturer.getId(),
                 null, null, null, 100);
         pending.setSubjectId(lecturer.getSubjectId());
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                pending, "status", ClassEntity.STATUS_PENDING);
         ClassEntity savedPending = classRepository.saveAndFlush(pending);
 
         assertThatThrownBy(() -> templateService.distribute(template.id(),
@@ -422,7 +424,7 @@ class LessonTemplateServiceTest {
                 null, null, null, 100);
         clazz.setCode("L" + UUID.randomUUID().toString().substring(0, 7).toUpperCase());
         clazz.setSubjectId(lecturer.getSubjectId());
-        clazz.approve(lecturer.getId(), LocalDateTime.now());
+
         return classRepository.saveAndFlush(clazz);
     }
 }

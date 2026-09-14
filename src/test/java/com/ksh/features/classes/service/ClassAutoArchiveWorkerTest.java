@@ -34,7 +34,7 @@ class ClassAutoArchiveWorkerTest {
         ClassEntity clazz = new ClassEntity(
                 "KOR311-A", 2L, 2L, null,
                 LocalDate.of(2026, 8, 1), endDate, 30);
-        clazz.approve(3L, java.time.LocalDateTime.of(2026, 8, 1, 9, 0));
+
         return clazz;
     }
 }

@@ -2,18 +2,15 @@ package com.ksh.features.classes.service;
 
 import com.ksh.entities.ClassActivity;
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.entities.Subject;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.dto.ClassesDtos.ClassForm;
 import com.ksh.features.classes.repository.ClassRepository;
-import com.ksh.features.classes.service.approval.ClassPendingReviewEvent;
 import com.ksh.features.classes.semester.AcademicSemesterService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Encapsulates class creation, subject binding, audit, and leader notification.
+ * Encapsulates immediate class activation, subject binding, and audit.
  *
  * <p>Plain package-private helper instantiated by {@link ClassesService}
  * rather than a separate Spring bean.
@@ -23,28 +20,25 @@ import org.springframework.context.ApplicationEventPublisher;
  */
 final class ClassCreator {
 
-    private static final Logger log = LoggerFactory.getLogger(ClassCreator.class);
     private final ClassRepository classRepository;
     private final ClassActivityWriter activityWriter;
-    private final DepartmentRepository subjectRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final SubjectRepository subjectRepository;
     private final AcademicSemesterService semesterService;
 
     ClassCreator(ClassRepository classRepository,
                  ClassActivityWriter activityWriter,
-                 DepartmentRepository subjectRepository,
+                 SubjectRepository subjectRepository,
                  ApplicationEventPublisher eventPublisher,
                  AcademicSemesterService semesterService) {
         this.classRepository = classRepository;
         this.activityWriter = activityWriter;
         this.subjectRepository = subjectRepository;
-        this.eventPublisher = eventPublisher;
         this.semesterService = semesterService;
     }
 
     ClassEntity create(ClassForm form, Long userId) {
-        Department subject = subjectRepository.findById(form.subjectId())
-                .filter(Department::isActive)
+        Subject subject = subjectRepository.findById(form.subjectId())
+                .filter(Subject::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Mã môn không tồn tại hoặc đã ngừng sử dụng"));
         ClassEntity entity = new ClassEntity(
                 form.name(), userId, userId,
@@ -55,19 +49,7 @@ final class ClassCreator {
         ClassEntity saved = classRepository.saveAndFlush(entity);
         activityWriter.write(saved.getId(), ClassActivity.TYPE_CREATED,
                 "Tạo lớp " + saved.getName(), userId);
-        publishPendingReview(saved, subject.getCode());
         return saved;
     }
 
-    /** Emits the after-commit leader notification for a new or resubmitted class. */
-    void publishPendingReview(ClassEntity clazz, String subjectCode) {
-        try {
-            eventPublisher.publishEvent(new ClassPendingReviewEvent(
-                    clazz.getId(), clazz.getSubjectId(), clazz.getLecturerId(),
-                    clazz.getName(), subjectCode));
-        } catch (RuntimeException exception) {
-            log.warn("Không đăng ký được thông báo chờ duyệt cho lớp {}",
-                    clazz.getId(), exception);
-        }
-    }
 }

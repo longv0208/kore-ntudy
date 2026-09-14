@@ -1,8 +1,8 @@
 package com.ksh.features.admin.users.imports.validator;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.admin.users.imports.dto.UserImportRow;
 import com.ksh.features.admin.users.imports.dto.UserImportRowStatus;
 import com.ksh.features.admin.users.imports.parser.UserRosterParser;
@@ -28,18 +28,18 @@ public class UserRosterRowValidator {
             Set.of(Role.STUDENT, Role.LECTURER, Role.ADMIN);
 
     private final UserRepository userRepository;
-    private final DepartmentRepository departmentRepository;
+    private final SubjectRepository subjectRepository;
 
     public UserRosterRowValidator(UserRepository userRepository,
-                                  DepartmentRepository departmentRepository) {
+                                  SubjectRepository subjectRepository) {
         this.userRepository = userRepository;
-        this.departmentRepository = departmentRepository;
+        this.subjectRepository = subjectRepository;
     }
 
     public List<UserImportRow> validate(List<UserRosterParser.RawRosterRow> rawRows) {
         List<UserImportRow> result = new ArrayList<>();
         Set<String> seenEmails = new HashSet<>();
-        Map<String, Department> subjects = loadSubjects();
+        Map<String, Subject> subjects = loadSubjects();
         for (UserRosterParser.RawRosterRow raw : rawRows) {
             UserImportRow row = new UserImportRow(raw.rowNumber(), raw.email(), raw.fullName(),
                     raw.role(), raw.subject(), raw.phone());
@@ -72,14 +72,14 @@ public class UserRosterRowValidator {
             Role role = resolveRole(raw.role());
             if (role == null || !IMPORTABLE_ROLES.contains(role)) {
                 row.mark(UserImportRowStatus.INVALID_ROLE,
-                        "Chấp nhận STUDENT, LECTURER hoặc ADMIN; LEADER phải được gán tại màn Bộ môn");
+                        "Chấp nhận STUDENT, LECTURER hoặc ADMIN; LEADER phải được gán tại màn Môn học");
                 continue;
             }
 
             Long subjectId = null;
             String subjectValue = text(raw.subject());
             if (subjectValue != null) {
-                Department subject = subjects.get(UserRosterParser.normalize(subjectValue));
+                Subject subject = subjects.get(UserRosterParser.normalize(subjectValue));
                 if (subject == null) {
                     row.mark(UserImportRowStatus.UNKNOWN_SUBJECT, subjectValue);
                     continue;
@@ -110,9 +110,9 @@ public class UserRosterRowValidator {
         row.mark(UserImportRowStatus.ALREADY_EXISTS);
     }
 
-    private Map<String, Department> loadSubjects() {
-        Map<String, Department> result = new HashMap<>();
-        for (Department subject : departmentRepository.findAllByOrderByNameAsc()) {
+    private Map<String, Subject> loadSubjects() {
+        Map<String, Subject> result = new HashMap<>();
+        for (Subject subject : subjectRepository.findAllByOrderByNameAsc()) {
             result.putIfAbsent(UserRosterParser.normalize(subject.getCode()), subject);
             result.putIfAbsent(UserRosterParser.normalize(subject.getName()), subject);
         }

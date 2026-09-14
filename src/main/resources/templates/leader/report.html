@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Trưởng bộ môn | Báo cáo', ~{::link.page-css})}">
+<head th:replace="~{fragments/head :: head('Trưởng môn | Báo cáo', ~{::link.page-css})}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/app-shell.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/class-detail.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/detail-page.css}">
   <link class="page-css" rel="stylesheet" th:href="@{/css/admin.css}">
-  <link class="page-css" rel="stylesheet" th:href="@{/css/leader-department.css}">
+  <link class="page-css" rel="stylesheet" th:href="@{/css/leader-subject.css}">
 </head>
 <body class="leader-page leader-report-page">
 <header th:replace="~{fragments/app-header :: appHeader('leader')}"></header>
@@ -24,22 +24,22 @@
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16V5"/></svg>
       </span>
       <span>
-        <h1 class="detail-title">Báo cáo bộ môn</h1>
-        <p class="detail-sub">So sánh sĩ số và điểm trung bình theo lớp trong bộ môn.</p>
+        <h1 class="detail-title">Báo cáo môn học</h1>
+        <p class="detail-sub">So sánh sĩ số và điểm trung bình theo lớp trong môn học.</p>
       </span>
     </div>
 
-    <div th:if="${emptyDepartment}" class="admin-list-empty" role="status">
-      Bạn chưa được gán bộ môn. Liên hệ quản trị viên để được chỉ định trưởng bộ môn.
+    <div th:if="${emptySubject}" class="admin-list-empty" role="status">
+      Bạn chưa được gán môn học. Liên hệ quản trị viên để được chỉ định trưởng môn.
     </div>
 
-    <section class="leader-report-section" th:if="${!emptyDepartment}">
+    <section class="leader-report-section" th:if="${!emptySubject}">
       <div class="leader-section-heading">
         <h2>Kết quả theo lớp</h2>
         <span th:if="${reportRows != null}" th:text="${reportRows.size()} + ' lớp'">0 lớp</span>
       </div>
       <div th:if="${reportRows == null or reportRows.isEmpty()}" class="leader-empty-state">
-        Chưa có lớp nào thuộc bộ môn.
+        Chưa có lớp nào thuộc môn học.
       </div>
       <div class="leader-table-shell" th:if="${reportRows != null and !reportRows.isEmpty()}">
         <table class="leader-data-table leader-report-table">
@@ -76,6 +76,6 @@
 </div>
 
 <script th:src="@{/js/app.js}"></script>
-<script th:src="@{/js/leader-department.js}"></script>
+<script th:src="@{/js/leader-subject.js}"></script>
 </body>
 </html>

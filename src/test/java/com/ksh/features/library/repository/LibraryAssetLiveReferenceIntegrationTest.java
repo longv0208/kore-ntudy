@@ -147,7 +147,7 @@ class LibraryAssetLiveReferenceIntegrationTest {
         ClassEntity clazz = new ClassEntity("Lớp " + suffix + " " + UUID.randomUUID(),
                 owner.getId(), owner.getId(), null, null, null, 20);
         clazz.setSubjectId(owner.getSubjectId());
-        clazz.approve(owner.getId(), LocalDateTime.now());
+
         return classRepository.saveAndFlush(clazz);
     }
 }

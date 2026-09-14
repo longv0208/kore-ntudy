@@ -83,7 +83,7 @@ public interface TestRepository extends JpaRepository<Test, Long> {
                                        @Param("includeCreated") boolean includeCreated);
 
     /**
-     * Exams attached to classes inside one LEADER department scope.
+     * Exams attached to classes inside one LEADER subject scope.
      * The collection must be non-empty; callers use a sentinel when needed.
      */
     Page<Test> findByClassIdIn(Collection<Long> classIds, Pageable pageable);

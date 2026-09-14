@@ -1,10 +1,10 @@
 package com.ksh.features.student.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.Enrollment;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.dto.ClassOverview;
 import com.ksh.features.classes.repository.ClassRepository;
@@ -35,7 +35,7 @@ class StudentClassWorkspaceTest {
     private final EnrollmentRepository enrollments = mock(EnrollmentRepository.class);
     private final ClassRepository classes = mock(ClassRepository.class);
     private final UserRepository users = mock(UserRepository.class);
-    private final DepartmentRepository subjects = mock(DepartmentRepository.class);
+    private final SubjectRepository subjects = mock(SubjectRepository.class);
     private StudentClassesService service;
 
     @BeforeEach
@@ -88,7 +88,7 @@ class StudentClassWorkspaceTest {
         when(lecturer.getId()).thenReturn(42L);
         when(lecturer.getFullName()).thenReturn("Kim Giảng Viên");
         when(users.findAllById(List.of(42L))).thenReturn(List.of(lecturer));
-        Department subject = new Department("Korean", "KOR311", null, true);
+        Subject subject = new Subject("Korean", "KOR311", null, true);
         ReflectionTestUtils.setField(subject, "id", 6L);
         when(subjects.findAllById(List.of(6L))).thenReturn(List.of(subject));
 

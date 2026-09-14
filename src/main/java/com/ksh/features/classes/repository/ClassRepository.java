@@ -162,7 +162,7 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
     long countDistinctTeachingUsers(@Param("classIds") Collection<Long> classIds);
 
     @Query("""
-            SELECT c FROM ClassEntity c, Department s
+            SELECT c FROM ClassEntity c, Subject s
             WHERE c.subjectId = s.id
               AND c.status IN :statuses
               AND (:semester = '' OR c.semester = :semester)
@@ -187,7 +187,7 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
             Pageable pageable);
 
     @Query("""
-            SELECT c FROM ClassEntity c, Department s
+            SELECT c FROM ClassEntity c, Subject s
             WHERE c.subjectId = s.id
               AND c.subjectId IN :subjectIds
               AND c.status IN :statuses
@@ -210,7 +210,7 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
             Pageable pageable);
 
     @Query("""
-            SELECT c FROM ClassEntity c, Department s
+            SELECT c FROM ClassEntity c, Subject s
             WHERE c.subjectId = s.id
               AND c.status IN :statuses
               AND (:semester = '' OR c.semester = :semester)
@@ -260,7 +260,7 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
             """, nativeQuery = true)
     List<Long> findClassIdsForLecturer(@Param("lecturerId") Long lecturerId);
 
-    /** Non-deleted classes owned by a department, newest first. */
+    /** Non-deleted classes owned by a subject, newest first. */
     List<ClassEntity> findAllBySubjectIdOrderByCreatedAtDesc(Long subjectId);
 
     /** Non-deleted classes owned by any subject curated by a multi-subject leader. */
@@ -273,13 +273,13 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
     List<ClassEntity> findAllBySubjectIdAndStatusOrderByUpdatedAtDescIdDesc(
             Long subjectId, String status);
 
-    /** Paginated department-scoped class list. */
+    /** Paginated subject-scoped class list. */
     Page<ClassEntity> findAllBySubjectId(Long subjectId, Pageable pageable);
 
     /** Paginated multi-subject class list for a leader. */
     Page<ClassEntity> findAllBySubjectIdIn(Collection<Long> subjectIds, Pageable pageable);
 
-    /** Department scope plus lifecycle tab filter for subject leaders. */
+    /** Subject scope plus lifecycle tab filter for subject leaders. */
     Page<ClassEntity> findAllBySubjectIdInAndStatusIn(Collection<Long> subjectIds,
                                                        Collection<String> statuses,
                                                        Pageable pageable);
@@ -295,7 +295,7 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
 
     /** Searchable, paginated ACTIVE catalog for student discovery. */
     @Query("""
-            SELECT c FROM ClassEntity c, Department s
+            SELECT c FROM ClassEntity c, Subject s
             WHERE c.subjectId = s.id
               AND c.status = :status
               AND (:query = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))
@@ -309,7 +309,7 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
                                           Pageable pageable);
 
     @Query("""
-            SELECT c FROM ClassEntity c, Department s
+            SELECT c FROM ClassEntity c, Subject s
             WHERE c.subjectId = s.id
               AND c.status = :status
               AND (:semester = '' OR c.semester = :semester)

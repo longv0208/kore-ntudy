@@ -148,12 +148,12 @@
             </div>
 
             <div class="form-row">
-              <label for="departmentSelect">Mã môn phụ trách</label>
-              <select id="departmentSelect" th:field="*{subjectId}" data-ksh-select>
+              <label for="subjectSelect">Mã môn phụ trách</label>
+              <select id="subjectSelect" th:field="*{subjectId}" data-ksh-select>
                 <option value="">— Chưa gán —</option>
-                <option th:each="d : ${departments}"
+                <option th:each="d : ${subjects}"
                         th:value="${d.id()}"
-                        th:text="${d.name() + ' (' + d.code() + ')'}">DEPT</option>
+                        th:text="${d.name() + ' (' + d.code() + ')'}">SUBJECT</option>
               </select>
             </div>
 

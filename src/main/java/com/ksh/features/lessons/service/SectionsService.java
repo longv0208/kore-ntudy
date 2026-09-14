@@ -26,7 +26,7 @@ import java.util.Map;
  * <p>Every mutating method enforces ownership via
  * {@link ClassesService#getEditable}: a LECTURER may only manage sections
  * inside classes they own; LEADER may manage classes in their resolved
- * department and ADMIN may manage any class. Read
+ * subject and ADMIN may manage any class. Read
  * operations go through {@link ClassesService#getViewable}, which today
  * applies the same rule but is decoupled so a future sprint can relax it
  * for enrolled students.

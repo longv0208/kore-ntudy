@@ -95,7 +95,7 @@ public class QuestionBankReviewService {
     }
 
     /**
-     * Approves each item, skipping any that are in an invalid state, cross-department,
+     * Approves each item, skipping any that are in an invalid state, cross-subject,
      * or missing. Not {@code @Transactional}: each single call runs in its own tx so
      * one failing item never rolls back items already committed (partial success).
      */

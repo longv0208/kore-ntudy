@@ -1,9 +1,9 @@
 package com.ksh.features.questionbank.service;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.leader.service.LeaderDepartmentResolver;
+import com.ksh.features.leader.service.LeaderSubjectResolver;
 import com.ksh.features.questionbank.entity.QuestionBankItem;
 import com.ksh.features.questionbank.repository.QuestionBankItemRepository;
 import com.ksh.security.Role;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 class QuestionBankReviewServiceTest {
 
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final LeaderDepartmentResolver resolver = mock(LeaderDepartmentResolver.class);
+    private final LeaderSubjectResolver resolver = mock(LeaderSubjectResolver.class);
     private final QuestionBankAccessPolicy accessPolicy = new QuestionBankAccessPolicy(resolver);
     private final QuestionBankItemRepository itemRepository = mock(QuestionBankItemRepository.class);
     private final QuestionBankReviewService service = new QuestionBankReviewService(
@@ -36,7 +36,7 @@ class QuestionBankReviewServiceTest {
         leader = mock(User.class);
         when(leader.getId()).thenReturn(30L);
         when(leader.getRole()).thenReturn(Role.LEADER);
-        Department subject = new Department("Tiếng Hàn 3.1.1", "KOR311", null, true);
+        Subject subject = new Subject("Tiếng Hàn 3.1.1", "KOR311", null, true);
         ReflectionTestUtils.setField(subject, "id", 5L);
         subject.assignLeader(30L);
         when(userRepository.findById(30L)).thenReturn(Optional.of(leader));

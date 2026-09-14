@@ -1,11 +1,11 @@
 package com.ksh.features.questionbank.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.TestActivity;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.library.repository.LessonTemplateRepository;
 import com.ksh.features.questionbank.entity.QuestionBankItem;
@@ -42,7 +42,7 @@ public class QuestionBankTestGenerationService {
     public static final String SCOPE_LESSON = "LESSON";
 
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final LessonTemplateRepository lessonRepository;
     private final QuestionBankAccessPolicy accessPolicy;
     private final QuestionBankItemRepository itemRepository;
@@ -54,7 +54,7 @@ public class QuestionBankTestGenerationService {
     private final TestActivityWriter activityWriter;
 
     public QuestionBankTestGenerationService(UserRepository userRepository,
-                                             DepartmentRepository subjectRepository,
+                                             SubjectRepository subjectRepository,
                                              LessonTemplateRepository lessonRepository,
                                              QuestionBankAccessPolicy accessPolicy,
                                              QuestionBankItemRepository itemRepository,
@@ -93,7 +93,7 @@ public class QuestionBankTestGenerationService {
                                      String title, String scope, Long lessonTemplateId,
                                      Integer questionCount, List<Long> classIds) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         int requested = questionCount == null ? 10 : Math.max(1, Math.min(questionCount, 50));
         String normalizedScope = normalizeScope(scope);
         LessonTemplate selectedLesson = null;
@@ -174,11 +174,11 @@ public class QuestionBankTestGenerationService {
         return actor;
     }
 
-    private Department requireSubject(User actor, Long subjectId) {
+    private Subject requireSubject(User actor, Long subjectId) {
         if (subjectId == null || !accessPolicy.canAccessSubject(actor, subjectId)) {
             throw new AccessDeniedException("Không có quyền truy cập mã môn");
         }
-        return subjectRepository.findById(subjectId).filter(Department::isActive)
+        return subjectRepository.findById(subjectId).filter(Subject::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Mã môn không còn hoạt động"));
     }
 

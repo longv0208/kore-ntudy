@@ -1,9 +1,9 @@
 package com.ksh.features.tests.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.questionbank.entity.QuestionBankItem;
@@ -32,7 +32,7 @@ import java.util.Set;
 public class ExamQuestionBankPickerService {
 
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final QuestionBankAccessPolicy accessPolicy;
     private final TestAccessResolver testAccessResolver;
     private final ClassRepository classRepository;
@@ -40,7 +40,7 @@ public class ExamQuestionBankPickerService {
     private final QuestionBankOptionRepository optionRepository;
 
     public ExamQuestionBankPickerService(UserRepository userRepository,
-                                         DepartmentRepository subjectRepository,
+                                         SubjectRepository subjectRepository,
                                          QuestionBankAccessPolicy accessPolicy,
                                          TestAccessResolver testAccessResolver,
                                          ClassRepository classRepository,
@@ -131,7 +131,7 @@ public class ExamQuestionBankPickerService {
     }
 
     private String subjectCode(Long subjectId) {
-        return subjectRepository.findById(subjectId).map(Department::getCode)
+        return subjectRepository.findById(subjectId).map(Subject::getCode)
                 .orElseThrow(this::forbidden);
     }
 

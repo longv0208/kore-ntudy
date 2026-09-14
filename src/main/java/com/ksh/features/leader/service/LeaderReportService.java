@@ -1,9 +1,9 @@
 package com.ksh.features.leader.service;
 
 import com.ksh.entities.ClassEntity;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.features.classes.repository.ClassRepository;
-import com.ksh.features.leader.dto.LeaderDtos.DepartmentSummary;
+import com.ksh.features.leader.dto.LeaderDtos.SubjectSummary;
 import com.ksh.features.leader.dto.LeaderDtos.ReportClassRow;
 import com.ksh.features.leader.dto.LeaderDtos.ReportView;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,16 +16,16 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Builds the department class comparison report for LEADER.
+ * Builds the subject class comparison report for LEADER.
  */
 @Service
 public class LeaderReportService {
 
-    private final LeaderDepartmentResolver resolver;
+    private final LeaderSubjectResolver resolver;
     private final ClassRepository classRepository;
     private final JdbcTemplate jdbc;
 
-    public LeaderReportService(LeaderDepartmentResolver resolver,
+    public LeaderReportService(LeaderSubjectResolver resolver,
                              ClassRepository classRepository,
                              JdbcTemplate jdbc) {
         this.resolver = resolver;
@@ -35,17 +35,18 @@ public class LeaderReportService {
 
     @Transactional(readOnly = true)
     public ReportView load(Long leaderUserId) {
-        List<Department> subjects = resolver.resolveAll(leaderUserId);
+        List<Subject> subjects = resolver.resolveAll(leaderUserId);
         if (subjects.isEmpty()) {
             return new ReportView(null, List.of(), true);
         }
         List<ClassEntity> classes = new ArrayList<>();
         java.util.Map<Long, String> subjectCodes = new java.util.HashMap<>();
-        for (Department subject : subjects) {
+        for (Subject subject : subjects) {
             subjectCodes.put(subject.getId(), subject.getCode());
             classes.addAll(classRepository.findAllBySubjectIdOrderByCreatedAtDesc(subject.getId()));
         }
-        classes.sort((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()));
+        classes.sort(java.util.Comparator.comparing(ClassEntity::getCreatedAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
         List<ReportClassRow> rows = new ArrayList<>(classes.size());
         for (ClassEntity c : classes) {
             long enrollments = countActiveEnrollments(c.getId());
@@ -55,11 +56,11 @@ public class LeaderReportService {
                     c.getId(), c.getName(), subjectCodes.get(c.getSubjectId()),
                     enrollments, avgTest, avgAsg));
         }
-        Department first = subjects.get(0);
-        DepartmentSummary summary = subjects.size() == 1
-                ? new DepartmentSummary(first.getId(), first.getCode(), first.getName())
-                : new DepartmentSummary(first.getId(), subjects.size() + " mã môn",
-                        "Bộ môn tiếng Hàn");
+        Subject first = subjects.get(0);
+        SubjectSummary summary = subjects.size() == 1
+                ? new SubjectSummary(first.getId(), first.getCode(), first.getName())
+                : new SubjectSummary(first.getId(), subjects.size() + " mã môn",
+                        "Môn học tiếng Hàn");
         return new ReportView(summary, rows, false);
     }
 

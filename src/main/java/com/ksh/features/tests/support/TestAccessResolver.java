@@ -26,9 +26,9 @@ import java.util.List;
  *       are ACTIVE-enrolled in its class, OR they own the PRACTICE test.
  *       Otherwise 404 (existence never leaked).</li>
  *   <li><b>Test management</b> follows the canonical class policy: ADMIN is
- *       global, LEADER is department-scoped, and LECTURER is owner-scoped.
+ *       global, LEADER is subject-scoped, and LECTURER is owner-scoped.
  *       A lecturer also retains access to an exam they created, matching the
- *       pre-department behavior. Student-owned PRACTICE tests remain isolated
+ *       pre-subject behavior. Student-owned PRACTICE tests remain isolated
  *       from these elevated class-management rules.</li>
  *   <li>Attempt/review access is strictly per-user.</li>
  * </ul>

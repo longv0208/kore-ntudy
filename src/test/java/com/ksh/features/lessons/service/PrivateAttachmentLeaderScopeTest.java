@@ -24,7 +24,7 @@ import static org.mockito.Mockito.*;
 class PrivateAttachmentLeaderScopeTest {
 
     @Test
-    void foreignDepartmentLeaderIsDeniedBeforePrivateObjectIsOpened() {
+    void foreignSubjectLeaderIsDeniedBeforePrivateObjectIsOpened() {
         LessonAttachmentRepository attachments = mock(LessonAttachmentRepository.class);
         LessonRepository lessons = mock(LessonRepository.class);
         SectionRepository sections = mock(SectionRepository.class);
@@ -38,7 +38,7 @@ class PrivateAttachmentLeaderScopeTest {
         when(lesson.getSectionId()).thenReturn(4L);
         when(sections.findById(4L)).thenReturn(Optional.of(section));
         when(section.getClassId()).thenReturn(5L);
-        doThrow(new AccessDeniedException("foreign department"))
+        doThrow(new AccessDeniedException("foreign subject"))
                 .when(classes).getEditable(5L, 7L, Role.LEADER);
 
         LessonAttachmentsService service = new LessonAttachmentsService(

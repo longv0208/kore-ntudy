@@ -398,7 +398,7 @@ class StudentLessonsControllerTest {
         ClassEntity entity = new ClassEntity(name, lecturerId, lecturerId,
                 null, null, null, 100);
         entity.setSubjectId(lecturer.getSubjectId());
-        entity.approve(lecturerId, java.time.LocalDateTime.now());
+
         entity.setCode(code);
         try {
             return classRepository.saveAndFlush(entity);

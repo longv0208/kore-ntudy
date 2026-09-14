@@ -1,6 +1,6 @@
 package com.ksh.features.admin;
 
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.admin.settings.repository.AiProviderRepository;
 import com.ksh.features.admin.settings.repository.AiSystemPromptRepository;
 import jakarta.persistence.LockModeType;
@@ -20,7 +20,7 @@ class AdminToggleConcurrencyContractTest {
 
     @Test
     void parityToggleRepositoriesUsePessimisticWriteLocks() throws Exception {
-        assertPessimisticWrite(DepartmentRepository.class);
+        assertPessimisticWrite(SubjectRepository.class);
         assertPessimisticWrite(AiProviderRepository.class);
         assertPessimisticWrite(AiSystemPromptRepository.class);
     }
@@ -28,7 +28,7 @@ class AdminToggleConcurrencyContractTest {
     @Test
     void parityToggleServicesReadMutableStateThroughTheirLockedLookup() throws Exception {
         assertToggleUsesLockedLookup(read(
-                "admin/departments/service/DepartmentService.java"), "boolean toggleActive(");
+                "admin/subjects/service/SubjectService.java"), "boolean toggleActive(");
         assertToggleUsesLockedLookup(read(
                 "admin/settings/service/AiProviderService.java"), "Optional<Boolean> toggleEnabled(");
         assertToggleUsesLockedLookup(read(

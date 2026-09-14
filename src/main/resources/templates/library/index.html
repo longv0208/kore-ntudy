@@ -69,8 +69,8 @@
         <strong>Đã khóa quyền thêm tài nguyên của giảng viên</strong>
         <p th:text="${libraryCanManageLock
             ? 'Leader vẫn có thể tạo, import, sắp xếp và biên tập toàn bộ syllabus; khóa này chỉ chặn giảng viên gắn thêm tài nguyên.'
-            : 'Trưởng bộ môn hiện không cho phép giảng viên gắn thêm tài nguyên vào bài học.'}">
-          Trưởng bộ môn hiện không cho phép giảng viên thêm tài nguyên.
+            : 'Trưởng môn hiện không cho phép giảng viên gắn thêm tài nguyên vào bài học.'}">
+          Trưởng môn hiện không cho phép giảng viên thêm tài nguyên.
         </p>
       </div>
     </aside>
@@ -142,7 +142,7 @@
                     ? 'Không tìm thấy bài học phù hợp' : 'Chưa có bài học nào'">Chưa có bài học</h3>
       <p th:text="${libraryCanManageLock
           ? 'Tạo hoặc import syllabus gồm chương và bài học cho mã môn này.'
-          : 'Mã môn chưa có bài học; hãy liên hệ trưởng bộ môn để tạo syllabus.'}">
+          : 'Mã môn chưa có bài học; hãy liên hệ trưởng môn để tạo syllabus.'}">
         Tạo bài học trong Library.
       </p>
       <button class="content-create-btn js-library-editor" type="button"
@@ -207,7 +207,7 @@
                       th:text="${item.title()}">Bài 1</strong>
               <small th:if="${item.canManageStructure()}">Nhấn tiêu đề để sửa nhanh; leader quản lý nội dung và cấu trúc bài học.</small>
               <small th:if="${!item.canManageStructure() and item.canAddResources()}">Giảng viên chỉ được thêm tài nguyên; cấu trúc và nội dung do leader quản lý.</small>
-              <small th:if="${!item.canManageStructure() and !item.canAddResources()}">Trưởng bộ môn đang khóa quyền thêm tài nguyên của giảng viên.</small>
+              <small th:if="${!item.canManageStructure() and !item.canAddResources()}">Trưởng môn đang khóa quyền thêm tài nguyên của giảng viên.</small>
             </div>
             <div class="library-lesson-meta">
               <span class="kind-pill" th:text="${item.contentType() == 'PDF'} ? 'PDF'

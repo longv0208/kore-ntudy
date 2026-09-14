@@ -73,8 +73,8 @@ class Sprint2ClassesIntegrationTest {
     void list_lecturer_sees_only_own_classes() throws Exception {
         ClassEntity own = saveClass("Lect-Own", lecturer.getId(), "OWN01");
         ClassEntity other = saveClass("Leader-Own", leader.getId(), "HDA01");
-        own.approve(leader.getId(), java.time.LocalDateTime.now());
-        other.approve(leader.getId(), java.time.LocalDateTime.now());
+
+
         classRepository.saveAllAndFlush(java.util.List.of(own, other));
 
         mockMvc.perform(get("/lecturer/classes"))
@@ -85,11 +85,11 @@ class Sprint2ClassesIntegrationTest {
 
     @Test
     @WithUserDetails("leader@ksh.edu.vn")
-    void list_leader_sees_same_department_classes() throws Exception {
+    void list_leader_sees_same_subject_classes() throws Exception {
         ClassEntity byLecturer = saveClass("By-Lect", lecturer.getId(), "BYL01");
         ClassEntity byLeader = saveClass("By-Leader", leader.getId(), "BYH01");
-        byLecturer.approve(leader.getId(), java.time.LocalDateTime.now());
-        byLeader.approve(leader.getId(), java.time.LocalDateTime.now());
+
+
         classRepository.saveAllAndFlush(java.util.List.of(byLecturer, byLeader));
 
         mockMvc.perform(get("/lecturer/classes"))
@@ -103,8 +103,8 @@ class Sprint2ClassesIntegrationTest {
     void list_admin_sees_all() throws Exception {
         ClassEntity first = saveClass("Admin-See-1", lecturer.getId(), "ADM01");
         ClassEntity second = saveClass("Admin-See-2", leader.getId(), "ADM02");
-        first.approve(leader.getId(), java.time.LocalDateTime.now());
-        second.approve(leader.getId(), java.time.LocalDateTime.now());
+
+
         classRepository.saveAllAndFlush(java.util.List.of(first, second));
 
         mockMvc.perform(get("/lecturer/classes"))
@@ -118,13 +118,16 @@ class Sprint2ClassesIntegrationTest {
     void list_tabs_separate_operational_and_archived_lifecycle_states() throws Exception {
         ClassEntity pending = saveClass("Tab-Pending-Unique", lecturer.getId(), "TPEND");
         ClassEntity rejected = saveClass("Tab-Rejected-Unique", lecturer.getId(), "TREJT");
+        org.springframework.test.util.ReflectionTestUtils.setField(pending, "status", ClassEntity.STATUS_PENDING);
+        org.springframework.test.util.ReflectionTestUtils.setField(rejected, "status", ClassEntity.STATUS_PENDING);
+        classRepository.saveAndFlush(pending);
         rejected.reject(leader.getId(), "Cần bổ sung mô tả", java.time.LocalDateTime.now());
         classRepository.saveAndFlush(rejected);
         ClassEntity active = saveClass("Tab-Active-Unique", lecturer.getId(), "TACTV");
-        active.approve(leader.getId(), java.time.LocalDateTime.now());
+
         classRepository.saveAndFlush(active);
         ClassEntity archived = saveClass("Tab-Archived-Unique", lecturer.getId(), "TARCH");
-        archived.approve(leader.getId(), java.time.LocalDateTime.now());
+
         archived.archive();
         classRepository.saveAndFlush(archived);
 
@@ -170,9 +173,9 @@ class Sprint2ClassesIntegrationTest {
         ClassEntity first = saveClass("Pagination-First-Unique", lecturer.getId(), "PGN01");
         ClassEntity second = saveClass("Pagination-Second-Unique", lecturer.getId(), "PGN02");
         ClassEntity third = saveClass("Pagination-Third-Unique", lecturer.getId(), "PGN03");
-        first.approve(leader.getId(), java.time.LocalDateTime.now());
-        second.approve(leader.getId(), java.time.LocalDateTime.now());
-        third.approve(leader.getId(), java.time.LocalDateTime.now());
+
+
+
         classRepository.saveAllAndFlush(java.util.List.of(first, second, third));
 
         mockMvc.perform(get("/lecturer/classes")
@@ -233,7 +236,7 @@ class Sprint2ClassesIntegrationTest {
                         .param("endDate", "2026-12-31")
                         .param("maxStudents", "50"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/lecturer/classes?tab=pending"));
+                .andExpect(redirectedUrl("/lecturer/classes?tab=current"));
 
         assertThat(classRepository.count()).isEqualTo(before + 1);
         assertThat(activityRepository.count()).isEqualTo(activityBefore + 1);
@@ -241,7 +244,9 @@ class Sprint2ClassesIntegrationTest {
         ClassEntity saved = classRepository.findAllByLecturerIdOrderByCreatedAtDesc(lecturer.getId())
                 .stream().filter(c -> "Java cơ bản".equals(c.getName())).findFirst().orElseThrow();
         assertThat(saved.getSubjectId()).isEqualTo(lecturer.getSubjectId());
-        assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_PENDING);
+        assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_ACTIVE);
+        assertThat(saved.getApprovedBy()).isNull();
+        assertThat(saved.getApprovedAt()).isNull();
         assertThat(saved.getStartDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 1));
 
     }

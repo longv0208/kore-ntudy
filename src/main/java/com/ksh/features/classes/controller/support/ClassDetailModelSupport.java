@@ -8,7 +8,7 @@ import com.ksh.features.classes.repository.ClassCoLecturerRepository;
 import com.ksh.security.Role;
 import org.springframework.stereotype.Component;
 import org.springframework.ui.Model;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 
 import static com.ksh.common.IConstant.*;
 
@@ -29,11 +29,11 @@ public class ClassDetailModelSupport {
 
     private final ClassCoLecturerRepository coLecturerRepository;
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
 
     public ClassDetailModelSupport(ClassCoLecturerRepository coLecturerRepository,
                                    UserRepository userRepository,
-                                   DepartmentRepository subjectRepository) {
+                                   SubjectRepository subjectRepository) {
         this.coLecturerRepository = coLecturerRepository;
         this.userRepository = userRepository;
         this.subjectRepository = subjectRepository;
@@ -64,7 +64,7 @@ public class ClassDetailModelSupport {
         model.addAttribute("classViewerRole",
                 primaryOwner ? "GV chủ lớp"
                         : coLecturer ? "Giảng viên đồng giảng"
-                        : role == Role.LEADER ? "Trưởng bộ môn"
+                        : role == Role.LEADER ? "Trưởng môn"
                         : role == Role.ADMIN ? "Quản trị viên" : "Người xem");
     }
 

@@ -5,7 +5,7 @@ import com.ksh.entities.ClassEntity;
 import com.ksh.entities.Enrollment;
 import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.tests.dto.TestDtos.ClassTestsView;
@@ -46,7 +46,7 @@ public class TestCatalogService {
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final TestAccessResolver accessResolver;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final TestAttemptService attemptLifecycle;
 
     public TestCatalogService(TestAccessQueries accessQueries,
@@ -56,7 +56,7 @@ public class TestCatalogService {
                               EnrollmentRepository enrollmentRepository,
                               UserRepository userRepository,
                               TestAccessResolver accessResolver,
-                              DepartmentRepository subjectRepository,
+                              SubjectRepository subjectRepository,
                               TestAttemptService attemptLifecycle) {
         this.accessQueries = accessQueries;
         this.attemptRepository = attemptRepository;
@@ -125,7 +125,7 @@ public class TestCatalogService {
                 .map(User::getFullName).orElse(null);
         String subjectCode = clazz.getSubjectId() == null ? "—"
                 : subjectRepository.findById(clazz.getSubjectId())
-                        .map(com.ksh.entities.Department::getCode).orElse("—");
+                        .map(com.ksh.entities.Subject::getCode).orElse("—");
         return new ClassTestsView(clazz.getId(), clazz.getName(), subjectCode,
                 lecturerName, normalized, rows);
     }

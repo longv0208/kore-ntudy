@@ -73,12 +73,12 @@ class QuestionBankFrontendContractTest {
         String form = Files.readString(FORM_TEMPLATE);
 
         assertThat(list)
-                .contains("!emptyDepartment")
+                .contains("!emptySubject")
                 .contains("Chưa có mã môn đang hoạt động", "qb-subject-catalog")
                 .doesNotContain("Bạn chưa được gán mã môn")
                 .doesNotContain("emptyCategories", "Danh mục ngân hàng câu hỏi");
         assertThat(form)
-                .contains("th:if=\"${!emptyDepartment}\"")
+                .contains("th:if=\"${!emptySubject}\"")
                 .contains("Chưa có mã môn đang hoạt động")
                 .doesNotContain("Bạn chưa được gán mã môn")
                 .doesNotContain("emptyCategories", "Danh mục ngân hàng câu hỏi");

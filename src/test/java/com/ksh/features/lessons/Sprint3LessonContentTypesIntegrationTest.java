@@ -302,7 +302,7 @@ class Sprint3LessonContentTypesIntegrationTest {
     private ClassEntity saveClass(String name, String code, Long lecturerId) {
         ClassEntity entity = new ClassEntity(name, lecturerId, lecturerId,
                 null, null, null, 100);
-        entity.approve(lecturerId, LocalDateTime.now());
+
         entity.setCode(code);
         try {
             return classRepository.saveAndFlush(entity);

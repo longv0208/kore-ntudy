@@ -518,23 +518,23 @@ public interface IConstant {
     // Numbered-button window size lives in com.ksh.common.PageWindow.
     String ATTR_PAGER_PARAMS = "params";
 
-    // ───────── Admin departments + LEADER shell ────────────────────────
-    String URL_ADMIN_DEPARTMENTS = "/admin/departments";
-    String VIEW_ADMIN_DEPARTMENTS      = "admin/departments";
-    String VIEW_ADMIN_DEPARTMENTS_FORM = "admin/departments-form";
-    String TAB_DEPARTMENTS = "departments";
+    // ───────── Admin subjects + LEADER shell ────────────────────────
+    String URL_ADMIN_SUBJECTS = "/admin/subjects";
+    String VIEW_ADMIN_SUBJECTS      = "admin/subjects";
+    String VIEW_ADMIN_SUBJECTS_FORM = "admin/subjects-form";
+    String TAB_SUBJECTS = "subjects";
 
-    String ATTR_DEPARTMENTS     = "departments";
+    String ATTR_SUBJECTS     = "subjects";
     String ATTR_LEADER_CANDIDATES = "leaderCandidates";
     String ATTR_TARGET_ID = "targetId";
     // Shared key "activitiesPage" — same string as users edit history tab.
     String ATTR_ACTIVITIES_PAGE = "activitiesPage";
 
-    String MSG_DEPARTMENT_CREATED     = "Đã thêm môn học ";
-    String MSG_DEPARTMENT_UPDATED     = "Đã cập nhật môn học";
-    String MSG_DEPARTMENT_ACTIVATED   = "Đã hiện môn học";
-    String MSG_DEPARTMENT_DEACTIVATED = "Đã ẩn môn học";
-    String MSG_DEPARTMENT_NOT_FOUND   = "Không tìm thấy môn học";
+    String MSG_SUBJECT_CREATED     = "Đã thêm môn học ";
+    String MSG_SUBJECT_UPDATED     = "Đã cập nhật môn học";
+    String MSG_SUBJECT_ACTIVATED   = "Đã hiện môn học";
+    String MSG_SUBJECT_DEACTIVATED = "Đã ẩn môn học";
+    String MSG_SUBJECT_NOT_FOUND   = "Không tìm thấy môn học";
 
     // LEADER product area.
     String BASE_LEADER              = "/leader";
@@ -546,17 +546,17 @@ public interface IConstant {
     String VIEW_LEADER_REPORT       = "leader/report";
     String VIEW_LEADER_QB_TESTS      = "leader/question-bank-tests";
     String ATTR_LEADER_QB_TESTS      = "qbTests";
-    String ATTR_LEADER_DEPARTMENT   = "leaderDepartment";
+    String ATTR_LEADER_SUBJECT   = "leaderSubject";
     String ATTR_LEADER_KPIS         = "kpis";
     String ATTR_LEADER_RECENT       = "recentClasses";
     String ATTR_LEADER_CLASS_ROWS   = "classRows";
     String ATTR_LEADER_LECTURERS    = "lecturers";
     String ATTR_LEADER_REPORT_ROWS  = "reportRows";
-    String ATTR_LEADER_EMPTY        = "emptyDepartment";
+    String ATTR_LEADER_EMPTY        = "emptySubject";
     String ATTR_QB_ITEMS          = "items";
     String ATTR_QB_SELECTED_STATUS = "selectedStatus";
     String ATTR_QB_QUERY          = "query";
-    String ATTR_QB_EMPTY_DEPARTMENT = "emptyDepartment";
+    String ATTR_QB_EMPTY_SUBJECT = "emptySubject";
     String ATTR_QB_DETAIL         = "detail";
     String MSG_LEADER_REASSIGNED    = "Đã phân công giảng viên cho lớp ";
     String MSG_LEADER_REASSIGN_FAIL = "Không thể phân công giảng viên";

@@ -1,8 +1,8 @@
 package com.ksh.features.library.controller;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,17 +30,17 @@ class LibraryAuthoringLockControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository userRepository;
-    @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private SubjectRepository subjectRepository;
     @Autowired private com.ksh.features.library.repository.LessonTemplateRepository templateRepository;
 
-    private Department subject;
+    private Subject subject;
 
     @BeforeEach
     void setUp() {
         User lecturer = userRepository.findByEmailIgnoreCase("lecturer@ksh.edu.vn").orElseThrow();
-        subject = departmentRepository.findById(lecturer.getSubjectId()).orElseThrow();
+        subject = subjectRepository.findById(lecturer.getSubjectId()).orElseThrow();
         subject.setLibraryLocked(false);
-        departmentRepository.saveAndFlush(subject);
+        subjectRepository.saveAndFlush(subject);
     }
 
     @Test
@@ -71,7 +71,7 @@ class LibraryAuthoringLockControllerTest {
     @WithUserDetails("lecturer@ksh.edu.vn")
     void lecturer_sees_read_only_state_without_lock_or_edit_controls() throws Exception {
         subject.setLibraryLocked(true);
-        departmentRepository.saveAndFlush(subject);
+        subjectRepository.saveAndFlush(subject);
 
         mockMvc.perform(get("/lecturer/library/templates")
                         .param("subjectId", subject.getId().toString()))
@@ -101,7 +101,7 @@ class LibraryAuthoringLockControllerTest {
     @WithUserDetails("kor_leader@ksh.edu.vn")
     void kor_leader_sees_authoring_and_drag_controls_even_when_locked() throws Exception {
         subject.setLibraryLocked(true);
-        departmentRepository.saveAndFlush(subject);
+        subjectRepository.saveAndFlush(subject);
         mockMvc.perform(get("/lecturer/library/templates")
                         .param("subjectId", subject.getId().toString()))
                 .andExpect(status().isOk())

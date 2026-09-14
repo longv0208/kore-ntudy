@@ -3,8 +3,6 @@ package com.ksh.features.leader.controller;
 import com.ksh.features.leader.dto.LeaderDtos.AssignView;
 import com.ksh.features.leader.dto.LeaderDtos.DashboardView;
 import com.ksh.features.leader.dto.LeaderDtos.ReportView;
-import com.ksh.features.leader.dto.LeaderDtos.ApprovalQueueView;
-import com.ksh.features.leader.service.LeaderClassApprovalService;
 import com.ksh.features.leader.service.LeaderDashboardService;
 import com.ksh.features.leader.service.LeaderLecturerAssignmentService;
 import com.ksh.features.leader.service.LeaderReportService;
@@ -24,7 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import static com.ksh.common.IConstant.*;
 
 /**
- * LEADER product shell: dashboard, lecturer assignment, and department report.
+ * LEADER product shell: dashboard, lecturer assignment, and subject report.
  */
 @Controller
 @RequestMapping(BASE_LEADER)
@@ -34,38 +32,26 @@ public class LeaderController {
     private final LeaderDashboardService dashboardService;
     private final LeaderLecturerAssignmentService assignmentService;
     private final LeaderReportService reportService;
-    private final LeaderClassApprovalService approvalService;
 
     public LeaderController(LeaderDashboardService dashboardService,
                           LeaderLecturerAssignmentService assignmentService,
-                          LeaderReportService reportService,
-                          LeaderClassApprovalService approvalService) {
+                          LeaderReportService reportService) {
         this.dashboardService = dashboardService;
         this.assignmentService = assignmentService;
         this.reportService = reportService;
-        this.approvalService = approvalService;
     }
 
     @GetMapping("/approvals")
     public String approvals(@AuthenticationPrincipal KshUserDetails user, Model model) {
-        ApprovalQueueView view = approvalService.load(user.getId());
-        model.addAttribute(ATTR_LEADER_DEPARTMENT, view.department());
-        model.addAttribute("pendingClasses", view.pendingClasses());
-        model.addAttribute(ATTR_LEADER_EMPTY, view.emptyDepartment());
-        return "leader/approvals";
+        return "redirect:/leader";
     }
 
     @PostMapping("/approvals/{classId}/approve")
     public String approveClass(@PathVariable Long classId,
                                @AuthenticationPrincipal KshUserDetails user,
                                RedirectAttributes ra) {
-        try {
-            ra.addFlashAttribute(ATTR_FLASH_SUCCESS,
-                    "Đã duyệt lớp " + approvalService.approve(user.getId(), classId));
-        } catch (IllegalStateException ex) {
-            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
-        }
-        return "redirect:/leader/approvals";
+        throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.GONE, "Quy trình duyệt lớp đã ngừng sử dụng");
     }
 
     @PostMapping("/approvals/{classId}/reject")
@@ -73,22 +59,17 @@ public class LeaderController {
                               @RequestParam(required = false) String note,
                               @AuthenticationPrincipal KshUserDetails user,
                               RedirectAttributes ra) {
-        try {
-            ra.addFlashAttribute(ATTR_FLASH_SUCCESS,
-                    "Đã từ chối lớp " + approvalService.reject(user.getId(), classId, note));
-        } catch (IllegalStateException ex) {
-            ra.addFlashAttribute(ATTR_FLASH_ERROR, ex.getMessage());
-        }
-        return "redirect:/leader/approvals";
+        throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.GONE, "Quy trình duyệt lớp đã ngừng sử dụng");
     }
 
     @GetMapping({"", "/"})
     public String dashboard(@AuthenticationPrincipal KshUserDetails user, Model model) {
         DashboardView view = dashboardService.load(user.getId());
-        model.addAttribute(ATTR_LEADER_DEPARTMENT, view.department());
+        model.addAttribute(ATTR_LEADER_SUBJECT, view.subject());
         model.addAttribute(ATTR_LEADER_KPIS, view.kpis());
         model.addAttribute(ATTR_LEADER_RECENT, view.recentClasses());
-        model.addAttribute(ATTR_LEADER_EMPTY, view.emptyDepartment());
+        model.addAttribute(ATTR_LEADER_EMPTY, view.emptySubject());
         model.addAttribute(ATTR_ACTIVE_TAB, "dashboard");
         return VIEW_LEADER_DASHBOARD;
     }
@@ -96,10 +77,10 @@ public class LeaderController {
     @GetMapping("/assign")
     public String assign(@AuthenticationPrincipal KshUserDetails user, Model model) {
         AssignView view = assignmentService.load(user.getId());
-        model.addAttribute(ATTR_LEADER_DEPARTMENT, view.department());
+        model.addAttribute(ATTR_LEADER_SUBJECT, view.subject());
         model.addAttribute(ATTR_LEADER_CLASS_ROWS, view.classRows());
         model.addAttribute(ATTR_LEADER_LECTURERS, view.lecturers());
-        model.addAttribute(ATTR_LEADER_EMPTY, view.emptyDepartment());
+        model.addAttribute(ATTR_LEADER_EMPTY, view.emptySubject());
         model.addAttribute(ATTR_ACTIVE_TAB, "assign");
         return VIEW_LEADER_ASSIGN;
     }
@@ -131,14 +112,14 @@ public class LeaderController {
     @GetMapping("/report")
     public String report(@AuthenticationPrincipal KshUserDetails user, Model model) {
         ReportView view = reportService.load(user.getId());
-        model.addAttribute(ATTR_LEADER_DEPARTMENT, view.department());
+        model.addAttribute(ATTR_LEADER_SUBJECT, view.subject());
         model.addAttribute(ATTR_LEADER_REPORT_ROWS, view.rows());
-        model.addAttribute(ATTR_LEADER_EMPTY, view.emptyDepartment());
+        model.addAttribute(ATTR_LEADER_EMPTY, view.emptySubject());
         model.addAttribute(ATTR_ACTIVE_TAB, "report");
         return VIEW_LEADER_REPORT;
     }
 
-    // The department question bank management screen is served by
+    // The subject question bank management screen is served by
     // LeaderQuestionBankController at /leader/question-bank; no handler here.
 
 }

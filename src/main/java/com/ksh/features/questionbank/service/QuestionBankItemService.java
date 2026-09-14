@@ -1,10 +1,10 @@
 package com.ksh.features.questionbank.service;
 
 import com.ksh.common.HtmlSanitizer;
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.User;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.questionbank.dto.QuestionBankItemForm;
 import com.ksh.features.questionbank.dto.QuestionBankViews.ContributorOption;
@@ -54,14 +54,14 @@ public class QuestionBankItemService {
     private static final String MSG_FORBIDDEN = "Bạn không có quyền thao tác với câu hỏi cộng tác này";
 
     private final UserRepository userRepository;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final QuestionBankAccessPolicy accessPolicy;
     private final QuestionBankItemRepository itemRepository;
     private final QuestionBankOptionRepository optionRepository;
     private final LessonTemplateRepository lessonRepository;
 
     public QuestionBankItemService(UserRepository userRepository,
-                                   DepartmentRepository subjectRepository,
+                                   SubjectRepository subjectRepository,
                                    QuestionBankAccessPolicy accessPolicy,
                                    QuestionBankItemRepository itemRepository,
                                    QuestionBankOptionRepository optionRepository,
@@ -84,7 +84,7 @@ public class QuestionBankItemService {
     public List<ItemRow> list(Long userId, Role role, Long subjectId, String status,
                               Long contributorId, String query) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         List<QuestionBankItem> items = itemRepository
                 .findBySubjectIdOrderByUpdatedAtDescIdDesc(subject.getId());
         Map<Long, String> userNames = userNames(items);
@@ -106,7 +106,7 @@ public class QuestionBankItemService {
     public Page<ItemRow> page(Long userId, Role role, Long subjectId, String status,
                               String query, int page, int size) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, Math.min(size, 100));
         String normalizedStatus = status == null || status.isBlank()
@@ -123,7 +123,7 @@ public class QuestionBankItemService {
     @Transactional(readOnly = true)
     public WorkspaceView workspace(Long userId, Role role, Long subjectId, String query) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         List<QuestionBankItem> items = itemRepository
                 .findBySubjectIdOrderByUpdatedAtDescIdDesc(subject.getId());
         Map<Long, String> names = userNames(items);
@@ -150,7 +150,7 @@ public class QuestionBankItemService {
     @Transactional(readOnly = true)
     public WorkspaceView workspaceSummary(Long userId, Role role, Long subjectId, String query) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         String normalizedQuery = normalizeQuery(query);
         long approved = itemRepository.countForWorkspace(subject.getId(),
                 QuestionBankItem.STATUS_APPROVED, normalizedQuery);
@@ -214,7 +214,7 @@ public class QuestionBankItemService {
     public SubjectReviewView reviewView(Long userId, Role role, Long subjectId,
                                         String status, Long contributorId, String query) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         List<QuestionBankItem> all = itemRepository
                 .findBySubjectIdOrderByUpdatedAtDescIdDesc(subject.getId());
         Map<Long, String> names = userNames(all);
@@ -279,7 +279,7 @@ public class QuestionBankItemService {
     public ItemDetail detail(Long userId, Role role, Long itemId) {
         User actor = requireActor(userId, role);
         QuestionBankItem item = requireVisibleItem(itemId, actor);
-        Department subject = requireSubject(actor, item.getSubjectId());
+        Subject subject = requireSubject(actor, item.getSubjectId());
         Map<Long, String> names = loadNames(Stream.of(item.getContributorId(), item.getReviewedBy())
                 .filter(Objects::nonNull).collect(Collectors.toSet()));
         return toDetail(actor, item, subject.getCode(), names, optionsByItemId(List.of(item)));
@@ -356,12 +356,12 @@ public class QuestionBankItemService {
     public SubjectCatalogView subjectCatalogView(Long userId, Role role, String query,
                                                  String bankStatus, String sort) {
         User actor = requireActor(userId, role);
-        List<Department> subjects = allowedSubjects(actor);
+        List<Subject> subjects = allowedSubjects(actor);
         if (subjects.isEmpty()) {
             return new SubjectCatalogView(new CatalogMetrics(0, 0, 0, 0), List.of());
         }
 
-        List<Long> subjectIds = subjects.stream().map(Department::getId).toList();
+        List<Long> subjectIds = subjects.stream().map(Subject::getId).toList();
         Map<Long, LessonTemplateRepository.SubjectContentCount> contentCounts = lessonRepository
                 .summarizeSubjects(subjectIds).stream()
                 .collect(Collectors.toMap(
@@ -435,7 +435,7 @@ public class QuestionBankItemService {
     public List<LessonOption> lessonOptions(Long userId, Role role) {
         User actor = requireActor(userId, role);
         List<LessonOption> result = new ArrayList<>();
-        for (Department subject : allowedSubjects(actor)) {
+        for (Subject subject : allowedSubjects(actor)) {
             for (LessonTemplate lesson : lessonRepository
                     .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId())) {
                 result.add(new LessonOption(lesson.getId(), subject.getId(), subject.getCode(),
@@ -448,7 +448,7 @@ public class QuestionBankItemService {
     @Transactional(readOnly = true)
     public List<ChapterOption> chapterOptions(Long userId, Role role, Long subjectId) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         Map<Integer, ChapterOption> chapters = new LinkedHashMap<>();
         for (LessonTemplate lesson : lessonRepository
                 .findBySubjectIdOrderByChapterOrderAscDisplayOrderAscTitleAsc(subject.getId())) {
@@ -461,7 +461,7 @@ public class QuestionBankItemService {
     @Transactional(readOnly = true)
     public QuestionBankItemForm newForm(Long userId, Role role, Long subjectId) {
         User actor = requireActor(userId, role);
-        Department subject = requireSubject(actor, subjectId);
+        Subject subject = requireSubject(actor, subjectId);
         QuestionBankItemForm form = QuestionBankItemForm.empty();
         form.setSubjectId(subject.getId());
         return form;
@@ -472,7 +472,7 @@ public class QuestionBankItemService {
                 .orElseThrow(() -> new QuestionBankValidationException(MSG_NOT_FOUND));
         if (!accessPolicy.canAccessSubject(actor, item.getSubjectId())
                 || subjectRepository.findById(item.getSubjectId())
-                .filter(Department::isActive).isEmpty()) {
+                .filter(Subject::isActive).isEmpty()) {
             throw new QuestionBankValidationException(MSG_NOT_FOUND);
         }
         return item;
@@ -514,12 +514,12 @@ public class QuestionBankItemService {
         return actor;
     }
 
-    private Department requireSubject(User actor) {
+    private Subject requireSubject(User actor) {
         return requireSubject(actor, null);
     }
 
-    private Department requireSubject(User actor, Long requestedSubjectId) {
-        List<Department> allowed = allowedSubjects(actor);
+    private Subject requireSubject(User actor, Long requestedSubjectId) {
+        List<Subject> allowed = allowedSubjects(actor);
         if (allowed.isEmpty()) {
             throw new QuestionBankValidationException(MSG_EMPTY_SUBJECT);
         }
@@ -537,11 +537,11 @@ public class QuestionBankItemService {
                 .orElseThrow(() -> new QuestionBankValidationException(MSG_EMPTY_SUBJECT));
     }
 
-    private List<Department> allowedSubjects(User actor) {
+    private List<Subject> allowedSubjects(User actor) {
         if (actor.getRole() == Role.LEADER) {
             return subjectRepository.findByActiveTrueOrderByNameAsc().stream()
                     .filter(subject -> accessPolicy.canAccessSubject(actor, subject.getId()))
-                    .sorted(Comparator.comparing(Department::getCode,
+                    .sorted(Comparator.comparing(Subject::getCode,
                             String.CASE_INSENSITIVE_ORDER))
                     .toList();
         }
@@ -549,7 +549,7 @@ public class QuestionBankItemService {
             return List.of();
         }
         return subjectRepository.findByActiveTrueOrderByNameAsc().stream()
-                .sorted(Comparator.comparing(Department::getCode,
+                .sorted(Comparator.comparing(Subject::getCode,
                         String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
@@ -679,7 +679,7 @@ public class QuestionBankItemService {
                 || subjectCode.toLowerCase().contains(query);
     }
 
-    private static boolean matchesSubject(Department subject, String query) {
+    private static boolean matchesSubject(Subject subject, String query) {
         if (query == null) return true;
         return subject.getCode().toLowerCase().contains(query)
                 || subject.getName().toLowerCase().contains(query);

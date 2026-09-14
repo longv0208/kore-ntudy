@@ -1,9 +1,9 @@
 package com.ksh.features.admin.users.imports.validator;
 
-import com.ksh.entities.Department;
+import com.ksh.entities.Subject;
 import com.ksh.entities.User;
 import com.ksh.entities.UserFactory;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.admin.users.imports.dto.UserImportRowStatus;
 import com.ksh.features.admin.users.imports.parser.UserRosterParser;
 import com.ksh.features.auth.repository.UserRepository;
@@ -25,16 +25,16 @@ import static org.mockito.Mockito.when;
 class UserRosterRowValidatorTest {
 
     @Mock private UserRepository userRepository;
-    @Mock private DepartmentRepository departmentRepository;
+    @Mock private SubjectRepository subjectRepository;
 
     private UserRosterRowValidator validator;
 
     @BeforeEach
     void setUp() {
-        validator = new UserRosterRowValidator(userRepository, departmentRepository);
-        Department korean = new Department("Korean Language", "KOR20", null, true);
+        validator = new UserRosterRowValidator(userRepository, subjectRepository);
+        Subject korean = new Subject("Korean Language", "KOR20", null, true);
         ReflectionTestUtils.setField(korean, "id", 20L);
-        when(departmentRepository.findAllByOrderByNameAsc()).thenReturn(List.of(korean));
+        when(subjectRepository.findAllByOrderByNameAsc()).thenReturn(List.of(korean));
     }
 
     @Test
@@ -74,7 +74,7 @@ class UserRosterRowValidatorTest {
                 UserImportRowStatus.UNKNOWN_SUBJECT,
                 UserImportRowStatus.CREATABLE,
                 UserImportRowStatus.DUPLICATE_IN_FILE);
-        assertThat(rows.get(2).getDetail()).contains("LEADER phải được gán tại màn Bộ môn");
+        assertThat(rows.get(2).getDetail()).contains("LEADER phải được gán tại màn Môn học");
     }
 
     @Test

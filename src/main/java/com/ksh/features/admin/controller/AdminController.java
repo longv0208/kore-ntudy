@@ -17,15 +17,15 @@ import static com.ksh.common.IConstant.*;
 /**
  * MVC controller for the system administration panel.
  * Access is restricted to the {@code ADMIN} role only — may be relaxed to include
- * {@code LEADER} in a future sprint once per-department dashboards are available.
+ * {@code LEADER} in a future sprint once per-subject dashboards are available.
  *
  * <p>URL pattern: {@code /admin/{tab}}:
  * <ul>
  *   <li>{@code /dashboard} — platform statistics, role breakdown chart, and recent
  *       classes (Sprint 2 wireframe).</li>
  *   <li>{@code /settings}  — settings index page (links to Email, General, etc.).</li>
- *   <li>{@code /departments} — handled by
- *       {@link com.ksh.features.admin.departments.controller.AdminDepartmentsController}.</li>
+ *   <li>{@code /subjects} — handled by
+ *       {@link com.ksh.features.admin.subjects.controller.AdminSubjectsController}.</li>
  * </ul>
  *
  * <p>The {@code /admin/settings/email} sub-tab is handled by

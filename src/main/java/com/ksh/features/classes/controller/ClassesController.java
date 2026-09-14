@@ -7,7 +7,7 @@ import com.ksh.features.classes.dto.ClassesDtos.ClassRow;
 import com.ksh.features.classes.service.ClassesService;
 import com.ksh.features.classes.service.ClassJoinRequestQuickViewService;
 import com.ksh.features.classes.service.JoinClassService;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.semester.AcademicSemesterService;
 import com.ksh.features.classes.semester.AcademicSemester;
 import com.ksh.security.Roles;
@@ -70,13 +70,13 @@ public class ClassesController {
     private static final String TAB_ARCHIVED = "archived";
 
     private final ClassesService classesService;
-    private final DepartmentRepository subjectRepository;
+    private final SubjectRepository subjectRepository;
     private final ClassJoinRequestQuickViewService quickJoinRequests;
     private final JoinClassService joinClassService;
     private final AcademicSemesterService semesterService;
 
     public ClassesController(ClassesService classesService,
-                             DepartmentRepository subjectRepository,
+                             SubjectRepository subjectRepository,
                              ClassJoinRequestQuickViewService quickJoinRequests,
                              JoinClassService joinClassService,
                              AcademicSemesterService semesterService) {
@@ -235,9 +235,7 @@ public class ClassesController {
             return VIEW_CLASS_FORM;
         }
         ra.addFlashAttribute(ATTR_FLASH_SUCCESS, MSG_CLASS_CREATED);
-        // New classes are never active immediately; keep the creator on the
-        // lifecycle tab where the just-created row actually exists.
-        return "redirect:" + URL_CLASSES_LIST + "?tab=" + TAB_PENDING;
+        return "redirect:" + URL_CLASSES_LIST + "?tab=" + TAB_CURRENT;
     }
 
     /**
@@ -290,18 +288,13 @@ public class ClassesController {
         return "redirect:" + URL_CLASSES_LIST;
     }
 
-    /** Returns a corrected REJECTED class to the leader approval queue. */
+    /** Rejects obsolete review submissions without changing historical classes. */
     @PostMapping("/classes/{id}/resubmit")
     public String resubmitForReview(@PathVariable Long id,
                                     @AuthenticationPrincipal KshUserDetails user,
                                     RedirectAttributes ra) {
-        try {
-            classesService.resubmitForReview(id, user.getId(), user.getRole());
-            ra.addFlashAttribute(ATTR_FLASH_SUCCESS, "Đã gửi lại lớp để chờ duyệt");
-        } catch (IllegalStateException exception) {
-            ra.addFlashAttribute(ATTR_FLASH_ERROR, exception.getMessage());
-        }
-        return "redirect:" + URL_CLASSES_LIST + "?tab=" + TAB_PENDING;
+        throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.GONE, "Quy trình duyệt lớp đã ngừng sử dụng");
     }
 
     /** Soft-deletes a class after the user confirms the action via the confirm modal. */

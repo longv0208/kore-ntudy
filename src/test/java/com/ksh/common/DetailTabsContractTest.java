@@ -60,7 +60,7 @@ class DetailTabsContractTest {
     void everyAdoptedTemplateExposesOnePanelAndLoadsTheSharedScript() throws Exception {
         List<String> templates = List.of(
                 "templates/admin/users-form.html",
-                "templates/admin/departments-form.html",
+                "templates/admin/subjects-form.html",
                 "templates/admin/settings-ai-form.html",
                 "templates/classes/detail-settings.html");
 

@@ -59,7 +59,7 @@ class TestAccessResolverLeaderScopeTest {
     }
 
     @org.junit.jupiter.api.Test
-    void sameDepartmentLeaderMayManageDirectTestId() {
+    void sameSubjectLeaderMayManageDirectTestId() {
         when(actor.getRole()).thenReturn(Role.LEADER);
         when(classAccessPolicy.canAccess(clazz, USER_ID, Role.LEADER)).thenReturn(true);
 
@@ -67,7 +67,7 @@ class TestAccessResolverLeaderScopeTest {
     }
 
     @org.junit.jupiter.api.Test
-    void crossDepartmentLeaderCannotManageDirectTestId() {
+    void crossSubjectLeaderCannotManageDirectTestId() {
         when(actor.getRole()).thenReturn(Role.LEADER);
         when(classAccessPolicy.canAccess(clazz, USER_ID, Role.LEADER)).thenReturn(false);
 

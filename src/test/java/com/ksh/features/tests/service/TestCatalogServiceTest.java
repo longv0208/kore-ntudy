@@ -1,7 +1,7 @@
 package com.ksh.features.tests.service;
 
 import com.ksh.features.auth.repository.UserRepository;
-import com.ksh.features.admin.departments.repository.DepartmentRepository;
+import com.ksh.features.admin.subjects.repository.SubjectRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
 import com.ksh.features.tests.dto.TestDtos.StudentTestDetail;
@@ -37,7 +37,7 @@ class TestCatalogServiceTest {
     @Mock private EnrollmentRepository enrollmentRepository;
     @Mock private UserRepository userRepository;
     @Mock private TestAccessResolver accessResolver;
-    @Mock private DepartmentRepository subjectRepository;
+    @Mock private SubjectRepository subjectRepository;
     @Mock private TestAttemptService attemptLifecycle;
 
     @InjectMocks private TestCatalogService service;
