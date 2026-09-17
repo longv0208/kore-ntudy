@@ -256,8 +256,14 @@ class ClassesServiceTest {
                 LocalDate.of(2026, 7, 1), LocalDate.of(2026, 12, 31), 50, 12L);
         ClassEntity saved = service.create(form, LECTURER_ID);
 
+        assertThat(saved.getName()).isEqualTo("Java");
+        assertThat(saved.getDescription()).isEqualTo("Khoá nhập môn");
+        assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+        assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(saved.getMaxStudents()).isEqualTo(50);
         assertThat(saved.getSubjectId()).isEqualTo(12L);
         assertThat(saved.getLecturerId()).isEqualTo(LECTURER_ID);
+        assertThat(saved.getCreatedBy()).isEqualTo(LECTURER_ID);
         assertThat(saved.getStatus()).isEqualTo(ClassEntity.STATUS_ACTIVE);
         assertThat(saved.getSemester()).isEqualTo("FA26");
 
@@ -286,6 +292,23 @@ class ClassesServiceTest {
                 .hasMessageContaining("Mã môn");
 
         verify(classRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void create_rejects_inactive_subject_before_persisting() {
+        Subject inactive = new Subject("Tiếng Hàn ngừng dạy", "KOR999", null, false);
+        ReflectionTestUtils.setField(inactive, "id", 99L);
+        when(subjectRepository.findById(99L)).thenReturn(Optional.of(inactive));
+
+        ClassForm form = new ClassForm("Lớp cũ", null, null, null, 30, 99L);
+
+        assertThatThrownBy(() -> service.create(form, LECTURER_ID))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ngừng sử dụng");
+
+        verify(classRepository, never()).saveAndFlush(any());
+        verify(activityWriter, never()).write(any(), any(), any(), any());
+        verify(activityWriter, never()).write(any(), any(), any(), any(), any());
     }
 
     @Test

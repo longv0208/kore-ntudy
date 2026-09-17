@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -72,11 +75,62 @@ class ClassMaterialsServiceTest {
         assertThat(captor.getValue().getClassId()).isEqualTo(5L);
         assertThat(captor.getValue().getLessonId()).isNull();
         assertThat(captor.getValue().getLibraryAssetId()).isEqualTo(11L);
+        assertThat(captor.getValue().getOriginalFilename()).isEqualTo("tai-lieu.pdf");
+        assertThat(captor.getValue().getStoredPath()).isEqualTo("library/7/tai-lieu.pdf");
+        assertThat(captor.getValue().getMimeType()).isEqualTo("application/pdf");
+        assertThat(captor.getValue().getSizeBytes()).isEqualTo(2048L);
+        assertThat(captor.getValue().getUploadedBy()).isEqualTo(7L);
+        assertThat(row.title()).isEqualTo("Tài liệu ôn tập");
+        assertThat(row.originalFilename()).isEqualTo("tai-lieu.pdf");
+        assertThat(row.mimeType()).isEqualTo("application/pdf");
+        assertThat(row.sizeBytes()).isEqualTo(2048L);
         assertThat(row.downloadUrl()).isEqualTo("/api/classes/5/materials/19/download");
     }
 
     @Test
-    void duplicate_class_share_is_rejected() {
+    void share_requires_owner_management_authorization() {
+        when(classesService.getOwnerManaged(5L, 99L, Role.LECTURER))
+                .thenThrow(new AccessDeniedException("forbidden"));
+
+        assertThatThrownBy(() -> service.shareFromLibrary(5L, 11L, 99L, Role.LECTURER))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(libraryService, never()).getOwnedAssetForUpdate(any(), any());
+        verify(attachmentRepository, never()).save(any());
+    }
+
+    @Test
+    void share_rejects_missing_class_before_asset_lookup() {
+        when(classesService.getOwnerManaged(404L, 7L, Role.LECTURER))
+                .thenThrow(new EntityNotFoundException("missing class"));
+
+        assertThatThrownBy(() -> service.shareFromLibrary(404L, 11L, 7L, Role.LECTURER))
+                .isInstanceOf(EntityNotFoundException.class);
+
+        verify(libraryService, never()).getOwnedAssetForUpdate(any(), any());
+    }
+
+    @Test
+    void share_rejects_missing_or_non_document_asset() {
+        when(classesService.getOwnerManaged(5L, 7L, Role.LECTURER)).thenReturn(clazz);
+        when(clazz.getStatus()).thenReturn(ClassEntity.STATUS_ACTIVE);
+        when(libraryService.getOwnedAssetForUpdate(7L, 404L))
+                .thenThrow(new EntityNotFoundException("missing asset"));
+
+        assertThatThrownBy(() -> service.shareFromLibrary(5L, 404L, 7L, Role.LECTURER))
+                .isInstanceOf(EntityNotFoundException.class);
+
+        when(libraryService.getOwnedAssetForUpdate(7L, 12L)).thenReturn(asset);
+        when(asset.getKind()).thenReturn(LibraryAsset.KIND_VIDEO);
+
+        assertThatThrownBy(() -> service.shareFromLibrary(5L, 12L, 7L, Role.LECTURER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("DOCUMENT");
+        verify(attachmentRepository, never()).save(any());
+    }
+
+    @Test
+    void duplicate_class_share_is_rejected_without_writing_again() {
         when(classesService.getOwnerManaged(5L, 7L, Role.LECTURER)).thenReturn(clazz);
         when(clazz.getStatus()).thenReturn(ClassEntity.STATUS_ACTIVE);
         when(libraryService.getOwnedAssetForUpdate(7L, 11L)).thenReturn(asset);
@@ -87,6 +141,7 @@ class ClassMaterialsServiceTest {
         assertThatThrownBy(() -> service.shareFromLibrary(5L, 11L, 7L, Role.LECTURER))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("đã có");
+        verify(attachmentRepository, never()).save(any());
     }
 
     @Test

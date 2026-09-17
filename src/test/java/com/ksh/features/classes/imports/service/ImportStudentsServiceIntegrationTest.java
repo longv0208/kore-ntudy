@@ -5,6 +5,7 @@ import com.ksh.entities.User;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.entities.ClassEntity;
 import com.ksh.entities.Enrollment;
+import com.ksh.features.classes.imports.InvalidFileException;
 import com.ksh.features.classes.imports.dto.ImportResult;
 import com.ksh.features.classes.imports.dto.ImportRowStatus;
 import com.ksh.features.classes.imports.session.ImportSession;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Integration test for the end-to-end import flow.
@@ -109,6 +111,71 @@ class ImportStudentsServiceIntegrationTest {
         assertThat(result.reactivated()).isZero();
         assertThat(result.skippedError()).isEqualTo(1);
         assertThat(enrollmentRepository.countActiveByClassId(clazz.getId())).isZero();
+    }
+
+    @Test
+    void confirm_rejects_session_for_another_class_and_restores_it() throws IOException {
+        ClassEntity otherClass = saveClass("Other import class", lecturer.getId(), "IMPIT-OTHER");
+        MultipartFile file = build(new String[]{"Email", "MSSV"}, new String[][]{
+                {"sv01@ksh.edu.vn", "SV0001"}
+        });
+
+        ImportSession session = importStudentsService.previewUpload(
+                file, clazz.getId(), lecturer.getId(), Role.LECTURER);
+
+        assertThatThrownBy(() -> importStudentsService.confirmImport(
+                session.getId(), otherClass.getId(), lecturer.getId(), Role.LECTURER,
+                new ImportStudentsService.ImportOptions(false)))
+                .isInstanceOf(InvalidFileException.class)
+                .hasMessageContaining("không khớp");
+        assertThat(sessionStore.get(session.getId(), lecturer.getId())).isPresent();
+
+        ImportResult result = importStudentsService.confirmImport(
+                session.getId(), clazz.getId(), lecturer.getId(), Role.LECTURER,
+                new ImportStudentsService.ImportOptions(false));
+        assertThat(result.imported()).isEqualTo(1);
+    }
+
+    @Test
+    void confirm_replay_is_rejected_after_session_has_been_consumed() throws IOException {
+        MultipartFile file = build(new String[]{"Email", "MSSV"}, new String[][]{
+                {"sv01@ksh.edu.vn", "SV0001"}
+        });
+        ImportSession session = importStudentsService.previewUpload(
+                file, clazz.getId(), lecturer.getId(), Role.LECTURER);
+
+        importStudentsService.confirmImport(session.getId(), clazz.getId(), lecturer.getId(),
+                Role.LECTURER, new ImportStudentsService.ImportOptions(false));
+
+        assertThatThrownBy(() -> importStudentsService.confirmImport(
+                session.getId(), clazz.getId(), lecturer.getId(), Role.LECTURER,
+                new ImportStudentsService.ImportOptions(false)))
+                .isInstanceOf(InvalidFileException.class)
+                .hasMessageContaining("hết hạn hoặc không tồn tại");
+        assertThat(enrollmentRepository.countActiveByClassId(clazz.getId())).isEqualTo(1);
+    }
+
+    @Test
+    void confirm_skips_students_already_active_in_class() throws IOException {
+        User sv01 = userRepository.findByEmailIgnoreCase("sv01@ksh.edu.vn").orElseThrow();
+        enrollmentRepository.saveAndFlush(new Enrollment(sv01, clazz.getId(), "MANUAL", null));
+
+        MultipartFile file = build(new String[]{"Email", "MSSV"}, new String[][]{
+                {"sv01@ksh.edu.vn", "SV0001"}
+        });
+        ImportSession session = importStudentsService.previewUpload(
+                file, clazz.getId(), lecturer.getId(), Role.LECTURER);
+        assertThat(session.getRows().get(0).getStatus())
+                .isEqualTo(ImportRowStatus.DUPLICATE_IN_CLASS);
+
+        ImportResult result = importStudentsService.confirmImport(
+                session.getId(), clazz.getId(), lecturer.getId(), Role.LECTURER,
+                new ImportStudentsService.ImportOptions(false));
+
+        assertThat(result.imported()).isZero();
+        assertThat(result.reactivated()).isZero();
+        assertThat(result.skippedDuplicate()).isEqualTo(1);
+        assertThat(enrollmentRepository.countActiveByClassId(clazz.getId())).isEqualTo(1);
     }
 
     @Test

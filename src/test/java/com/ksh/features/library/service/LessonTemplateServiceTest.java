@@ -6,12 +6,14 @@ import com.ksh.entities.LessonTemplate;
 import com.ksh.entities.LibraryAsset;
 import com.ksh.entities.Section;
 import com.ksh.entities.User;
+import jakarta.persistence.EntityNotFoundException;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.lessons.repository.LessonRepository;
 import com.ksh.features.lessons.repository.SectionRepository;
 import com.ksh.features.library.dto.LibraryDtos.LessonTemplateRow;
 import com.ksh.features.library.dto.LessonTemplateForm;
+import com.ksh.features.library.repository.LessonTemplateAttachmentRepository;
 import com.ksh.features.library.repository.LessonTemplateRepository;
 import com.ksh.features.library.repository.LibraryAssetRepository;
 import com.ksh.security.Role;
@@ -42,6 +44,7 @@ class LessonTemplateServiceTest {
 
     @Autowired private LessonTemplateService templateService;
     @Autowired private LessonTemplateRepository templateRepository;
+    @Autowired private LessonTemplateAttachmentRepository templateAttachmentRepository;
     @Autowired private LibraryAssetRepository assetRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private ClassRepository classRepository;
@@ -390,6 +393,135 @@ class LessonTemplateServiceTest {
                 .containsExactly(beforeInsert - 2, beforeInsert - 1, beforeInsert, beforeInsert + 1);
         assertThat(third.getTitle()).startsWith("Bài " + beforeInsert + " ·");
         assertThat(shifted.getTitle()).startsWith("Bài " + (beforeInsert + 1) + " ·");
+    }
+
+    @Test
+    void saveForm_create_update_sanitises_markup_and_preserves_metadata() {
+        LessonTemplateForm create = richtextForm("Chương 87", "Bài metadata");
+        create.setContentRichtext("<p>Được giữ</p><script>alert(1)</script>"
+                + "<img src=\"javascript:alert(2)\" onclick=\"x()\">");
+
+        LessonTemplateRow row = templateService.saveForm(
+                lecturer.getId(), Role.LEADER, create);
+        LessonTemplate before = templateRepository.findById(row.id()).orElseThrow();
+        Long ownerId = before.getOwnerId();
+        Long subjectId = before.getSubjectId();
+        int chapter = before.getChapterOrder();
+        int displayOrder = before.getDisplayOrder();
+        LocalDateTime createdAt = before.getCreatedAt();
+
+        assertThat(before.getContentRichtext()).contains("<p>Được giữ</p>")
+                .doesNotContain("<script>", "onclick", "javascript:");
+
+        LessonTemplateForm edit = templateService.loadForm(
+                lecturer.getId(), Role.LEADER, row.id(), subjectId);
+        edit.setContentRichtext("<p>Cập nhật an toàn</p><script>bad()</script>");
+        templateService.saveForm(lecturer.getId(), Role.LEADER, edit);
+
+        LessonTemplate after = templateRepository.findById(row.id()).orElseThrow();
+        assertThat(after.getId()).isEqualTo(row.id());
+        assertThat(after.getOwnerId()).isEqualTo(ownerId);
+        assertThat(after.getSubjectId()).isEqualTo(subjectId);
+        assertThat(after.getChapterOrder()).isEqualTo(chapter);
+        assertThat(after.getDisplayOrder()).isEqualTo(displayOrder);
+        assertThat(after.getCreatedAt()).isEqualTo(createdAt);
+        assertThat(after.getContentRichtext()).isEqualTo("<p>Cập nhật an toàn</p>");
+    }
+
+    @Test
+    void saveForm_accepts_media_url_and_rejects_unsafe_video_url() {
+        LessonTemplateForm create = richtextForm("Chương 86", "Bài media URL");
+        create.setVideoUrl("  https://www.youtube.com/watch?v=media86  ");
+        create.setVideoSummary("  Tóm tắt media  ");
+
+        LessonTemplateRow row = templateService.saveForm(
+                lecturer.getId(), Role.LEADER, create);
+        LessonTemplate saved = templateRepository.findById(row.id()).orElseThrow();
+        assertThat(saved.getVideoProvider()).isEqualTo("YOUTUBE");
+        assertThat(saved.getVideoUrl()).isEqualTo("https://www.youtube.com/watch?v=media86");
+        assertThat(saved.getVideoSummary()).isEqualTo("Tóm tắt media");
+
+        LessonTemplateForm unsafe = templateService.loadForm(
+                lecturer.getId(), Role.LEADER, row.id(), lecturer.getSubjectId());
+        unsafe.setVideoUrl("https://evil.example/video");
+        assertThatThrownBy(() -> templateService.saveForm(
+                lecturer.getId(), Role.LEADER, unsafe))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("YouTube hoặc Vimeo");
+    }
+
+    @Test
+    void saveForm_rejects_foreign_missing_and_mixed_asset_ids_before_create() {
+        User foreignOwner = userRepository.findByEmailIgnoreCase("student@ksh.edu.vn")
+                .orElseThrow();
+        LibraryAsset own = assetRepository.saveAndFlush(new LibraryAsset(
+                lecturer.getId(), "Own guide", "own.pdf", "library/own.pdf",
+                "application/pdf", 10L, LibraryAsset.KIND_DOCUMENT));
+        LibraryAsset foreign = assetRepository.saveAndFlush(new LibraryAsset(
+                foreignOwner.getId(), "Foreign guide", "foreign.pdf", "library/foreign.pdf",
+                "application/pdf", 11L, LibraryAsset.KIND_DOCUMENT));
+        long before = templateRepository.count();
+
+        LessonTemplateForm foreignForm = richtextForm("Chương 85", "Bài foreign");
+        foreignForm.setMaterialAssetIds(List.of(foreign.getId()));
+        assertThatThrownBy(() -> templateService.saveForm(
+                lecturer.getId(), Role.LEADER, foreignForm))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThat(templateRepository.count()).isEqualTo(before);
+
+        LessonTemplateForm missingForm = richtextForm("Chương 84", "Bài missing");
+        missingForm.setMaterialAssetIds(List.of(999_999_999L));
+        assertThatThrownBy(() -> templateService.saveForm(
+                lecturer.getId(), Role.LEADER, missingForm))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThat(templateRepository.count()).isEqualTo(before);
+
+        LessonTemplateForm mixedForm = richtextForm("Chương 83", "Bài mixed");
+        mixedForm.setMaterialAssetIds(List.of(own.getId(), foreign.getId()));
+        assertThatThrownBy(() -> templateService.saveForm(
+                lecturer.getId(), Role.LEADER, mixedForm))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThat(templateRepository.count()).isEqualTo(before);
+    }
+
+    @Test
+    void saveForm_update_preserves_library_video_and_material_metadata() {
+        LibraryAsset video = assetRepository.saveAndFlush(new LibraryAsset(
+                lecturer.getId(), "Video metadata", "metadata.mp4",
+                "library/metadata.mp4", "video/mp4", 20L, LibraryAsset.KIND_VIDEO));
+        LibraryAsset material = assetRepository.saveAndFlush(new LibraryAsset(
+                lecturer.getId(), "Material metadata", "metadata.pdf",
+                "library/metadata.pdf", "application/pdf", 21L, LibraryAsset.KIND_DOCUMENT));
+        LessonTemplateForm create = richtextForm("Chương 82", "Bài có tài nguyên");
+        create.setVideoLibraryAssetId(video.getId());
+        create.setVideoSummary("Tóm tắt ban đầu");
+        create.setMaterialAssetIds(List.of(material.getId()));
+
+        LessonTemplateRow row = templateService.saveForm(
+                lecturer.getId(), Role.LEADER, create);
+        LessonTemplate before = templateRepository.findById(row.id()).orElseThrow();
+        LocalDateTime createdAt = before.getCreatedAt();
+
+        LessonTemplateForm edit = templateService.loadForm(
+                lecturer.getId(), Role.LEADER, row.id(), lecturer.getSubjectId());
+        edit.setContentRichtext("<p>Nội dung mới</p>");
+        templateService.saveForm(lecturer.getId(), Role.LEADER, edit);
+
+        LessonTemplate after = templateRepository.findById(row.id()).orElseThrow();
+        assertThat(after.getCreatedAt()).isEqualTo(createdAt);
+        assertThat(after.getOwnerId()).isEqualTo(lecturer.getId());
+        assertThat(after.getVideoProvider()).isEqualTo("UPLOAD");
+        assertThat(after.getVideoLibraryAssetId()).isEqualTo(video.getId());
+        assertThat(after.getVideoUrl()).isEqualTo(video.getStoredPath());
+        assertThat(after.getVideoSummary()).isEqualTo("Tóm tắt ban đầu");
+        assertThat(templateAttachmentRepository
+                .findByTemplateIdOrderByDisplayOrderAsc(row.id()))
+                .singleElement()
+                .satisfies(attachment -> {
+                    assertThat(attachment.getLibraryAssetId()).isEqualTo(material.getId());
+                    assertThat(attachment.getOriginalFilename()).isEqualTo("metadata.pdf");
+                    assertThat(attachment.getDisplayOrder()).isZero();
+                });
     }
 
     private LessonTemplateForm richtextForm(String chapter, String title) {

@@ -12,8 +12,10 @@ import com.ksh.features.assignments.dto.AssignmentDtos.StudentAssignmentRow;
 import com.ksh.features.assignments.dto.AssignmentDtos.SubmissionRow;
 import com.ksh.features.assignments.dto.AssignmentDtos.SubmitForm;
 import com.ksh.features.assignments.entity.AssignmentStatus;
+import com.ksh.features.assignments.entity.AssignmentSubmission;
 import com.ksh.features.assignments.service.LecturerAssignmentService;
 import com.ksh.features.assignments.service.StudentAssignmentService;
+import com.ksh.features.assignments.repository.AssignmentSubmissionRepository;
 import com.ksh.features.auth.repository.UserRepository;
 import com.ksh.features.classes.repository.ClassRepository;
 import com.ksh.features.classes.repository.EnrollmentRepository;
@@ -44,6 +46,7 @@ class AssignmentServiceTest {
 
     @Autowired private LecturerAssignmentService lecturerAssignmentService;
     @Autowired private StudentAssignmentService studentAssignmentService;
+    @Autowired private AssignmentSubmissionRepository submissionRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private ClassRepository classRepository;
     @Autowired private EnrollmentRepository enrollmentRepository;
@@ -155,12 +158,71 @@ class AssignmentServiceTest {
     void submit_creates_submitted_status() {
         Long aid = createAndPublish("Bài tập submit");
 
-        studentAssignmentService.submit(clazz.getId(), aid, new SubmitForm("Nội dung bài làm"), student.getId());
+        studentAssignmentService.submit(
+                clazz.getId(), aid, new SubmitForm("  Nội dung bài làm  "), student.getId());
+
+        AssignmentSubmission persisted = submissionRepository
+                .findByAssignmentIdAndUserId(aid, student.getId()).orElseThrow();
+        assertThat(persisted.getAssignmentId()).isEqualTo(aid);
+        assertThat(persisted.getUserId()).isEqualTo(student.getId());
+        assertThat(persisted.getContent()).isEqualTo("Nội dung bài làm");
+        assertThat(persisted.getStatus()).isEqualTo(AssignmentStatus.SUB_SUBMITTED);
+        assertThat(persisted.isLate()).isFalse();
+        assertThat(persisted.getSubmittedAt()).isNotNull();
+        assertThat(persisted.getUpdatedAt()).isNotNull();
 
         List<StudentAssignmentRow> rows = studentAssignmentService
                 .listPublishedForStudent(clazz.getId(), student.getId());
         assertThat(rows).hasSize(1);
         assertThat(rows.get(0).submissionStatus()).isEqualTo(AssignmentStatus.SUB_SUBMITTED);
+    }
+
+    @Test
+    void submit_rejects_assignment_from_another_class_without_persisting() {
+        ClassEntity otherClass = saveClass("Other assignment class", lecturer.getId(),
+                "ASGNOTHER" + System.nanoTime() % 10000);
+        Long aid = createAndPublishInClass(otherClass, "Wrong class assignment");
+
+        assertThatThrownBy(() -> studentAssignmentService.submit(
+                clazz.getId(), aid, new SubmitForm("Không được nhận"), student.getId()))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThat(submissionRepository.countByAssignmentId(aid)).isZero();
+    }
+
+    @Test
+    void submit_requires_active_enrollment_without_persisting() {
+        User unenrolled = ensureUser("assignment-outsider@ksh.edu.vn", "Assignment Outsider", Role.STUDENT);
+        Long aid = createAndPublish("Enrollment required");
+
+        assertThatThrownBy(() -> studentAssignmentService.submit(
+                clazz.getId(), aid, new SubmitForm("Không được nhận"), unenrolled.getId()))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThat(submissionRepository.countByAssignmentId(aid)).isZero();
+    }
+
+    @Test
+    void submit_rejects_draft_without_persisting() {
+        AssignmentForm form = new AssignmentForm(
+                null, "Draft submit guard", "Mô tả", BigDecimal.valueOf(100), null, false);
+        lecturerAssignmentService.create(clazz.getId(), form, lecturer.getId(), Role.LECTURER);
+        Long aid = lecturerAssignmentService.listForLecturer(
+                clazz.getId(), lecturer.getId(), Role.LECTURER).get(0).id();
+
+        assertThatThrownBy(() -> studentAssignmentService.submit(
+                clazz.getId(), aid, new SubmitForm("Không được nhận"), student.getId()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(submissionRepository.countByAssignmentId(aid)).isZero();
+    }
+
+    @Test
+    void submit_rejects_closed_assignment_without_persisting() {
+        Long aid = createAndPublish("Closed submit guard");
+        lecturerAssignmentService.close(clazz.getId(), aid, lecturer.getId(), Role.LECTURER);
+
+        assertThatThrownBy(() -> studentAssignmentService.submit(
+                clazz.getId(), aid, new SubmitForm("Không được nhận"), student.getId()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(submissionRepository.countByAssignmentId(aid)).isZero();
     }
 
     @Test
@@ -189,6 +251,7 @@ class AssignmentServiceTest {
                 clazz.getId(), aid, new SubmitForm("Forbidden replacement"), student.getId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("chỉ được nộp một lần");
+        assertThat(submissionRepository.countByAssignmentId(aid)).isEqualTo(1);
 
         StudentAssignmentDetail detail =
                 studentAssignmentService.getForStudent(clazz.getId(), aid, student.getId());
@@ -223,6 +286,11 @@ class AssignmentServiceTest {
 
         studentAssignmentService.submit(clazz.getId(), aid, new SubmitForm("Nộp muộn"), student.getId());
 
+        AssignmentSubmission persisted = submissionRepository
+                .findByAssignmentIdAndUserId(aid, student.getId()).orElseThrow();
+        assertThat(persisted.getStatus()).isEqualTo(AssignmentStatus.SUB_SUBMITTED);
+        assertThat(persisted.isLate()).isTrue();
+
         StudentAssignmentDetail detail =
                 studentAssignmentService.getForStudent(clazz.getId(), aid, student.getId());
         assertThat(detail.isLate()).isTrue();
@@ -243,6 +311,7 @@ class AssignmentServiceTest {
         assertThatThrownBy(() ->
                 studentAssignmentService.submit(clazz.getId(), aid, new SubmitForm("Nộp muộn"), student.getId()))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThat(submissionRepository.countByAssignmentId(aid)).isZero();
     }
 
     // ── Grade ─────────────────────────────────────────────────────────────
@@ -307,14 +376,19 @@ class AssignmentServiceTest {
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private Long createAndPublish(String title) {
+        return createAndPublishInClass(clazz, title);
+    }
+
+    private Long createAndPublishInClass(ClassEntity targetClass, String title) {
         AssignmentForm form = new AssignmentForm(
                 null, title, "Mô tả", BigDecimal.valueOf(100), null, false);
-        lecturerAssignmentService.create(clazz.getId(), form, lecturer.getId(), Role.LECTURER);
+        lecturerAssignmentService.create(targetClass.getId(), form, lecturer.getId(), Role.LECTURER);
         Long aid = lecturerAssignmentService
-                .listForLecturer(clazz.getId(), lecturer.getId(), Role.LECTURER)
+                .listForLecturer(targetClass.getId(), lecturer.getId(), Role.LECTURER)
                 .stream().filter(r -> title.equals(r.title()))
                 .findFirst().orElseThrow().id();
-        lecturerAssignmentService.publish(clazz.getId(), aid, lecturer.getId(), Role.LECTURER);
+        lecturerAssignmentService.publish(
+                targetClass.getId(), aid, lecturer.getId(), Role.LECTURER);
         return aid;
     }
 

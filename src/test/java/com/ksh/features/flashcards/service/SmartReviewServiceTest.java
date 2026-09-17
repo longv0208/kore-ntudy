@@ -11,6 +11,7 @@ import com.ksh.features.flashcards.dto.FlashcardDtos.CardView;
 import com.ksh.features.flashcards.dto.FlashcardDtos.DeckForm;
 import com.ksh.features.flashcards.entity.FlashcardReview;
 import com.ksh.features.flashcards.repository.FlashcardReviewRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Integration tests for {@link SmartReviewService}: due selection, upsert,
  *  scheduling, and per-user isolation. */
@@ -82,6 +84,61 @@ class SmartReviewServiceTest {
         // card1 no longer due (scheduled for the future); card2 still due.
         assertThat(smartReviewService.getDueCards(deckId, owner.getId()))
                 .extracting(CardView::id).containsExactly(card2);
+    }
+
+    @Test
+    void rating_persists_scheduler_state_and_future_due_date() {
+        java.time.LocalDateTime before = java.time.LocalDateTime.now();
+
+        smartReviewService.recordRating(card1, owner.getId(), 4);
+
+        FlashcardReview review = reviewRepository
+                .findByUserIdAndFlashcardId(owner.getId(), card1).orElseThrow();
+        assertThat(review.getQuality()).isEqualTo(4);
+        assertThat(review.getRepetitions()).isEqualTo(1);
+        assertThat(review.getIntervalDays()).isEqualTo(1);
+        assertThat(review.getReviewedAt()).isNotNull();
+        assertThat(review.getNextReviewAt()).isAfter(before.plusHours(23));
+        assertThat(review.getNextReviewAt())
+                .isBefore(before.plusDays(1).plusMinutes(1));
+    }
+
+    @Test
+    void rating_rejects_quality_outside_sm2_bounds_without_persisting() {
+        assertThatThrownBy(() -> smartReviewService.recordRating(card1, owner.getId(), -1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> smartReviewService.recordRating(card1, owner.getId(), 6))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(reviewRepository.findByUserIdAndFlashcardId(owner.getId(), card1))
+                .isEmpty();
+    }
+
+    @Test
+    void rating_accepts_sm2_quality_boundaries() {
+        smartReviewService.recordRating(card1, owner.getId(), 0);
+        smartReviewService.recordRating(card2, owner.getId(), 5);
+
+        assertThat(reviewRepository.findByUserIdAndFlashcardId(owner.getId(), card1))
+                .get().extracting(FlashcardReview::getQuality).isEqualTo(0);
+        assertThat(reviewRepository.findByUserIdAndFlashcardId(owner.getId(), card2))
+                .get().extracting(FlashcardReview::getQuality).isEqualTo(5);
+    }
+
+    @Test
+    void non_owner_cannot_rate_private_card_and_no_review_is_persisted() {
+        Long privateDeckId = deckService.createDeck(owner.getId(), new DeckForm("Riêng tư", null));
+        cardService.replaceCards(privateDeckId, owner.getId(),
+                List.of(new CardItem(null, "private-front", "private-back")));
+        Long privateCardId = cardService.getEditorView(privateDeckId, owner.getId())
+                .cards().get(0).id();
+
+        assertThatThrownBy(() -> smartReviewService.recordRating(
+                privateCardId, member.getId(), 4))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThat(reviewRepository.findByUserIdAndFlashcardId(member.getId(), privateCardId))
+                .isEmpty();
+        assertThat(reviewRepository.findAll()).noneMatch(
+                review -> review.getFlashcardId().equals(privateCardId));
     }
 
     @Test

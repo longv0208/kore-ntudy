@@ -282,6 +282,69 @@ class LessonsServiceTest {
     }
 
     @Test
+    void reorder_rejects_null_and_duplicate_ids_without_mutating_order_or_history() {
+        LessonRow a = lessonsService.create(
+                clazz.getId(), section.getId(), "A", "DRAFT", "",
+                lecturer.getId(), Role.LECTURER);
+        LessonRow b = lessonsService.create(
+                clazz.getId(), section.getId(), "B", "DRAFT", "",
+                lecturer.getId(), Role.LECTURER);
+        LessonRow c = lessonsService.create(
+                clazz.getId(), section.getId(), "C", "DRAFT", "",
+                lecturer.getId(), Role.LECTURER);
+
+        assertThatThrownBy(() -> lessonsService.reorder(
+                clazz.getId(), section.getId(), null,
+                lecturer.getId(), Role.LECTURER))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> lessonsService.reorder(
+                clazz.getId(), section.getId(), Arrays.asList(a.id(), b.id(), b.id()),
+                lecturer.getId(), Role.LECTURER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("trùng lặp");
+
+        assertThat(lessonsService.listForSection(
+                clazz.getId(), section.getId(), lecturer.getId(), Role.LECTURER))
+                .extracting(LessonRow::id).containsExactly(a.id(), b.id(), c.id());
+        for (Long lessonId : List.of(a.id(), b.id(), c.id())) {
+            assertThat(activityRepository.findByLessonIdOrderByCreatedAtDesc(
+                    lessonId, PageRequest.of(0, 10)).getContent())
+                    .extracting(LessonActivity::getType)
+                    .containsExactly(LessonActivity.TYPE_CREATED);
+        }
+    }
+
+    @Test
+    void reorder_enforces_owner_and_section_class_binding_before_writes() {
+        LessonRow a = lessonsService.create(
+                clazz.getId(), section.getId(), "A", "DRAFT", "",
+                lecturer.getId(), Role.LECTURER);
+        LessonRow b = lessonsService.create(
+                clazz.getId(), section.getId(), "B", "DRAFT", "",
+                lecturer.getId(), Role.LECTURER);
+        ClassEntity otherClass = saveClass("Lessons mismatch class", lecturer.getId(), "LSNMISMATCH");
+        Section otherSection = sectionRepository.saveAndFlush(
+                new Section(otherClass.getId(), "Chương khác", (short) 0, lecturer.getId()));
+
+        assertThatThrownBy(() -> lessonsService.reorder(
+                otherClass.getId(), section.getId(), List.of(b.id(), a.id()),
+                lecturer.getId(), Role.LECTURER))
+                .isInstanceOf(jakarta.persistence.EntityNotFoundException.class)
+                .hasMessageContaining("Chương");
+        assertThatThrownBy(() -> lessonsService.reorder(
+                clazz.getId(), section.getId(), List.of(b.id(), a.id()),
+                otherLecturer.getId(), Role.LECTURER))
+                .isInstanceOf(AccessDeniedException.class);
+
+        assertThat(lessonsService.listForSection(
+                clazz.getId(), section.getId(), lecturer.getId(), Role.LECTURER))
+                .extracting(LessonRow::id).containsExactly(a.id(), b.id());
+        assertThat(lessonsService.listForSection(
+                otherClass.getId(), otherSection.getId(), lecturer.getId(), Role.LECTURER))
+                .isEmpty();
+    }
+
+    @Test
     void non_owner_lecturer_cannot_create_or_update_or_delete() {
         assertThatThrownBy(() -> lessonsService.create(
                 clazz.getId(), section.getId(), "Lậu", "DRAFT", "",

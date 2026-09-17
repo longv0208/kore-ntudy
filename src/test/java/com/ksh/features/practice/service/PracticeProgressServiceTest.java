@@ -139,6 +139,57 @@ class PracticeProgressServiceTest {
     }
 
     @Test
+    void recentHistorySeparatesCompletedInProgressAndFailedAttempts() {
+        PracticeAttempt completed = new PracticeAttempt(
+                USER_ID, 1L, 2L, "READING", 3L);
+        completed.lockPublishedVersion(10L, 11L, 12L, 13L);
+        completed.markGraded(new BigDecimal("8"), new BigDecimal("10"), "{}", "{}");
+        org.springframework.test.util.ReflectionTestUtils.setField(completed, "id", 301L);
+        setTemporalField(completed, "submittedAt", LocalDateTime.parse("2026-07-23T09:00:00"));
+
+        PracticeAttempt inProgress = new PracticeAttempt(
+                USER_ID, 1L, 2L, "READING", 3L);
+        inProgress.lockPublishedVersion(10L, 11L, 12L, 13L);
+        org.springframework.test.util.ReflectionTestUtils.setField(inProgress, "id", 302L);
+        setTemporalField(inProgress, "updatedAt", LocalDateTime.parse("2026-07-24T09:00:00"));
+
+        PracticeAttempt failed = new PracticeAttempt(
+                USER_ID, 4L, 5L, "WRITING", 6L);
+        LocalDateTime failedAt = LocalDateTime.parse("2026-07-25T01:00:00");
+        failed.markSubmittedForAnalysis(BigDecimal.TEN, "{}", failedAt);
+        failed.markAnalysisFailed("PROVIDER_TIMEOUT", failedAt);
+        org.springframework.test.util.ReflectionTestUtils.setField(failed, "id", 303L);
+
+        when(attemptRepository.findProgressAllTime(
+                USER_ID, PracticeAttempt.STATUS_DISCARDED))
+                .thenReturn(allTime(3, 2, 1, 0, 1, 0, 30));
+        when(attemptRepository.findRecentProgressAttempts(
+                eq(USER_ID), eq(PracticeAttempt.STATUS_DISCARDED), any(Pageable.class)))
+                .thenReturn(List.of(failed, inProgress, completed));
+        stubCanonicalVersionIdentity();
+
+        PracticeProgressPageData page = service.getProgressPageData(
+                USER_ID, "Learner", "");
+
+        assertThat(page.overview().attemptCounts().total()).isEqualTo(3);
+        assertThat(page.overview().attemptCounts().completed()).isEqualTo(2);
+        assertThat(page.overview().attemptCounts().inProgress()).isEqualTo(1);
+        assertThat(page.overview().recentAverageScore()).isEqualTo(80.0);
+        assertThat(page.analytics().history()).extracting(row -> row.state())
+                .containsExactly("FAILED", "IN_PROGRESS", "SCORED");
+        assertThat(page.analytics().history().get(0).resultEligible()).isFalse();
+        assertThat(page.analytics().history().get(1).resumable()).isTrue();
+        assertThat(page.analytics().history().get(1).resultEligible()).isFalse();
+        assertThat(page.analytics().history().get(2).resultEligible()).isTrue();
+        assertThat(page.analytics().history().get(2).score())
+                .isEqualByComparingTo("8");
+        assertThat(page.analytics().history().get(2).totalPoints())
+                .isEqualByComparingTo("10");
+        assertThat(page.analytics().scoreTrend()).singleElement()
+                .satisfies(point -> assertThat(point.normalizedScore()).isEqualTo(80.0));
+    }
+
+    @Test
     void allTimeCountIsNotDefinedByTheBoundedRecentOneHundred() {
         when(attemptRepository.findProgressAllTime(
                 USER_ID, PracticeAttempt.STATUS_DISCARDED))
