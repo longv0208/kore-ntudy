@@ -184,7 +184,8 @@ public class WritingEvaluationClient {
                     prompt, learnerAnswer, ruleAnalysis, isReEvaluation, imageEvidence);
 
             response = callPass(
-                    "unified", systemPrompt, userPayload, imageEvidence, unifiedResponseFormat());
+                    "unified", systemPrompt, userPayload, imageEvidence,
+                    unifiedResponseFormat(ruleAnalysis.taskType()));
             log.info("KSH writing evaluation unified call complete: taskType={}",
                     ruleAnalysis.taskType());
         } catch (ProviderContractException ex) {
@@ -542,11 +543,13 @@ public class WritingEvaluationClient {
 
     // ---- Response format / schema ----
 
-    private Map<String, Object> unifiedResponseFormat() {
-        return responseFormat("ksh_writing_unified", unifiedSchema());
+    private Map<String, Object> unifiedResponseFormat(String taskType) {
+        return responseFormat(
+                "ksh_writing_unified",
+                unifiedSchema(taskType));
     }
 
-    private Map<String, Object> unifiedSchema() {
+    private Map<String, Object> unifiedSchema(String taskType) {
         Map<String, Object> schema = baseObject(list(
                 "schemaVersion", "promptVersion", "scoreAnchorVersion",
                 "taskRequirementVersion",
@@ -564,7 +567,7 @@ public class WritingEvaluationClient {
                 "rubricScores", arrayOf(rubricJudgmentSchema()),
                 "taskCoverage", arrayOf(taskCoverageSchema()),
                 "evidenceLedger", arrayOf(evidenceSchema()),
-                "findings", arrayOf(findingSchema()),
+                "findings", arrayOf(findingSchema(taskType)),
                 "upgradedAnswer", upgradedAnswerSchema()));
         return schema;
     }
@@ -610,7 +613,135 @@ public class WritingEvaluationClient {
                         "sourceHash", typed("string")));
     }
 
-    private Map<String, Object> findingSchema() {
+    private Map<String, Object> findingSchema(String taskType) {
+        List<WritingRubricCriterion> criteria =
+                WritingRubricCriterion.activeForTask(taskType).stream()
+                        .filter(WritingDiagnosticContract::ledgerEligible)
+                        .toList();
+        List<Map<String, Object>> shapes = new ArrayList<>();
+        for (String category : criteria.stream()
+                .map(WritingDiagnosticContract::categoryCode)
+                .distinct()
+                .toList()) {
+            List<WritingRubricCriterion> categoryCriteria = criteria.stream()
+                    .filter(criterion -> category.equals(
+                            WritingDiagnosticContract
+                                    .categoryCode(criterion)))
+                    .toList();
+            List<WritingRubricCriterion> strengths = categoryCriteria.stream()
+                    .filter(criterion -> criterion.polarity()
+                            == WritingRubricCriterion.Polarity.STRENGTH)
+                    .toList();
+            addFindingShape(
+                    shapes,
+                    strengths.stream().filter(criterion ->
+                            criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.TEXT_SPAN)
+                                    && !criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.WHOLE_ANSWER))
+                            .toList(),
+                    taskType, "STRENGTH", new String[] {"KEEP"},
+                    1, 1, enumSchema(""));
+            addFindingShape(
+                    shapes,
+                    strengths.stream().filter(criterion ->
+                            !criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.TEXT_SPAN)
+                                    && criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.WHOLE_ANSWER))
+                            .toList(),
+                    taskType, "STRENGTH", new String[] {"KEEP"},
+                    0, 0, enumSchema(""));
+            addFindingShape(
+                    shapes,
+                    strengths.stream().filter(criterion ->
+                            criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.TEXT_SPAN)
+                                    && criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.WHOLE_ANSWER))
+                            .toList(),
+                    taskType, "STRENGTH", new String[] {"KEEP"},
+                    0, 1, enumSchema(""));
+
+            List<WritingRubricCriterion> improvements =
+                    categoryCriteria.stream()
+                            .filter(criterion -> criterion.polarity()
+                                    == WritingRubricCriterion.Polarity
+                                    .NEEDS_IMPROVEMENT)
+                            .toList();
+            addFindingShape(
+                    shapes,
+                    improvements.stream().filter(criterion ->
+                            criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.WHOLE_ANSWER))
+                            .toList(),
+                    taskType, "IMPROVEMENT", new String[] {"MISSING"},
+                    0, 0, enumSchema(""));
+            List<WritingRubricCriterion> textImprovements =
+                    improvements.stream().filter(criterion ->
+                            criterion.supports(
+                                    WritingRubricCriterion.EvidenceScope.TEXT_SPAN))
+                            .toList();
+            addFindingShape(
+                    shapes, textImprovements, taskType,
+                    "IMPROVEMENT", new String[] {"REPLACE"},
+                    1, 1, nonBlankString());
+            addFindingShape(
+                    shapes, textImprovements, taskType,
+                    "IMPROVEMENT", new String[] {"REDUNDANT"},
+                    1, 1, enumSchema(""));
+        }
+        return Map.of("anyOf", List.copyOf(shapes));
+    }
+
+    private void addFindingShape(
+            List<Map<String, Object>> shapes,
+            List<WritingRubricCriterion> criteria,
+            String taskType,
+            String polarity,
+            String[] operations,
+            int minimumEvidence,
+            int maximumEvidence,
+            Map<String, Object> replacementSchema) {
+        if (criteria.isEmpty()) {
+            return;
+        }
+        String[] criterionIds = criteria.stream()
+                .map(WritingRubricCriterion::id)
+                .toArray(String[]::new);
+        String[] subtypes = criteria.stream()
+                .flatMap(criterion -> WritingDiagnosticContract
+                        .allowedSubtypes(criterion).stream())
+                .distinct()
+                .toArray(String[]::new);
+        String[] parentIds = criteria.stream()
+                .flatMap(criterion -> WritingDiagnosticContract
+                        .allowedParentCriterionIds(
+                                criterion, taskType).stream())
+                .distinct()
+                .toArray(String[]::new);
+        shapes.add(findingShape(
+                criterionIds,
+                subtypes,
+                parentIds,
+                WritingDiagnosticContract.categoryCode(criteria.get(0)),
+                polarity,
+                operations,
+                minimumEvidence,
+                maximumEvidence,
+                replacementSchema));
+    }
+
+    private Map<String, Object> findingShape(
+            String[] criterionIds,
+            String[] subtypes,
+            String[] parentIds,
+            String category,
+            String polarity,
+            String[] operations,
+            int minimumEvidence,
+            int maximumEvidence,
+            Map<String, Object> replacementSchema) {
         return objectSchema(
                 list("findingId", "polarity", "operation",
                         "criterionId", "subtype", "scoringCriterionId",
@@ -618,19 +749,21 @@ public class WritingEvaluationClient {
                         "explanationVi", "replacementKo",
                         "impact", "frequency", "confidence", "observability"),
                 prop("findingId", typed("string"),
-                        "polarity", enumSchema(
-                                "STRENGTH", "IMPROVEMENT"),
-                        "operation", enumSchema(
-                                "KEEP", "MISSING", "REPLACE", "REDUNDANT"),
-                        "criterionId", typed("string"),
-                        "subtype", typed("string"),
-                        "scoringCriterionId", nullableString(),
-                        "errorCategory", typed("string"),
-                        "evidenceIds", stringArray(),
+                        "polarity", enumSchema(polarity),
+                        "operation", enumSchema(operations),
+                        "criterionId", enumSchema(criterionIds),
+                        "subtype", enumSchema(subtypes),
+                        "scoringCriterionId", parentIds.length == 0
+                                ? typed("null")
+                                : enumSchema(parentIds),
+                        "errorCategory", enumSchema(category),
+                        "evidenceIds", boundedStringArray(
+                                minimumEvidence, maximumEvidence),
                         "requirementIds", stringArray(),
-                        "explanationVi", typed("string"),
-                        "replacementKo", typed("string"),
-                        "impact", enumSchema("MINOR", "MODERATE", "MAJOR", "BLOCKING"),
+                        "explanationVi", nonBlankString(),
+                        "replacementKo", replacementSchema,
+                        "impact", enumSchema(
+                                "MINOR", "MODERATE", "MAJOR", "BLOCKING"),
                         "frequency", integerSchema(1),
                         "confidence", boundedNumberSchema(0.0, 1.0),
                         "observability", enumSchema(
@@ -738,6 +871,12 @@ public class WritingEvaluationClient {
         return node;
     }
 
+    private static Map<String, Object> nonBlankString() {
+        Map<String, Object> node = typed("string");
+        node.put("minLength", 1);
+        return node;
+    }
+
     private static Map<String, Object> integerSchema(int minimum) {
         Map<String, Object> node = typed("integer");
         node.put("minimum", minimum);
@@ -760,6 +899,15 @@ public class WritingEvaluationClient {
 
     private static Map<String, Object> stringArray() {
         return arrayOf(typed("string"));
+    }
+
+    private static Map<String, Object> boundedStringArray(
+            int minimum,
+            int maximum) {
+        Map<String, Object> node = stringArray();
+        node.put("minItems", minimum);
+        node.put("maxItems", maximum);
+        return node;
     }
 
     private static Map<String, Object> baseObject(List<String> required) {

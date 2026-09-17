@@ -224,6 +224,9 @@ public class PracticeAiControlPlaneController {
             result.reject("purpose", "BINDING_PURPOSE_MISMATCH");
         }
         if (result.hasErrors()) {
+            model.addAttribute("form", form);
+            model.addAttribute(
+                    BindingResult.MODEL_KEY_PREFIX + "form", result);
             model.addAttribute("profiles", adminService.profiles());
             model.addAttribute("purpose", purpose);
             model.addAttribute("requiredCapabilities",
@@ -237,7 +240,10 @@ public class PracticeAiControlPlaneController {
             redirect.addFlashAttribute(ATTR_FLASH_SUCCESS, "Practice AI binding saved");
             return REDIRECT;
         } catch (RuntimeException exception) {
+            model.addAttribute("form", form);
             result.reject("binding", safeCode(exception));
+            model.addAttribute(
+                    BindingResult.MODEL_KEY_PREFIX + "form", result);
             model.addAttribute("profiles", adminService.profiles());
             model.addAttribute("purpose", purpose);
             model.addAttribute("requiredCapabilities",

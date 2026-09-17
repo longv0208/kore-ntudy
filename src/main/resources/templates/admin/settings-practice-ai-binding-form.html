@@ -118,6 +118,7 @@
                         <p class="field-error" role="alert" th:errors="*{model}"></p>
                     </div>
                     <label class="settings-switch" for="directAudioInput" th:if="${purpose.name() == 'PRACTICE_SPEAKING_DIRECT_AUDIO_EVALUATION'}"><input id="directAudioInput" type="checkbox" th:field="*{directAudioInput}"><span><strong>Model nhận trực tiếp âm thanh người học</strong><small>Checkbox chỉ mô tả request. Quyền capability đến từ registry evidence, không đến từ tên model hoặc checkbox.</small></span></label>
+                    <input th:unless="${purpose.name() == 'PRACTICE_SPEAKING_DIRECT_AUDIO_EVALUATION'}" type="hidden" name="directAudioInput" value="false">
                     <label class="settings-switch" th:classappend="${#lists.isEmpty(profiles)} ? 'is-disabled'" for="enabled"><input id="enabled" type="checkbox" th:field="*{enabled}" th:disabled="${#lists.isEmpty(profiles)}"><span><strong>Bật cho mục đích này</strong><small>Nếu tắt, tính năng sẽ dừng an toàn và không fallback global.</small></span></label>
                 </div>
             </section>
@@ -127,6 +128,7 @@
                 <div class="settings-technical-summary"><span>Mã mục đích <code th:text="${purpose}">PURPOSE</code></span><span>Capability <code th:text="${requiredCapabilities}">STRICT_JSON_SCHEMA</code></span><span th:if="${form.revision != null}">Revision <code th:text="${form.revision}">0</code></span></div>
                 <div class="settings-form-grid settings-form-grid-compact">
                     <label class="settings-switch" for="pdfImageInput" th:if="${purpose.name() == 'PRACTICE_PDF_AUTHORING'}"><input id="pdfImageInput" type="checkbox" th:field="*{pdfImageInput}"><span><strong>Cho phép ảnh đầu vào PDF</strong><small>Capability này vẫn phải qua kiểm tra rõ ràng.</small></span></label>
+                    <input th:unless="${purpose.name() == 'PRACTICE_PDF_AUTHORING'}" type="hidden" name="pdfImageInput" value="false">
                     <div class="form-row" th:if="${purpose.name() == 'PRACTICE_SPEAKING_DIRECT_AUDIO_EVALUATION'}"><label for="nonTrainingEvidenceId">ID bằng chứng không dùng để huấn luyện</label><input id="nonTrainingEvidenceId" th:field="*{nonTrainingEvidenceId}" maxlength="160"><p class="field-error" th:errors="*{nonTrainingEvidenceId}"></p></div>
                     <div class="form-row" th:if="${purpose.name() == 'PRACTICE_SPEAKING_DIRECT_AUDIO_EVALUATION'}"><label for="retentionEvidenceId">ID tài liệu thời hạn lưu giữ</label><input id="retentionEvidenceId" th:field="*{retentionEvidenceId}" maxlength="160"><p class="field-error" th:errors="*{retentionEvidenceId}"></p><p class="field-hint">Hai tài liệu không huấn luyện và lưu giữ là bắt buộc. Khu vực xử lý và SLA xóa phía nhà cung cấp không phải release gate.</p></div>
                     <div class="form-row"><label for="retentionCode">Chính sách lưu giữ</label><input id="retentionCode" th:field="*{retentionCode}" maxlength="64" required><p class="field-error" th:errors="*{retentionCode}"></p></div>

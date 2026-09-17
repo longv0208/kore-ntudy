@@ -14,6 +14,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -283,6 +286,67 @@ class WritingEvaluationClientTest {
                                 "evidenceScopes"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"Q51", "Q52", "Q53", "Q54"})
+    @SuppressWarnings("unchecked")
+    void observableProviderRequestUsesTaskSpecificFindingSchema(
+            String taskType) throws Exception {
+        WritingEvaluationCacheService cacheService =
+                mock(WritingEvaluationCacheService.class);
+        when(cacheService.get(any(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        TestPracticeStructuredGenerationPort port =
+                structuredPort(aiResponse(), new AtomicInteger());
+        WritingEvaluationClient client = new WritingEvaluationClient(
+                properties("valid-key", "model"), objectMapper, normalizer,
+                ruleEngine, cacheService, port);
+
+        String answer = "Q51".equals(taskType) || "Q52".equals(taskType)
+                ? "있다"
+                : "한국어를 공부합니다";
+        client.evaluate(USER_ID, "Bài " + taskType, answer, false,
+                WritingTaskType.valueOf(taskType));
+
+        assertThat(port.lastRequest()).isNotNull();
+        assertThat(port.lastRequest().responseSchemaName())
+                .isEqualTo("ksh_writing_unified");
+        assertThat(port.lastRequest().input())
+                .containsEntry("task_type", taskType);
+
+        Map<String, Object> properties =
+                (Map<String, Object>) port.lastRequest().responseSchema()
+                        .get("properties");
+        Map<String, Object> findings =
+                (Map<String, Object>) properties.get("findings");
+        Map<String, Object> findingItems =
+                (Map<String, Object>) findings.get("items");
+        List<Map<String, Object>> shapes =
+                (List<Map<String, Object>>) findingItems.get("anyOf");
+        Set<String> expectedCriteria = WritingEvaluationClient
+                .allowedRubric(taskType).stream()
+                .map(row -> (String) row.get("criterionId"))
+                .collect(java.util.stream.Collectors.toSet());
+        Set<String> actualCriteria = shapes.stream()
+                .map(shape -> (Map<String, Object>) shape.get("properties"))
+                .map(shapeProperties -> (Map<String, Object>)
+                        shapeProperties.get("criterionId"))
+                .flatMap(criterion -> ((List<String>) criterion.get("enum"))
+                        .stream())
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertThat(actualCriteria).containsExactlyInAnyOrderElementsOf(
+                expectedCriteria);
+        assertThat(shapes).allSatisfy(shape -> {
+            Map<String, Object> shapeProperties =
+                    (Map<String, Object>) shape.get("properties");
+            Map<String, Object> criterion =
+                    (Map<String, Object>) shapeProperties.get("criterionId");
+            assertThat((List<String>) criterion.get("enum"))
+                    .allMatch(expectedCriteria::contains);
+        });
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void strictFindingSchemaAndEvaluationIdentityCarryTheCompletePolicyBundle() {
@@ -297,28 +361,67 @@ class WritingEvaluationClientTest {
                         "model"));
 
         Map<String, Object> schema = ReflectionTestUtils.invokeMethod(
-                client, "unifiedSchema");
+                client, "unifiedSchema", "Q53");
         Map<String, Object> properties =
                 (Map<String, Object>) schema.get("properties");
-        Map<String, Object> strengths =
+        Map<String, Object> findings =
                 (Map<String, Object>) properties.get("findings");
         Map<String, Object> finding =
-                (Map<String, Object>) strengths.get("items");
-        assertThat((List<String>) finding.get("required"))
-                .contains(
-                        "findingId", "polarity", "operation",
-                        "subtype", "scoringCriterionId", "errorCategory",
-                        "evidenceIds", "requirementIds", "impact",
-                        "frequency", "confidence", "observability");
-        Map<String, Object> findingProperties =
-                (Map<String, Object>) finding.get("properties");
-        assertThat((List<String>) ((Map<String, Object>)
-                findingProperties.get("operation")).get("enum"))
-                .containsExactly(
+                (Map<String, Object>) findings.get("items");
+        List<Map<String, Object>> shapes =
+                (List<Map<String, Object>>) finding.get("anyOf");
+        assertThat(shapes).hasSizeGreaterThan(4);
+        assertThat(shapes).allSatisfy(shape -> {
+            assertThat((List<String>) shape.get("required"))
+                    .contains(
+                            "findingId", "polarity", "operation",
+                            "criterionId", "subtype",
+                            "scoringCriterionId", "errorCategory",
+                            "evidenceIds", "requirementIds", "impact",
+                            "frequency", "confidence", "observability");
+            Map<String, Object> shapeProperties =
+                    (Map<String, Object>) shape.get("properties");
+            assertThat((List<String>) ((Map<String, Object>)
+                    shapeProperties.get("criterionId")).get("enum"))
+                    .isNotEmpty()
+                    .doesNotContain("W_WON_GO_JI");
+            assertThat((List<String>) ((Map<String, Object>)
+                    shapeProperties.get("subtype")).get("enum"))
+                    .isNotEmpty();
+            String polarity = ((List<String>) ((Map<String, Object>)
+                    shapeProperties.get("polarity")).get("enum")).get(0);
+            List<String> operations = (List<String>) ((Map<String, Object>)
+                    shapeProperties.get("operation")).get("enum");
+            Map<String, Object> evidenceIds =
+                    (Map<String, Object>) shapeProperties.get("evidenceIds");
+            if (operations.contains("KEEP")) {
+                assertThat(polarity).isEqualTo("STRENGTH");
+                assertThat((Integer) evidenceIds.get("minItems"))
+                        .isBetween(0, 1);
+                assertThat((Integer) evidenceIds.get("maxItems"))
+                        .isBetween(0, 1);
+            } else if (operations.contains("MISSING")) {
+                assertThat(polarity).isEqualTo("IMPROVEMENT");
+                assertThat(evidenceIds)
+                        .containsEntry("minItems", 0)
+                        .containsEntry("maxItems", 0);
+            } else {
+                assertThat(polarity).isEqualTo("IMPROVEMENT");
+                assertThat(evidenceIds)
+                        .containsEntry("minItems", 1)
+                        .containsEntry("maxItems", 1);
+            }
+        });
+        assertThat(shapes.stream()
+                .map(shape -> (Map<String, Object>) shape.get("properties"))
+                .map(shapeProperties -> (Map<String, Object>)
+                        shapeProperties.get("operation"))
+                .flatMap(operation -> ((List<String>)
+                        operation.get("enum")).stream())
+                .distinct()
+                .toList())
+                .containsExactlyInAnyOrder(
                         "KEEP", "MISSING", "REPLACE", "REDUNDANT");
-        assertThat((List<String>) ((Map<String, Object>)
-                findingProperties.get("observability")).get("enum"))
-                .containsExactly("DIRECT", "INFERRED_BOUNDED");
         assertThat(client.evaluationContractIdentity())
                 .contains(
                         WritingAssessmentPolicyBundle.POLICY_BUNDLE_ID,
@@ -484,6 +587,52 @@ class WritingEvaluationClientTest {
                 any(), anyString(), anyString(), anyString(),
                 anyString(), anyString(), anyString(), anyString(),
                 anyString());
+    }
+
+    @Test
+    void retryableProviderHttp429IsMarkedRetryableAndNotCached() throws Exception {
+        WritingEvaluationCacheService cacheService = mock(WritingEvaluationCacheService.class);
+        when(cacheService.get(any(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        WritingEvaluationClient client = new WritingEvaluationClient(
+                properties("valid-key", "model"), objectMapper, normalizer,
+                ruleEngine, cacheService, httpErrorPort(HttpStatus.TOO_MANY_REQUESTS,
+                        "rate limited"));
+
+        JsonNode root = objectMapper.readTree(client.evaluate(
+                USER_ID, "Bài 53 viết", "한국어를 공부합니다", false, WritingTaskType.Q53));
+
+        assertThat(root.path("evaluation_status").asText())
+                .isEqualTo("EVALUATION_UNAVAILABLE");
+        assertThat(root.path("evaluation_reason").asText())
+                .isEqualTo("PROVIDER_HTTP_ERROR");
+        assertThat(root.path("evaluation_retryable").asBoolean()).isTrue();
+        verify(cacheService, never()).put(any(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void retryableProviderHttp503IsMarkedRetryableAndNotCached() throws Exception {
+        WritingEvaluationCacheService cacheService = mock(WritingEvaluationCacheService.class);
+        when(cacheService.get(any(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        WritingEvaluationClient client = new WritingEvaluationClient(
+                properties("valid-key", "model"), objectMapper, normalizer,
+                ruleEngine, cacheService, httpErrorPort(HttpStatus.SERVICE_UNAVAILABLE,
+                        "temporarily unavailable"));
+
+        JsonNode root = objectMapper.readTree(client.evaluate(
+                USER_ID, "Bài 53 viết", "한국어를 공부합니다", false, WritingTaskType.Q53));
+
+        assertThat(root.path("evaluation_status").asText())
+                .isEqualTo("EVALUATION_UNAVAILABLE");
+        assertThat(root.path("evaluation_reason").asText())
+                .isEqualTo("PROVIDER_HTTP_ERROR");
+        assertThat(root.path("evaluation_retryable").asBoolean()).isTrue();
+        verify(cacheService, never()).put(any(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test
@@ -711,6 +860,50 @@ class WritingEvaluationClientTest {
                 eq(WritingPromptRules.EVALUATION_SCHEMA_VERSION + ":"
                         + WritingPromptRules.EVALUATION_CONTRACT_VERSION),
                 anyString());
+    }
+
+    @Test
+    void reEvaluatePayloadMarksAuditModeForProvider() {
+        WritingEvaluationCacheService cacheService = mock(WritingEvaluationCacheService.class);
+        AtomicInteger callCount = new AtomicInteger(0);
+        TestPracticeStructuredGenerationPort port = structuredPort(aiResponse(), callCount);
+        WritingEvaluationClient client = new WritingEvaluationClient(
+                properties("valid-key", "model"), objectMapper, normalizer, ruleEngine,
+                cacheService, port);
+
+        client.evaluate(USER_ID, "Bài 53 viết", "한국어를 공부합니다", true);
+
+        assertThat(port.lastRequest().input())
+                .containsEntry("is_re_evaluation", true)
+                .containsEntry("audit_mode", true);
+        verify(cacheService, never()).get(any(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void questionImageShaIsPartOfCachePromptIdentity() {
+        WritingEvaluationCacheService cacheService = mock(WritingEvaluationCacheService.class);
+        when(cacheService.get(any(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        var resolver = mock(com.ksh.features.practice.ai.media.AiQuestionImageResolver.class);
+        when(resolver.resolve(eq("image-a"), eq(USER_ID)))
+                .thenReturn(Optional.of(new AiImageEvidence(1L, "image/png", "data:image/png;base64,YQ==", "sha-a", 1)));
+        when(resolver.resolve(eq("image-b"), eq(USER_ID)))
+                .thenReturn(Optional.of(new AiImageEvidence(2L, "image/png", "data:image/png;base64,Yg==", "sha-b", 1)));
+        WritingEvaluationClient client = new WritingEvaluationClient(
+                properties("", "model"), objectMapper, normalizer, ruleEngine,
+                new WritingTaskResolver(), cacheService, resolver, PracticeAiMetrics.noop(),
+                TestPracticeStructuredGenerationPort.unavailable("openai-primary", "model"));
+
+        client.evaluate(USER_ID, "Bài 53 viết", "한국어를 공부합니다", false, WritingTaskType.Q53, "image-a");
+        client.evaluate(USER_ID, "Bài 53 viết", "한국어를 공부합니다", false, WritingTaskType.Q53, "image-b");
+
+        ArgumentCaptor<String> prompts = ArgumentCaptor.forClass(String.class);
+        verify(cacheService, times(2)).get(eq(USER_ID), prompts.capture(), anyString(), eq("Q53"),
+                eq("model"), anyString(), anyString(), anyString());
+        assertThat(prompts.getAllValues()).containsExactly(
+                "Bài 53 viết\n[KSH_QUESTION_IMAGE_SHA256:sha-a]",
+                "Bài 53 viết\n[KSH_QUESTION_IMAGE_SHA256:sha-b]");
     }
 
     @Test
@@ -963,14 +1156,23 @@ class WritingEvaluationClientTest {
 
     private TestPracticeStructuredGenerationPort httpErrorPort(
             String responseBody) {
-        return TestPracticeStructuredGenerationPort.throwing(
-                "openai-primary",
-                "safe-model",
-                new org.springframework.web.client.HttpClientErrorException(
-                        HttpStatus.BAD_REQUEST,
-                        "Bad Request",
+        return httpErrorPort(HttpStatus.BAD_REQUEST, responseBody);
+    }
+
+    private TestPracticeStructuredGenerationPort httpErrorPort(
+            HttpStatus status,
+            String responseBody) {
+        var exception = status.is4xxClientError()
+                ? new org.springframework.web.client.HttpClientErrorException(
+                        status, status.getReasonPhrase(),
                         responseBody.getBytes(StandardCharsets.UTF_8),
-                        StandardCharsets.UTF_8));
+                        StandardCharsets.UTF_8)
+                : new org.springframework.web.client.HttpServerErrorException(
+                        status, status.getReasonPhrase(),
+                        responseBody.getBytes(StandardCharsets.UTF_8),
+                        StandardCharsets.UTF_8);
+        return TestPracticeStructuredGenerationPort.throwing(
+                "openai-primary", "safe-model", exception);
     }
 
     private TestPracticeStructuredGenerationPort structuredPort(

@@ -331,8 +331,17 @@ public class PracticeService {
             loadWritingReEvaluationSnapshot(attempt);
         }
 
+        Long scheduledQuestionId = questionId;
+        if (questionId != null
+                && (!PracticeAttempt.ANALYSIS_SUCCEEDED.equals(
+                        attempt.getAnalysisStatus())
+                || attempt.getAiFeedbackJson() == null
+                || attempt.getAiFeedbackJson().isBlank())) {
+            scheduledQuestionId = null;
+        }
+
         LocalDateTime now = LocalDateTime.now();
-        String operation = questionId == null
+        String operation = scheduledQuestionId == null
                 ? PracticeAttemptEvaluationJob
                         .OPERATION_FULL_REEVALUATE
                 : PracticeAttemptEvaluationJob
@@ -343,7 +352,7 @@ public class PracticeService {
                 attempt,
                 normalizeJsonForCompare(attempt.getAnswersJson()),
                 reEvaluationIdentityMaterial(
-                        attempt, questionId));
+                        attempt, scheduledQuestionId));
         PracticeAttemptEvaluationJob job =
                 attemptEvaluationJobRepository
                         .findByAttemptId(attemptId)
@@ -368,7 +377,7 @@ public class PracticeService {
                     .insertIfAbsent(
                             attemptId,
                             operation,
-                            questionId,
+                            scheduledQuestionId,
                             fingerprint,
                             evaluationContractIdentity,
                             PracticeAttemptEvaluationJob.STATUS_QUEUED,
@@ -409,7 +418,7 @@ public class PracticeService {
             }
             job.requestManualRetry(
                     operation,
-                    questionId,
+                    scheduledQuestionId,
                     fingerprint,
                     evaluationContractIdentity,
                     userId,
@@ -2859,7 +2868,7 @@ public class PracticeService {
             requireEvaluationThreadActive();
             BigDecimal configuredPoints = q.points();
             attemptTotalPoints = attemptTotalPoints.add(configuredPoints);
-            String answer = snapshot.answers().getOrDefault(String.valueOf(q.questionId()), "").trim();
+            String answer = snapshot.answers().getOrDefault(String.valueOf(q.questionId()), "");
 
             Optional<AssessmentScoreResult> objectiveScore = scoreObjective(q, answer);
             if (objectiveScore.isPresent()) {
@@ -2935,7 +2944,7 @@ public class PracticeService {
                     null);
         }
 
-        String targetAnswer = snapshot.answers().getOrDefault(String.valueOf(snapshot.targetQuestion().questionId()), "").trim();
+        String targetAnswer = snapshot.answers().getOrDefault(String.valueOf(snapshot.targetQuestion().questionId()), "");
         String targetFeedback = evaluateWriting(
                 snapshot.userId(),
                 snapshot.targetQuestion().prompt(),

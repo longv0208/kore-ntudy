@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static com.ksh.features.practice.ai.writing.WritingContractTestFixtures.addEvidence;
 import static com.ksh.features.practice.ai.writing.WritingContractTestFixtures.addFinding;
@@ -82,6 +83,24 @@ class WritingEvaluationNormalizerTest {
     }
 
     @Test
+    void rubricReferenceListsAreDerivedFromFindingsAndCoverage()
+            throws Exception {
+        JsonNode expected = normalize(q53AtomicEnvelope(), "Q53", Q53_ANSWER);
+        ObjectNode tampered = q53AtomicEnvelope();
+        for (JsonNode row : tampered.withArray("rubricScores")) {
+            replaceIds((ObjectNode) row, "evidenceIds", "EV_CAR");
+            replaceIds((ObjectNode) row, "findingIds", "F_CAR");
+            replaceIds((ObjectNode) row, "requirementIds",
+                    "Q53_DATA_2024");
+        }
+
+        JsonNode actual = normalize(tampered, "Q53", Q53_ANSWER);
+
+        assertThat(actual.path("rubric_scores"))
+                .isEqualTo(expected.path("rubric_scores"));
+    }
+
+    @Test
     void repeatedOccurrenceIsAcceptedOnlyWithExactProviderIdentity()
             throws Exception {
         String answer = "같았다. 같았다.";
@@ -120,6 +139,23 @@ class WritingEvaluationNormalizerTest {
                 .put("startOffset", 10);
 
         assertContractFailed(normalize(provider, "Q53", Q53_ANSWER));
+    }
+
+    @Test
+    void nonEmptyUpgradeWithoutRewritesNormalizesToEmptyUpgradeFields()
+            throws Exception {
+        ObjectNode provider = zeroEnvelope(
+                objectMapper, "Q53", Q53_ANSWER);
+        provider.with("upgradedAnswer").put(
+                "content", "provider supplied rewrite without evidence");
+
+        JsonNode normalized = normalize(provider, "Q53", Q53_ANSWER);
+
+        assertThat(normalized.path("evaluation_status").asText())
+                .isEqualTo("EVALUATED");
+        assertThat(normalized.path("upgraded_answer").asText()).isEmpty();
+        assertThat(normalized.path("corrected_version").asText()).isEmpty();
+        assertThat(normalized.path("sentence_rewrites")).isEmpty();
     }
 
     @Test
@@ -278,6 +314,30 @@ class WritingEvaluationNormalizerTest {
     }
 
     @Test
+    void validZeroAndIntermediateAnchorsRemainAccepted() throws Exception {
+        JsonNode zero = normalize(
+                zeroEnvelope(objectMapper, "Q53", Q53_ANSWER),
+                "Q53",
+                Q53_ANSWER);
+        assertThat(zero.path("evaluation_status").asText())
+                .isEqualTo("EVALUATED");
+        assertThat(zero.path("raw_score").asInt()).isZero();
+        assertThat(zero.path("score").asInt()).isZero();
+
+        JsonNode intermediate = normalize(
+                q53AtomicEnvelope(), "Q53", Q53_ANSWER);
+        assertThat(intermediate.path("evaluation_status").asText())
+                .isEqualTo("EVALUATED");
+        assertThat(intermediate.path("rubric_scores"))
+                .anySatisfy(row -> {
+                    double score = row.path("score").asDouble();
+                    double maxScore = row.path("maxScore").asDouble();
+                    assertThat(score).isGreaterThan(0.0)
+                            .isLessThan(maxScore);
+                });
+    }
+
+    @Test
     void legacyFreeTextEnvelopeHasNoScoreAuthority() throws Exception {
         JsonNode root = objectMapper.readTree(normalizer.normalize(
                 """
@@ -358,6 +418,86 @@ class WritingEvaluationNormalizerTest {
                 .deriveScoreFromRubrics(rubrics)).isEqualTo(70.0);
         assertThat(WritingEvaluationNormalizer
                 .deriveScoreFromRubrics(List.of())).isZero();
+    }
+
+    @Test
+    void cacheabilityRejectsTamperedScoreAndWrongTaskType() throws Exception {
+        String normalized = normalizer.normalize(
+                objectMapper.writeValueAsString(q53AtomicEnvelope()),
+                "Q53", Q53_ANSWER, null);
+        ObjectNode tampered = (ObjectNode) objectMapper.readTree(normalized);
+        tampered.put("raw_score", tampered.path("raw_score").asDouble() + 1.0);
+
+        assertThat(normalizer.isCacheableAiResult(
+                objectMapper.writeValueAsString(tampered))).isFalse();
+        assertThat(normalizer.isCacheableAiResult(normalized)).isTrue();
+        assertThatThrownBy(() -> normalizer.rehydrateCachedResult(
+                normalizer.sanitizeForCache(normalized), Q53_ANSWER, "Q54"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void cacheTrustRejectsStaleContractsAndTamperedFindingMetadata()
+            throws Exception {
+        String normalized = normalizer.normalize(
+                objectMapper.writeValueAsString(q53AtomicEnvelope()),
+                "Q53", Q53_ANSWER, null);
+        List<Consumer<ObjectNode>> tamperings = List.of(
+                node -> node.put("policy_bundle_id", "stale-policy"),
+                node -> node.put("ledger_contract_version", "stale-ledger"),
+                node -> node.put("scoring_contract", "stale-score-contract"),
+                node -> ((ObjectNode) node.path("strengths").get(0))
+                        .put("evidenceScope", "WHOLE_ANSWER"));
+
+        for (Consumer<ObjectNode> tampering : tamperings) {
+            ObjectNode tampered = (ObjectNode) objectMapper
+                    .readTree(normalized);
+            tampering.accept(tampered);
+            String payload = objectMapper.writeValueAsString(tampered);
+
+            assertThat(normalizer.isCacheableAiResult(payload)).isFalse();
+            assertThatThrownBy(() -> normalizer.rehydrateCachedResult(
+                    normalizer.sanitizeForCache(payload),
+                    Q53_ANSWER,
+                    "Q53"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void cachedPayloadWithStudentTextIsRejectedAndSanitizationRemovesIt() throws Exception {
+        String normalized = normalizer.normalize(
+                objectMapper.writeValueAsString(q53AtomicEnvelope()),
+                "Q53", Q53_ANSWER, null);
+        ObjectNode cachedWithStudentText = (ObjectNode) objectMapper.readTree(
+                normalizer.sanitizeForCache(normalized));
+        cachedWithStudentText.put("student_text", "tampered learner answer");
+
+        assertThatThrownBy(() -> normalizer.rehydrateCachedResult(
+                objectMapper.writeValueAsString(cachedWithStudentText),
+                Q53_ANSWER, "Q53"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(normalizer.sanitizeForCache(normalized))
+                .doesNotContain("student_text");
+    }
+
+    @Test
+    void overlappingEvidenceSpansFailClosedBeforeScoreBecomesAvailable()
+            throws Exception {
+        ObjectNode provider = q53AtomicEnvelope();
+        addEvidence(provider, "EV_OVERLAP", Q53_ANSWER,
+                "45%에서 35%로 감소했고", 9);
+
+        assertContractFailed(normalize(provider, "Q53", Q53_ANSWER));
+    }
+
+    @Test
+    void oneEvidenceSpanCannotBeOwnedByTwoFindings() throws Exception {
+        ObjectNode provider = q53AtomicEnvelope();
+        ObjectNode transit = (ObjectNode) provider.withArray("findings").get(1);
+        replaceIds(transit, "evidenceIds", "EV_CAR");
+
+        assertContractFailed(normalize(provider, "Q53", Q53_ANSWER));
     }
 
     private ObjectNode q53AtomicEnvelope() {

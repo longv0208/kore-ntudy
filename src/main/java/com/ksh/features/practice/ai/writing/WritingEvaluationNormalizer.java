@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ksh.features.practice.ai.contract.PracticeAiResultCompleteness;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.text.Normalizer;
@@ -14,6 +16,9 @@ import java.util.Map;
 
 @Component
 public class WritingEvaluationNormalizer {
+    private static final Logger log =
+            LoggerFactory.getLogger(WritingEvaluationNormalizer.class);
+
 
     public static final String EVALUATION_ENGINE =
             "KSH_WRITING_EVALUATOR_V3";
@@ -104,6 +109,11 @@ public class WritingEvaluationNormalizer {
                     true);
             return objectMapper.writeValueAsString(normalized);
         } catch (Exception ex) {
+            log.warn(
+                    "Writing provider envelope rejected: taskType={} reason={} exception={}",
+                    taskType,
+                    ex.getMessage(),
+                    ex.getClass().getSimpleName());
             return contractFailure(
                     ex instanceof com.fasterxml.jackson.core.JsonProcessingException
                             ? "PROVIDER_MALFORMED_JSON"

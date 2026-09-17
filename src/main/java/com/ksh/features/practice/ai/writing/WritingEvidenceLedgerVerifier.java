@@ -258,20 +258,34 @@ public final class WritingEvidenceLedgerVerifier {
                     || criterion == null
                     || !criterion.activeForProvider()
                     || !WritingDiagnosticContract.ledgerEligible(criterion)
-                    || !criterion.appliesTo(taskType)
-                    || !criterion.supports(evidenceScope)
-                    || !WritingDiagnosticContract.allowedSubtypes(criterion)
-                    .contains(subtype)
-                    || !WritingDiagnosticContract.categoryCode(criterion)
-                    .equals(errorCategory)
-                    || !java.util.Objects.equals(
+                    || !criterion.appliesTo(taskType)) {
+                throw invalid("Writing finding criterion is outside the strict registry");
+            }
+            if (!criterion.supports(evidenceScope)) {
+                throw invalid("Writing finding evidence scope is not supported");
+            }
+            if (!WritingDiagnosticContract.allowedSubtypes(criterion)
+                    .contains(subtype)) {
+                throw invalid("Writing finding subtype is outside the strict registry");
+            }
+            if (!WritingDiagnosticContract.categoryCode(criterion)
+                    .equals(errorCategory)) {
+                throw invalid("Writing finding category does not match its criterion");
+            }
+            if (!java.util.Objects.equals(
                     WritingDiagnosticContract.expectedParentCriterionId(
                             criterion, taskType, requirementRefs),
-                    scoringCriterionId)
-                    || !validOperation(polarity, operation, evidenceRefs)
-                    || !validFindingMetadata(node)
-                    || result.containsKey(findingId)) {
-                throw invalid("Writing finding is outside the strict registry");
+                    scoringCriterionId)) {
+                throw invalid("Writing finding scoring criterion is inconsistent");
+            }
+            if (!validOperation(polarity, operation, evidenceRefs)) {
+                throw invalid("Writing finding operation is inconsistent");
+            }
+            if (!validFindingMetadata(node)) {
+                throw invalid("Writing finding metadata is invalid");
+            }
+            if (result.containsKey(findingId)) {
+                throw invalid("Duplicate Writing finding ID");
             }
             for (String evidenceRef : evidenceRefs) {
                 if (!findingEvidenceIds.add(evidenceRef)) {
@@ -379,19 +393,34 @@ public final class WritingEvidenceLedgerVerifier {
                     ownedRequirements.add(requirement.requirementId());
                 }
             }
-            if (!new LinkedHashSet<>(findingRefs).equals(ownedFindings)
-                    || !new LinkedHashSet<>(requirementRefs)
-                    .equals(ownedRequirements)
-                    || score > 0 && evidenceRefs.isEmpty()
-                    || contradictsAnchor(
+            Set<String> ownedEvidence = new LinkedHashSet<>();
+            for (Finding finding : findings.values()) {
+                if (ownedFindings.contains(finding.findingId())) {
+                    ownedEvidence.addAll(finding.evidenceIds());
+                }
+            }
+            for (Coverage row : coverage) {
+                WritingTaskRequirementPolicy.Requirement requirement =
+                        requirements.get(row.requirementId());
+                if (requirement != null
+                        && criterionId.equals(
+                                requirement.scoringCriterionId())) {
+                    ownedEvidence.addAll(row.evidenceIds());
+                }
+            }
+            if (contradictsAnchor(
                     criterionId,
                     score,
                     maxScore,
                     findings.values(),
                     coverage,
                     requirements)) {
+                String anchorType = score == maxScore
+                        ? "MAXIMUM"
+                        : score == 0 ? "ZERO" : "INTERMEDIATE";
                 throw invalid(
-                        "Writing rubric judgment contradicts verified evidence");
+                        "Writing rubric anchor is contradicted: "
+                                + anchorType);
             }
             result.put(criterionId, new RubricJudgment(
                     criterionId,
@@ -399,9 +428,9 @@ public final class WritingEvidenceLedgerVerifier {
                     maxScore,
                     anchor.labelVi(),
                     anchor.descriptionVi(),
-                    evidenceRefs,
-                    findingRefs,
-                    requirementRefs));
+                    List.copyOf(ownedEvidence),
+                    List.copyOf(ownedFindings),
+                    List.copyOf(ownedRequirements)));
         }
         if (!result.keySet().equals(expected.keySet())) {
             throw invalid("Writing rubric coverage is incomplete");
@@ -438,9 +467,6 @@ public final class WritingEvidenceLedgerVerifier {
         boolean hasImprovement = findings.stream().anyMatch(finding ->
                 "IMPROVEMENT".equals(finding.polarity())
                         && criterionId.equals(finding.scoringCriterionId()));
-        boolean hasStrength = findings.stream().anyMatch(finding ->
-                "STRENGTH".equals(finding.polarity())
-                        && criterionId.equals(finding.scoringCriterionId()));
         boolean hasUnmetRequirement = coverage.stream().anyMatch(row -> {
             WritingTaskRequirementPolicy.Requirement requirement =
                     requirements.get(row.requirementId());
@@ -449,19 +475,12 @@ public final class WritingEvidenceLedgerVerifier {
                     && criterionId.equals(requirement.scoringCriterionId())
                     && !"MET".equals(row.status());
         });
-        boolean hasMetRequirement = coverage.stream().anyMatch(row -> {
-            WritingTaskRequirementPolicy.Requirement requirement =
-                    requirements.get(row.requirementId());
-            return requirement != null
-                    && criterionId.equals(requirement.scoringCriterionId())
-                    && "MET".equals(row.status());
-        });
         if (score == maxScore) {
             return contradictsMaximum(
                     criterionId, findings, coverage, requirements);
         }
         if (score == 0) {
-            return hasStrength || hasMetRequirement;
+            return false;
         }
         return !hasImprovement && !hasUnmetRequirement;
     }
@@ -498,11 +517,10 @@ public final class WritingEvidenceLedgerVerifier {
                     replacement,
                     reason));
         }
-        if (!content.isBlank() && rewrites.isEmpty()) {
-            throw invalid(
-                    "Writing upgraded answer requires verified rewrites");
-        }
-        return new Upgrade(content, List.copyOf(rewrites));
+        String verifiedContent = rewrites.isEmpty() ? "" : content;
+        return new Upgrade(
+                verifiedContent,
+                List.copyOf(rewrites));
     }
 
     private static void requireOneToOnePositionedFindings(
